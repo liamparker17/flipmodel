@@ -424,13 +424,6 @@ export default function FlipModelApp() {
     input: "#1A1F2A", inputBorder: "#2A3040",
   };
 
-  // ─── SLIDER STYLES (inline CSS for range inputs) ───
-  const sliderTrackStyle = `
-    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; background: #2A3040; outline: none; }
-    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #D4A853; cursor: pointer; border: 2px solid #0C0F14; }
-    input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #D4A853; cursor: pointer; border: 2px solid #0C0F14; }
-  `;
-
   // ─── UI COMPONENTS ───
   const Tooltip = ({ text }) => {
     const [show, setShow] = useState(false);
@@ -679,16 +672,16 @@ export default function FlipModelApp() {
         <SliderInput label="Renovation Overrun" value={sensRenoAdj} onChange={setSensRenoAdj} min={0} max={30} />
         <SliderInput label="Extra Holding Time" value={sensHoldAdj} onChange={setSensHoldAdj} min={0} max={14} suffix=" mo" />
 
-        {(sensResaleAdj !== 0 || sensRenoAdj !== 0 || sensHoldAdj !== 0) && (
-          <div style={{ background: theme.input, borderRadius: 10, padding: 16, marginTop: 8 }}>
-            <div style={{ fontSize: 11, color: theme.textDim, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Adjusted Scenario</div>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <MetricBox label="Adj. Net Profit" value={fmt(sensCalc.netProfit)} color={sensCalc.netProfit >= 0 ? theme.green : theme.red} />
-              <MetricBox label="Adj. ROI" value={pct(sensCalc.roi)} color={sensCalc.roi >= 0.15 ? theme.green : sensCalc.roi >= 0 ? theme.orange : theme.red} />
-              <MetricBox label="Adj. Ann. ROI" value={pct(sensCalc.annRoi)} color={sensCalc.annRoi >= 0.3 ? theme.green : sensCalc.annRoi >= 0.15 ? theme.orange : theme.red} sub={`${sensCalc.holdMonths} mo hold`} />
-            </div>
+        <div style={{ background: theme.input, borderRadius: 10, padding: 16, marginTop: 8 }}>
+          <div style={{ fontSize: 11, color: theme.textDim, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
+            {sensResaleAdj === 0 && sensRenoAdj === 0 && sensHoldAdj === 0 ? "Base Scenario" : "Adjusted Scenario"}
           </div>
-        )}
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <MetricBox label="Adj. Net Profit" value={fmt(sensCalc.netProfit)} color={sensCalc.netProfit >= 0 ? theme.green : theme.red} />
+            <MetricBox label="Adj. ROI" value={pct(sensCalc.roi)} color={sensCalc.roi >= 0.15 ? theme.green : sensCalc.roi >= 0 ? theme.orange : theme.red} />
+            <MetricBox label="Adj. Ann. ROI" value={pct(sensCalc.annRoi)} color={sensCalc.annRoi >= 0.3 ? theme.green : sensCalc.annRoi >= 0.15 ? theme.orange : theme.red} sub={`${sensCalc.holdMonths} mo hold`} />
+          </div>
+        </div>
       </Card>
 
       <Card subtitle="Auto-applied smart defaults: Transfer duty auto-calculated, Bond rate at prime+1%, Agent commission 5%, Attorney fees R 45,000, Monthly holding ~R 6,450/mo. Switch to Advanced Mode for full control over every line item." style={{ background: theme.input, borderColor: theme.inputBorder }}>
@@ -1158,8 +1151,6 @@ export default function FlipModelApp() {
   if (step === -1) {
     return (
       <div style={{ background: theme.bg, minHeight: "100vh", color: theme.text, fontFamily: "'Outfit', 'Segoe UI', sans-serif" }}>
-        <style>{sliderTrackStyle}</style>
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
         {renderLanding()}
       </div>
     );
@@ -1169,8 +1160,6 @@ export default function FlipModelApp() {
   if (mode === "quick") {
     return (
       <div style={{ background: theme.bg, minHeight: "100vh", color: theme.text, fontFamily: "'Outfit', 'Segoe UI', sans-serif" }}>
-        <style>{sliderTrackStyle}</style>
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
         {/* Header */}
         <div style={{ padding: isMobile ? "12px 16px" : "16px 24px", borderBottom: `1px solid ${theme.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }} onClick={() => setStep(-1)}>
