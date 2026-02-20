@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { theme, fmt, NumInput, Card, SectionDivider, MetricBox, Select, Tooltip } from "./theme";
+import { theme, fmt, NumInput, Card, SectionDivider, MetricBox, Select, Tooltip, Accordion } from "./theme";
 import { SA_PROFESSIONS, SA_BANKS, ACCOUNT_TYPES } from "../data/constants";
 
 const emptyContractor = () => ({
@@ -17,7 +17,7 @@ const emptyContractor = () => ({
 });
 
 export default function ContractorPanel({ contractors, setContractors, rooms, isMobile }) {
-  const [editing, setEditing] = useState(null); // contractor id or null
+  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyContractor());
 
   const totalLabour = contractors.reduce((s, c) => s + c.dailyRate * c.daysWorked, 0);
@@ -61,7 +61,6 @@ export default function ContractorPanel({ contractors, setContractors, rooms, is
     });
   };
 
-  // Group by profession for summary
   const byProfession = {};
   contractors.forEach((c) => {
     if (!byProfession[c.profession]) byProfession[c.profession] = { count: 0, cost: 0 };
@@ -69,22 +68,36 @@ export default function ContractorPanel({ contractors, setContractors, rooms, is
     byProfession[c.profession].cost += c.dailyRate * c.daysWorked;
   });
 
-  const inputStyle = { background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 8, padding: isMobile ? "10px 12px" : "8px 10px", color: theme.text, fontSize: isMobile ? 16 : 14, width: "100%", outline: "none" };
+  const inputStyle = {
+    background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 8,
+    padding: "10px 12px", color: theme.text, fontSize: 16, width: "100%", outline: "none",
+    minHeight: 44,
+  };
 
   return (
     <div>
       <Card subtitle="Manage contractors working on this project. Add their details, daily rates, and assign them to rooms.">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <span style={{ fontSize: 13, color: theme.textDim }}>
-            {contractors.length} contractor{contractors.length !== 1 ? "s" : ""} &middot; Total labour: {fmt(totalLabour)}
+            {contractors.length} contractor{contractors.length !== 1 ? "s" : ""} &middot; Total: {fmt(totalLabour)}
           </span>
-          <button onClick={startAdd} style={{ background: theme.accent, color: "#000", border: "none", borderRadius: 8, padding: isMobile ? "10px 18px" : "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+ Add Contractor</button>
+          <button onClick={startAdd} style={{
+            background: theme.accent, color: "#000", border: "none", borderRadius: 8,
+            padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", minHeight: 44,
+          }}>+ Add Contractor</button>
         </div>
       </Card>
 
-      {/* Contractor list */}
+      {contractors.length === 0 && editing === null && (
+        <Card>
+          <div style={{ textAlign: "center", padding: "32px 0", color: theme.textDim, fontSize: 14 }}>
+            No contractors added yet. Tap "+ Add Contractor" to get started.
+          </div>
+        </Card>
+      )}
+
       {contractors.map((c) => (
-        <Card key={c.id} style={{ padding: isMobile ? 12 : 16 }}>
+        <Card key={c.id} style={{ padding: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
             <div>
               <div style={{ fontSize: 15, fontWeight: 600, color: theme.text }}>{c.name}</div>
@@ -102,76 +115,98 @@ export default function ContractorPanel({ contractors, setContractors, rooms, is
             </div>
           )}
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => startEdit(c)} style={{ background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, padding: "5px 12px", fontSize: 11, color: theme.text, cursor: "pointer" }}>Edit</button>
-            <button onClick={() => remove(c.id)} style={{ background: "none", border: `1px solid ${theme.red}40`, borderRadius: 6, padding: "5px 12px", fontSize: 11, color: theme.red, cursor: "pointer" }}>Remove</button>
+            <button onClick={() => startEdit(c)} style={{
+              background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 8,
+              padding: "8px 16px", fontSize: 12, color: theme.text, cursor: "pointer", minHeight: 40,
+            }}>Edit</button>
+            <button onClick={() => remove(c.id)} style={{
+              background: "none", border: `1px solid ${theme.red}40`, borderRadius: 8,
+              padding: "8px 16px", fontSize: 12, color: theme.red, cursor: "pointer", minHeight: 40,
+            }}>Remove</button>
           </div>
         </Card>
       ))}
 
-      {/* Edit / Add form */}
       {editing !== null && (
         <>
           <SectionDivider label={editing === "new" ? "Add Contractor" : "Edit Contractor"} />
           <Card style={{ borderColor: theme.accent }}>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 20px" }}>
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, color: theme.textDim, marginBottom: 5, display: "block", textTransform: "uppercase", letterSpacing: 1 }}>Name</label>
-                <input value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Contractor name" style={inputStyle} />
-              </div>
-              <Select label="Profession" value={form.profession} onChange={(v) => updateForm("profession", v)} options={SA_PROFESSIONS.map((p) => ({ value: p, label: p }))} />
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, color: theme.textDim, marginBottom: 5, display: "block", textTransform: "uppercase", letterSpacing: 1 }}>Phone</label>
-                <input value={form.phone} onChange={(e) => updateForm("phone", e.target.value)} placeholder="e.g. 082 123 4567" style={inputStyle} />
-              </div>
-              <NumInput label="Daily Rate (R)" value={form.dailyRate} onChange={(v) => updateForm("dailyRate", v)} isMobile={isMobile} />
-              <NumInput label="Days Worked" value={form.daysWorked} onChange={(v) => updateForm("daysWorked", v)} prefix="" suffix="days" isMobile={isMobile} />
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, color: theme.textDim, marginBottom: 5, display: "block", textTransform: "uppercase", letterSpacing: 1 }}>
-                  Total Cost <Tooltip text="Daily rate x days worked" />
-                </label>
-                <div style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: theme.accent }}>
-                  {fmt(form.dailyRate * form.daysWorked)}
+            <Accordion title="Contact & Cost" defaultOpen={true}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 20px" }}>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, color: theme.textDim, marginBottom: 5, display: "block", textTransform: "uppercase", letterSpacing: 1 }}>Name *</label>
+                  <input value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Contractor name" style={inputStyle} />
+                  {form.name.trim() === "" && editing !== null && (
+                    <div style={{ fontSize: 11, color: theme.red, marginTop: 4 }}>Name is required</div>
+                  )}
+                </div>
+                <Select label="Profession" value={form.profession} onChange={(v) => updateForm("profession", v)} options={SA_PROFESSIONS.map((p) => ({ value: p, label: p }))} />
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, color: theme.textDim, marginBottom: 5, display: "block", textTransform: "uppercase", letterSpacing: 1 }}>Phone</label>
+                  <input value={form.phone} onChange={(e) => updateForm("phone", e.target.value)} placeholder="e.g. 082 123 4567" style={inputStyle} />
+                </div>
+                <NumInput label="Daily Rate (R)" value={form.dailyRate} onChange={(v) => updateForm("dailyRate", v)} isMobile={isMobile} />
+                <NumInput label="Days Worked" value={form.daysWorked} onChange={(v) => updateForm("daysWorked", v)} prefix="" suffix="days" isMobile={isMobile} />
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, color: theme.textDim, marginBottom: 5, display: "block", textTransform: "uppercase", letterSpacing: 1 }}>
+                    Total Cost <Tooltip text="Daily rate x days worked" />
+                  </label>
+                  <div style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: theme.accent }}>
+                    {fmt(form.dailyRate * form.daysWorked)}
+                  </div>
                 </div>
               </div>
-            </div>
+            </Accordion>
 
-            <SectionDivider label="Bank Details" />
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 20px" }}>
-              <Select label="Bank" value={form.bank} onChange={handleBankChange} options={SA_BANKS.map((b) => ({ value: b.name, label: b.name }))} />
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, color: theme.textDim, marginBottom: 5, display: "block", textTransform: "uppercase", letterSpacing: 1 }}>Branch Code (auto-filled)</label>
-                <input value={form.branchCode} readOnly style={{ ...inputStyle, opacity: 0.7 }} />
+            <Accordion title="Bank Details">
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 20px" }}>
+                <Select label="Bank" value={form.bank} onChange={handleBankChange} options={SA_BANKS.map((b) => ({ value: b.name, label: b.name }))} />
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, color: theme.textDim, marginBottom: 5, display: "block", textTransform: "uppercase", letterSpacing: 1 }}>Branch Code (auto-filled)</label>
+                  <input value={form.branchCode} readOnly style={{ ...inputStyle, opacity: 0.7 }} />
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, color: theme.textDim, marginBottom: 5, display: "block", textTransform: "uppercase", letterSpacing: 1 }}>Account Number</label>
+                  <input value={form.accountNumber} onChange={(e) => updateForm("accountNumber", e.target.value)} placeholder="Account number" style={inputStyle} />
+                </div>
+                <Select label="Account Type" value={form.accountType} onChange={(v) => updateForm("accountType", v)} options={ACCOUNT_TYPES.map((t) => ({ value: t.value, label: t.label }))} />
               </div>
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, color: theme.textDim, marginBottom: 5, display: "block", textTransform: "uppercase", letterSpacing: 1 }}>Account Number</label>
-                <input value={form.accountNumber} onChange={(e) => updateForm("accountNumber", e.target.value)} placeholder="Account number" style={inputStyle} />
+            </Accordion>
+
+            <Accordion title="Room Assignment">
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+                {rooms.length === 0 ? (
+                  <div style={{ color: theme.textDim, fontSize: 13 }}>No rooms to assign. Add rooms in the Rooms step first.</div>
+                ) : (
+                  rooms.map((room) => {
+                    const assigned = form.assignedRooms.includes(room.id);
+                    return (
+                      <button key={room.id} onClick={() => toggleRoomAssignment(room.id)} style={{
+                        background: assigned ? theme.accentDim : theme.input,
+                        border: `1px solid ${assigned ? theme.accent : theme.inputBorder}`,
+                        borderRadius: 8, padding: "10px 16px", fontSize: 13,
+                        color: assigned ? theme.accent : theme.textDim, cursor: "pointer",
+                        fontWeight: assigned ? 600 : 400, minHeight: 44,
+                      }}>
+                        {assigned ? "# " : ""}{room.name}
+                      </button>
+                    );
+                  })
+                )}
               </div>
-              <Select label="Account Type" value={form.accountType} onChange={(v) => updateForm("accountType", v)} options={ACCOUNT_TYPES.map((t) => ({ value: t.value, label: t.label }))} />
-            </div>
+            </Accordion>
 
-            <SectionDivider label="Room Assignment" />
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-              {rooms.map((room) => {
-                const assigned = form.assignedRooms.includes(room.id);
-                return (
-                  <button key={room.id} onClick={() => toggleRoomAssignment(room.id)} style={{
-                    background: assigned ? theme.accentDim : theme.input,
-                    border: `1px solid ${assigned ? theme.accent : theme.inputBorder}`,
-                    borderRadius: 8, padding: "6px 12px", fontSize: 12,
-                    color: assigned ? theme.accent : theme.textDim, cursor: "pointer",
-                    fontWeight: assigned ? 600 : 400,
-                  }}>
-                    {assigned ? "✓ " : ""}{room.name}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={save} style={{ background: theme.accent, color: "#000", border: "none", borderRadius: 8, padding: "10px 24px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <button onClick={save} style={{
+                background: theme.accent, color: "#000", border: "none", borderRadius: 8,
+                padding: "12px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer", minHeight: 44,
+              }}>
                 {editing === "new" ? "Add Contractor" : "Save Changes"}
               </button>
-              <button onClick={() => setEditing(null)} style={{ background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: "10px 24px", fontSize: 13, color: theme.text, cursor: "pointer" }}>
+              <button onClick={() => setEditing(null)} style={{
+                background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 8,
+                padding: "12px 24px", fontSize: 14, color: theme.text, cursor: "pointer", minHeight: 44,
+              }}>
                 Cancel
               </button>
             </div>
@@ -179,13 +214,12 @@ export default function ContractorPanel({ contractors, setContractors, rooms, is
         </>
       )}
 
-      {/* Summary by profession */}
       {contractors.length > 0 && (
         <>
           <SectionDivider label="Labour Summary" />
           <Card title="Cost by Profession" style={{ background: `${theme.accent}10`, borderColor: theme.accent }}>
             {Object.entries(byProfession).map(([prof, data]) => (
-              <div key={prof} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${theme.cardBorder}20`, fontSize: 13 }}>
+              <div key={prof} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${theme.cardBorder}20`, fontSize: 13 }}>
                 <span style={{ color: theme.text }}>{prof} <span style={{ color: theme.textDim, fontSize: 11 }}>({data.count})</span></span>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", color: theme.accent }}>{fmt(data.cost)}</span>
               </div>

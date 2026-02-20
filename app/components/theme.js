@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 
 // ─── Theme Object ───
 export const theme = {
@@ -30,32 +30,84 @@ export const calcTransferDuty = (price) => {
 const MobileContext = createContext(false);
 export const MobileProvider = ({ children }) => {
   const [isMobile, setIsMobile] = useState(false);
-  if (typeof window !== "undefined") {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useState(() => {
-      const check = () => setIsMobile(window.innerWidth < 640);
-      check();
-      window.addEventListener("resize", check);
-      return () => window.removeEventListener("resize", check);
-    });
-  }
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   return <MobileContext.Provider value={isMobile}>{children}</MobileContext.Provider>;
 };
 export const useIsMobile = () => useContext(MobileContext);
 
+// ─── Toast ───
+export const Toast = ({ message, visible }) => {
+  if (!visible || !message) return null;
+  return (
+    <div style={{
+      position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
+      background: theme.green, color: "#000", padding: "12px 24px",
+      borderRadius: 10, fontSize: 14, fontWeight: 600, zIndex: 500,
+      animation: "fadeInOut 2.5s ease forwards",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+    }}>
+      {message}
+    </div>
+  );
+};
+
+// ─── Accordion ───
+export const Accordion = ({ title, defaultOpen = false, children }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ marginBottom: 12, border: `1px solid ${theme.cardBorder}`, borderRadius: 10, overflow: "hidden" }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+          background: theme.input, border: "none", padding: "14px 16px",
+          color: theme.text, fontSize: 13, fontWeight: 600, cursor: "pointer",
+          minHeight: 44,
+        }}
+      >
+        {title}
+        <span style={{ color: theme.textDim, fontSize: 16, transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0)" }}>v</span>
+      </button>
+      {open && <div style={{ padding: 16, background: theme.card }}>{children}</div>}
+    </div>
+  );
+};
+
 // ─── Shared UI Atoms ───
 export const Tooltip = ({ text }) => {
   const [show, setShow] = useState(false);
+  const ref = useRef(null);
   return (
-    <span style={{ position: "relative", display: "inline-flex", marginLeft: 6, cursor: "help" }}>
+    <span ref={ref} style={{ position: "relative", display: "inline-flex", marginLeft: 6, cursor: "help" }}>
       <span
-        onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)} onClick={() => setShow(!show)}
-        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 16, height: 16, borderRadius: "50%", background: theme.inputBorder, color: theme.textDim, fontSize: 10, fontWeight: 700, lineHeight: 1 }}
+        onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}
+        onClick={(e) => { e.stopPropagation(); setShow(!show); }}
+        style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 22, height: 22, borderRadius: "50%",
+          background: theme.inputBorder, color: theme.textDim,
+          fontSize: 11, fontWeight: 700, lineHeight: 1,
+        }}
       >?</span>
       {show && (
-        <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#1E2430", border: `1px solid ${theme.accent}40`, borderRadius: 8, padding: "10px 14px", fontSize: 12, color: theme.text, lineHeight: 1.5, width: 240, zIndex: 100, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", pointerEvents: "none" }}>
+        <div style={{
+          position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
+          background: "#1E2430", border: `1px solid ${theme.accent}40`, borderRadius: 8,
+          padding: "10px 14px", fontSize: 12, color: theme.text, lineHeight: 1.5,
+          width: 240, zIndex: 100, boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+        }}>
           {text}
-          <div style={{ position: "absolute", bottom: -5, left: "50%", transform: "translateX(-50%) rotate(45deg)", width: 10, height: 10, background: "#1E2430", borderRight: `1px solid ${theme.accent}40`, borderBottom: `1px solid ${theme.accent}40` }} />
+          <div style={{
+            position: "absolute", bottom: -5, left: "50%",
+            transform: "translateX(-50%) rotate(45deg)",
+            width: 10, height: 10, background: "#1E2430",
+            borderRight: `1px solid ${theme.accent}40`, borderBottom: `1px solid ${theme.accent}40`,
+          }} />
         </div>
       )}
     </span>
@@ -69,21 +121,37 @@ export const NumInput = ({ label, value, onChange, prefix = "R", suffix = "", wi
         {label}{tooltip && <Tooltip text={tooltip} />}
       </label>
     )}
-    <div style={{ display: "flex", alignItems: "center", background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 8, padding: isMobile ? "10px 12px" : "8px 10px" }}>
+    <div style={{
+      display: "flex", alignItems: "center",
+      background: theme.input, border: `1px solid ${theme.inputBorder}`,
+      borderRadius: 8, padding: "10px 12px", minHeight: 44,
+    }}>
       {prefix && <span style={{ color: theme.textDim, fontSize: 13, marginRight: 4 }}>{prefix}</span>}
       <input type="number" value={value} onChange={(e) => onChange(Number(e.target.value))}
-        style={{ background: "transparent", border: "none", color: theme.text, fontSize: isMobile ? 16 : (small ? 13 : 14), width: "100%", outline: "none", fontFamily: "'JetBrains Mono', monospace" }} />
-      {suffix && <span style={{ color: theme.textDim, fontSize: 12, marginLeft: 4 }}>{suffix}</span>}
+        style={{
+          background: "transparent", border: "none", color: theme.text,
+          fontSize: 16, width: "100%", outline: "none",
+          fontFamily: "'JetBrains Mono', monospace",
+        }}
+      />
+      {suffix && <span style={{ color: theme.textDim, fontSize: 12, marginLeft: 4, whiteSpace: "nowrap" }}>{suffix}</span>}
     </div>
   </div>
 );
 
 export const Toggle = ({ label, value, onChange, tooltip }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-    <div onClick={() => onChange(!value)} style={{ width: 44, height: 24, borderRadius: 12, background: value ? theme.accent : theme.inputBorder, cursor: "pointer", position: "relative", transition: "all 0.2s", flexShrink: 0 }}>
-      <div style={{ width: 18, height: 18, borderRadius: 9, background: "#fff", position: "absolute", top: 3, left: value ? 23 : 3, transition: "all 0.2s" }} />
+  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, minHeight: 44 }}>
+    <div onClick={() => onChange(!value)} style={{
+      width: 48, height: 28, borderRadius: 14,
+      background: value ? theme.accent : theme.inputBorder,
+      cursor: "pointer", position: "relative", transition: "all 0.2s", flexShrink: 0,
+    }}>
+      <div style={{
+        width: 22, height: 22, borderRadius: 11, background: "#fff",
+        position: "absolute", top: 3, left: value ? 23 : 3, transition: "all 0.2s",
+      }} />
     </div>
-    <span style={{ fontSize: 13, color: theme.text }}>{label}</span>
+    <span style={{ fontSize: 14, color: theme.text }}>{label}</span>
     {tooltip && <Tooltip text={tooltip} />}
   </div>
 );
@@ -95,24 +163,34 @@ export const Select = ({ label, value, onChange, options, tooltip }) => (
         {label}{tooltip && <Tooltip text={tooltip} />}
       </label>
     )}
-    <select value={value} onChange={(e) => onChange(e.target.value)} style={{ background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 8, padding: "8px 10px", color: theme.text, fontSize: 14, width: "100%", outline: "none" }}>
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={{
+      background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 8,
+      padding: "10px 12px", color: theme.text, fontSize: 16, width: "100%", outline: "none",
+      minHeight: 44,
+    }}>
       {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   </div>
 );
 
 export const Card = ({ children, title, subtitle, style: s = {} }) => (
-  <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: 24, marginBottom: 20, ...s }}>
-    {title && <h3 style={{ margin: subtitle ? "0 0 4px" : "0 0 18px", fontSize: 15, color: theme.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5 }}>{title}</h3>}
-    {subtitle && <p style={{ margin: "0 0 18px", fontSize: 12, color: theme.textDim, lineHeight: 1.5 }}>{subtitle}</p>}
+  <div style={{
+    background: theme.card, border: `1px solid ${theme.cardBorder}`,
+    borderRadius: 12, padding: 20, marginBottom: 16, ...s,
+  }}>
+    {title && <h3 style={{ margin: subtitle ? "0 0 4px" : "0 0 16px", fontSize: 15, color: theme.accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1.5 }}>{title}</h3>}
+    {subtitle && <p style={{ margin: "0 0 16px", fontSize: 12, color: theme.textDim, lineHeight: 1.5 }}>{subtitle}</p>}
     {children}
   </div>
 );
 
 export const MetricBox = ({ label, value, sub, color = theme.text, isMobile }) => (
-  <div style={{ background: theme.input, borderRadius: 10, padding: isMobile ? "10px 12px" : "14px 16px", minWidth: isMobile ? 120 : 140, flex: 1 }}>
+  <div style={{
+    background: theme.input, borderRadius: 10,
+    padding: "12px 14px", minWidth: 120, flex: 1,
+  }}>
     <div style={{ fontSize: 11, color: theme.textDim, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{label}</div>
-    <div style={{ fontSize: isMobile ? 17 : 20, fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
+    <div style={{ fontSize: 18, fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
     {sub && <div style={{ fontSize: 11, color: theme.textDim, marginTop: 2 }}>{sub}</div>}
   </div>
 );
@@ -124,8 +202,12 @@ export const BarChart = ({ data, maxVal, isMobile }) => {
       {data.map((d, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: isMobile ? "wrap" : "nowrap" }}>
           <div style={{ width: isMobile ? "100%" : 180, fontSize: 12, color: theme.textDim, textAlign: isMobile ? "left" : "right", flexShrink: 0 }}>{d.label}</div>
-          <div style={{ flex: 1, height: 22, background: theme.input, borderRadius: 4, overflow: "hidden", position: "relative", minWidth: 80 }}>
-            <div style={{ height: "100%", width: `${Math.abs(d.value / max) * 100}%`, background: d.value >= 0 ? theme.green : theme.red, borderRadius: 4, opacity: 0.7, transition: "width 0.4s ease" }} />
+          <div style={{ flex: 1, height: 24, background: theme.input, borderRadius: 4, overflow: "hidden", position: "relative", minWidth: 80 }}>
+            <div style={{
+              height: "100%", width: `${Math.abs(d.value / max) * 100}%`,
+              background: d.value >= 0 ? theme.green : theme.red,
+              borderRadius: 4, opacity: 0.7, transition: "width 0.4s ease",
+            }} />
           </div>
           <div style={{ width: 110, fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: d.value >= 0 ? theme.green : theme.red, textAlign: "right" }}>{fmt(d.value)}</div>
         </div>
@@ -135,7 +217,7 @@ export const BarChart = ({ data, maxVal, isMobile }) => {
 };
 
 export const SectionDivider = ({ label }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0 16px" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0 14px" }}>
     <div style={{ height: 1, flex: 1, background: theme.cardBorder }} />
     <span style={{ fontSize: 11, color: theme.accent, textTransform: "uppercase", letterSpacing: 2, fontWeight: 600 }}>{label}</span>
     <div style={{ height: 1, flex: 1, background: theme.cardBorder }} />
@@ -146,8 +228,9 @@ export const CTAButton = ({ label, onClick, primary = true, style: s = {}, isMob
   <button onClick={onClick} style={{
     background: primary ? theme.accent : "transparent", color: primary ? "#000" : theme.text,
     border: primary ? "none" : `1px solid ${theme.cardBorder}`, borderRadius: 10,
-    padding: isMobile ? "14px 28px" : "12px 32px", fontSize: isMobile ? 15 : 14,
-    fontWeight: 700, cursor: "pointer", letterSpacing: 0.5, transition: "all 0.2s", ...s,
+    padding: "14px 28px", fontSize: 15,
+    fontWeight: 700, cursor: "pointer", letterSpacing: 0.5, transition: "all 0.2s",
+    minHeight: 44, ...s,
   }}>{label}</button>
 );
 
@@ -157,7 +240,10 @@ export const SliderInput = ({ label, value, onChange, min, max, step = 1, suffix
       <label style={{ display: "flex", alignItems: "center", fontSize: 11, color: theme.textDim, textTransform: "uppercase", letterSpacing: 1 }}>
         {label}{tooltip && <Tooltip text={tooltip} />}
       </label>
-      <span style={{ fontSize: 14, fontWeight: 700, color: value === 0 ? theme.textDim : value > 0 ? (suffix === "%" && label.toLowerCase().includes("resale") ? theme.green : theme.orange) : theme.green, fontFamily: "'JetBrains Mono', monospace" }}>
+      <span style={{
+        fontSize: 14, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+        color: value === 0 ? theme.textDim : value > 0 ? (suffix === "%" && label.toLowerCase().includes("resale") ? theme.green : theme.orange) : theme.green,
+      }}>
         {value > 0 ? "+" : ""}{value}{suffix}
       </span>
     </div>

@@ -1,9 +1,21 @@
 // ─── Profile Persistence (localStorage) ───
 
-const STORAGE_KEY = "flipmodel_profiles";
+const STORAGE_KEY = "justhousesErp_profiles";
+const OLD_KEY = "flipmodel_profiles";
+
+function migrate() {
+  try {
+    const old = localStorage.getItem(OLD_KEY);
+    if (old && !localStorage.getItem(STORAGE_KEY)) {
+      localStorage.setItem(STORAGE_KEY, old);
+      localStorage.removeItem(OLD_KEY);
+    }
+  } catch { /* ignore */ }
+}
 
 export function loadProfiles() {
   try {
+    migrate();
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);

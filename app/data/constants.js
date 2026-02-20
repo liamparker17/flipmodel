@@ -1,4 +1,4 @@
-// ─── FlipModel Constants ───
+// ─── JustHouses ERP Constants ───
 
 export const SA_PRIME = 11.75;
 
@@ -111,5 +111,17 @@ export const STEPS = [
   "Holding Costs",
   "Resale & Profit",
   "Scenario Lab",
+  "Expenses",
   "Summary",
+];
+
+export const STEP_SHORT = [
+  "Acquire", "Property", "Rooms", "Team", "Reno $",
+  "Holding", "Resale", "Scenarios", "Expenses", "Summary",
+];
+
+export const EXPENSE_CATEGORIES = [
+  "Materials", "Labour", "Transport", "Permits & Compliance",
+  "Professional Fees", "Insurance", "Utilities", "Equipment Hire",
+  "Furnishing & Staging", "Marketing", "Miscellaneous",
 ];

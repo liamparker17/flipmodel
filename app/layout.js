@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "FlipModel — Estimate Property Flip Profitability in Minutes",
+  title: "JustHouses ERP — Property Flip Profitability Calculator",
   description: "Input purchase price, renovation and holding costs to see your projected profit and ROI. Built for South African property investors.",
 };
 
