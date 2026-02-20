@@ -12,8 +12,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "FlipModel",
-  description: "SA Property Development Feasibility Calculator",
+  title: "FlipModel — Estimate Property Flip Profitability in Minutes",
+  description: "Input purchase price, renovation and holding costs to see your projected profit and ROI. Built for South African property investors.",
 };
 
 export default function RootLayout({ children }) {
