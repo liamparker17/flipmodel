@@ -24,6 +24,7 @@ import SummaryStep from "./components/SummaryStep";
 import ProfileManager from "./components/ProfileManager";
 import ScenarioLab from "./components/ScenarioLab";
 import ExpensesStep from "./components/ExpensesStep";
+import MaterialBreakdown from "./components/MaterialBreakdown";
 import { loadProfiles, saveProfile as persistProfile, deleteProfile as removeProfile } from "./utils/profiles";
 
 export default function JustHousesApp() {
@@ -309,7 +310,7 @@ export default function JustHousesApp() {
 
   const handleCompareProfiles = () => {
     setMode("advanced");
-    setStep(7);
+    setStep(8);
     setScenarioTab("crossProfile");
   };
 
@@ -500,6 +501,9 @@ export default function JustHousesApp() {
         </div>
       </Card>
 
+      <SectionDivider label="Shop This Renovation" />
+      <MaterialBreakdown rooms={rooms} prop={prop} mode={mode} isMobile={isMobile} />
+
       <Card subtitle="Auto-applied smart defaults: Transfer duty auto-calculated, Bond rate at prime+1%, Agent commission 5%, Attorney fees R 45,000, Monthly holding ~R 6,450/mo. Switch to Advanced Mode for full control." style={{ background: theme.input, borderColor: theme.inputBorder }}>
         <div style={{ textAlign: "center" }}>
           <CTAButton label="Switch to Advanced Mode" onClick={() => { setMode("advanced"); setStep(0); }} primary={false} isMobile={isMobile} />
@@ -621,6 +625,8 @@ export default function JustHousesApp() {
           />
         );
       case 7:
+        return <MaterialBreakdown rooms={rooms} prop={prop} mode={mode} isMobile={isMobile} />;
+      case 8:
         return (
           <ScenarioLab
             baseInputs={{
@@ -636,9 +642,9 @@ export default function JustHousesApp() {
             isMobile={isMobile}
           />
         );
-      case 8:
-        return <ExpensesStep profileId={activeProfileId} isMobile={isMobile} />;
       case 9:
+        return <ExpensesStep profileId={activeProfileId} isMobile={isMobile} />;
+      case 10:
         return (
           <SummaryStep
             acq={acq} holding={holding} resale={resale} prop={prop} transferDuty={transferDuty}
@@ -754,7 +760,7 @@ export default function JustHousesApp() {
             <button onClick={() => setStep(Math.min(STEPS.length - 1, step + 1))} style={{
               background: theme.accent, border: "none", color: "#000", borderRadius: 10,
               padding: "12px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer", minHeight: 44,
-            }}>{step === 6 ? "See Scenarios" : "Next Step"}</button>
+            }}>{step === 6 ? "Shop Materials" : "Next Step"}</button>
           )}
         </div>
       </div>

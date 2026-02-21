@@ -110,6 +110,7 @@ export const STEPS = [
   "Renovation Costs",
   "Holding Costs",
   "Resale & Profit",
+  "Shop Materials",
   "Scenario Lab",
   "Expenses",
   "Summary",
@@ -117,7 +118,7 @@ export const STEPS = [
 
 export const STEP_SHORT = [
   "Acquire", "Property", "Rooms", "Team", "Reno $",
-  "Holding", "Resale", "Scenarios", "Expenses", "Summary",
+  "Holding", "Resale", "Shop", "Scenarios", "Expenses", "Summary",
 ];
 
 export const EXPENSE_CATEGORIES = [
