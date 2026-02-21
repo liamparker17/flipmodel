@@ -1,10 +1,15 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { theme } from "../components/theme";
-import Sidebar from "../components/Sidebar";
-import useDeals from "../hooks/useDeals";
+import { theme } from "../theme";
+import Sidebar from "./Sidebar";
+import useDeals from "../../hooks/useDeals";
+import type { ReactNode } from "react";
 
-export default function ErpLayout({ children }) {
+interface AppLayoutProps {
+  children: ReactNode;
+}
+
+export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const { createDeal } = useDeals();
 

@@ -1,17 +1,28 @@
 "use client";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { theme } from "./theme";
+import { theme } from "../theme";
 
-const NAV_ITEMS = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "D" },
   { href: "/pipeline", label: "Pipeline", icon: "P" },
   { href: "/projects", label: "Projects", icon: "W" },
   { href: "/finance", label: "Finance", icon: "F" },
+  { href: "/reports", label: "Reports", icon: "R" },
   { href: "/settings", label: "Settings", icon: "S" },
 ];
 
-export default function Sidebar({ onNewDeal }) {
+interface SidebarProps {
+  onNewDeal: () => void;
+}
+
+export default function Sidebar({ onNewDeal }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
@@ -31,26 +42,24 @@ export default function Sidebar({ onNewDeal }) {
   const collapsed = isTablet;
   const sidebarWidth = collapsed ? 56 : 240;
 
-  const isActive = (href) => {
+  const isActive = (href: string): boolean => {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
   };
 
-  const handleNav = (href) => {
+  const handleNav = (href: string) => {
     router.push(href);
     setMobileOpen(false);
   };
 
   const handleNewDeal = () => {
-    if (onNewDeal) onNewDeal();
+    onNewDeal();
     setMobileOpen(false);
   };
 
-  // Mobile: hamburger button (rendered by layout) + slide-out overlay
   if (isMobile) {
     return (
       <>
-        {/* Mobile hamburger */}
         <button
           onClick={() => setMobileOpen(true)}
           style={{
@@ -63,8 +72,6 @@ export default function Sidebar({ onNewDeal }) {
         >
           =
         </button>
-
-        {/* Overlay */}
         {mobileOpen && (
           <div style={{ position: "fixed", inset: 0, zIndex: 300 }}>
             <div onClick={() => setMobileOpen(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} />
@@ -84,7 +91,6 @@ export default function Sidebar({ onNewDeal }) {
     );
   }
 
-  // Desktop / Tablet: fixed sidebar
   return (
     <div style={{
       width: sidebarWidth, minHeight: "100vh", flexShrink: 0,
@@ -97,10 +103,17 @@ export default function Sidebar({ onNewDeal }) {
   );
 }
 
-function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }) {
+interface SidebarContentProps {
+  collapsed: boolean;
+  isActive: (href: string) => boolean;
+  onNav: (href: string) => void;
+  onNewDeal: () => void;
+  onClose?: () => void;
+}
+
+function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }: SidebarContentProps) {
   return (
     <>
-      {/* Logo */}
       <div style={{
         padding: collapsed ? "16px 10px" : "16px 20px",
         borderBottom: `1px solid ${theme.cardBorder}`,
@@ -124,7 +137,6 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }) {
         )}
       </div>
 
-      {/* New Deal CTA */}
       <div style={{ padding: collapsed ? "12px 8px" : "12px 16px" }}>
         <button
           onClick={onNewDeal}
@@ -140,7 +152,6 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }) {
         </button>
       </div>
 
-      {/* Nav Items */}
       <nav style={{ flex: 1, padding: collapsed ? "4px 8px" : "4px 12px" }}>
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.href);
@@ -174,7 +185,6 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }) {
         })}
       </nav>
 
-      {/* Footer */}
       {!collapsed && (
         <div style={{
           padding: "12px 16px", borderTop: `1px solid ${theme.cardBorder}`,
