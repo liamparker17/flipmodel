@@ -30,9 +30,10 @@ interface DealAnalysisProps {
   initialData?: DealData;
   dealId?: string;
   onSave?: (snapshot: DealData) => void;
+  view?: "analysis" | "contractors" | "suppliers";
 }
 
-export default function DealAnalysis({ initialData, dealId, onSave }: DealAnalysisProps) {
+export default function DealAnalysis({ initialData, dealId, onSave, view = "analysis" }: DealAnalysisProps) {
   const calc = useCalculator(initialData);
   const [step, setStep] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
@@ -281,6 +282,23 @@ export default function DealAnalysis({ initialData, dealId, onSave }: DealAnalys
       default: return null;
     }
   };
+
+  // ─── STANDALONE VIEWS (rendered as tabs from deal detail page) ───
+  if (view === "contractors") {
+    return (
+      <div style={{ padding: isMobile ? 16 : 28, maxWidth: 840, margin: "0 auto" }}>
+        <ContractorPanel contractors={calc.contractors} setContractors={calc.setContractors} rooms={calc.rooms} isMobile={isMobile} />
+      </div>
+    );
+  }
+
+  if (view === "suppliers") {
+    return (
+      <div style={{ padding: isMobile ? 16 : 28, maxWidth: 840, margin: "0 auto" }}>
+        <MaterialBreakdown rooms={calc.rooms} prop={calc.prop} mode={calc.mode} isMobile={isMobile} />
+      </div>
+    );
+  }
 
   if (calc.mode === "quick") {
     return (

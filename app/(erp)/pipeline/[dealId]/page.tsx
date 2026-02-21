@@ -10,6 +10,8 @@ import type { Deal, DealData, DealStage } from "../../../types/deal";
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "analysis", label: "Analysis" },
+  { key: "contractors", label: "Contractors" },
+  { key: "suppliers", label: "Suppliers" },
   { key: "budget", label: "Budget" },
   { key: "timeline", label: "Timeline" },
 ] as const;
@@ -177,8 +179,8 @@ export default function DealDetailPage() {
         </div>
       )}
 
-      {activeTab === "analysis" && (
-        <DealAnalysis initialData={deal.data} dealId={deal.id} onSave={handleSave} />
+      {(activeTab === "analysis" || activeTab === "contractors" || activeTab === "suppliers") && (
+        <DealAnalysis initialData={deal.data} dealId={deal.id} onSave={handleSave} view={activeTab} />
       )}
 
       {activeTab === "budget" && (
