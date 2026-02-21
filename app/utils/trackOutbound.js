@@ -62,14 +62,13 @@ export function getClickHistory() {
  * @returns {string} The search URL
  */
 export function getSupplierUrl(supplier, itemName) {
-  const encoded = encodeURIComponent(itemName);
   switch (supplier) {
     case "leroymerlin":
-      return `https://www.leroymerlin.co.za/search?q=${encoded}`;
+      return `https://leroymerlin.co.za/search/?q=${itemName.replace(/ /g, "+")}`;
     case "builders":
-      return `https://www.builders.co.za/search?text=${encoded}`;
+      return `https://www.builders.co.za/search?text=${encodeURIComponent(itemName)}`;
     case "cashbuild":
-      return `https://www.cashbuild.co.za/search?q=${encoded}`;
+      return `https://www.cashbuild.co.za/search?order=product.position.desc&c=0&s=${itemName.replace(/ /g, "+")}`;
     default:
       return "#";
   }
