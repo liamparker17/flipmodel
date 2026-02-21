@@ -212,6 +212,7 @@ export default function SuppliersPage() {
       category: item.category,
       quantity: item.qty,
       unit: item.unit,
+      baseUnitPrice: item.unitPrice,
     }));
   }, [flatItems]);
 

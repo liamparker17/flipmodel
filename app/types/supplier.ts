@@ -4,6 +4,7 @@ export interface MaterialItem {
   category: string;
   quantity: number;
   unit: string;
+  baseUnitPrice: number; // realistic unit price from material catalog
 }
 
 export interface SupplierOffer {
