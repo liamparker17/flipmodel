@@ -27,6 +27,7 @@ export interface Deal {
   activities: Activity[];
   contacts: DealContact[];
   documents: Document[];
+  shoppingList?: ShoppingListItem[];
   actualSalePrice?: number;
   actualSaleDate?: string;
   offerAmount?: number;
@@ -248,6 +249,24 @@ export interface Document {
   url?: string;
   notes?: string;
   addedAt: string;
+}
+
+// ─── Shopping List ───
+export interface ShoppingListItem {
+  materialKey: string;      // e.g. "floorTiles" or custom_<timestamp>
+  category: string;         // e.g. "tiles"
+  purchased: boolean;
+  actualPrice?: number;     // what user actually paid
+  actualQty?: number;       // actual quantity bought
+  vendor?: string;          // where they bought it
+  purchasedDate?: string;
+  notes?: string;
+  // Custom / unanticipated item fields
+  isCustom?: boolean;       // true = not from estimator
+  label?: string;           // display name for custom items
+  qty?: number;             // quantity for custom items
+  unit?: string;            // unit for custom items
+  unitPrice?: number;       // unit price for custom items
 }
 
 // ─── Computed / Display Types ───

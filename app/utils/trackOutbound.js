@@ -57,7 +57,7 @@ export function getClickHistory() {
 
 /**
  * Generate a supplier search URL.
- * @param {"leroymerlin"|"builders"} supplier
+ * @param {"leroymerlin"|"builders"|"cashbuild"} supplier
  * @param {string} itemName
  * @returns {string} The search URL
  */
@@ -68,6 +68,8 @@ export function getSupplierUrl(supplier, itemName) {
       return `https://www.leroymerlin.co.za/search?q=${encoded}`;
     case "builders":
       return `https://www.builders.co.za/search?text=${encoded}`;
+    case "cashbuild":
+      return `https://www.cashbuild.co.za/search?q=${encoded}`;
     default:
       return "#";
   }

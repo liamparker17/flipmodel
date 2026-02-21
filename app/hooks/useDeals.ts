@@ -7,6 +7,7 @@ import type {
   Activity, ActivityType,
   DealContact, ContactRole,
   Document, DocumentType,
+  ShoppingListItem,
 } from "../types/deal";
 
 const DEALS_KEY = "justhousesErp_deals";
@@ -48,6 +49,7 @@ function ensureDealDefaults(deal: Partial<Deal>): Deal {
     activities: deal.activities || [],
     contacts: deal.contacts || [],
     documents: deal.documents || [],
+    shoppingList: deal.shoppingList || undefined,
     data: deal.data || {
       mode: "quick",
       acq: { purchasePrice: 1200000, deposit: 0, bondRate: 12.75, bondTerm: 240, cashPurchase: false, transferAttorneyFees: 45000, bondRegistration: 25000, initialRepairs: 0 },
@@ -667,6 +669,80 @@ export default function useDeals() {
     return persist(updated);
   }, [persist]);
 
+  // ─── Shopping List Management ───
+  const updateShoppingItem = useCallback((dealId: string, materialKey: string, category: string, changes: Partial<ShoppingListItem>) => {
+    const current = loadDealsFromStorage();
+    const updated = current.map((d) => {
+      if (d.id !== dealId) return d;
+      const list = d.shoppingList ? [...d.shoppingList] : [];
+      const idx = list.findIndex((item) => item.materialKey === materialKey && item.category === category);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...changes };
+      } else {
+        list.push({ materialKey, category, purchased: false, ...changes });
+      }
+      return ensureDealDefaults({ ...d, shoppingList: list, updatedAt: new Date().toISOString() });
+    });
+    return persist(updated);
+  }, [persist]);
+
+  const markItemPurchased = useCallback((dealId: string, materialKey: string, category: string, purchased: boolean, actualPrice?: number, vendor?: string) => {
+    const current = loadDealsFromStorage();
+    const updated = current.map((d) => {
+      if (d.id !== dealId) return d;
+      const list = d.shoppingList ? [...d.shoppingList] : [];
+      const idx = list.findIndex((item) => item.materialKey === materialKey && item.category === category);
+      const entry: ShoppingListItem = {
+        materialKey,
+        category,
+        purchased,
+        ...(actualPrice !== undefined ? { actualPrice } : {}),
+        ...(vendor ? { vendor } : {}),
+        ...(purchased ? { purchasedDate: new Date().toISOString().slice(0, 10) } : {}),
+      };
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...entry };
+      } else {
+        list.push(entry);
+      }
+      return ensureDealDefaults({ ...d, shoppingList: list, updatedAt: new Date().toISOString() });
+    });
+    return persist(updated);
+  }, [persist]);
+
+  const addCustomShoppingItem = useCallback((dealId: string, item: { label: string; category: string; qty: number; unit: string; unitPrice: number; vendor?: string }) => {
+    const current = loadDealsFromStorage();
+    const materialKey = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const entry: ShoppingListItem = {
+      materialKey,
+      category: item.category,
+      purchased: false,
+      isCustom: true,
+      label: item.label,
+      qty: item.qty,
+      unit: item.unit,
+      unitPrice: item.unitPrice,
+      ...(item.vendor ? { vendor: item.vendor } : {}),
+    };
+    const updated = current.map((d) => {
+      if (d.id !== dealId) return d;
+      const list = d.shoppingList ? [...d.shoppingList, entry] : [entry];
+      return ensureDealDefaults({ ...d, shoppingList: list, updatedAt: new Date().toISOString() });
+    });
+    persist(updated);
+    return materialKey;
+  }, [persist]);
+
+  const removeCustomShoppingItem = useCallback((dealId: string, materialKey: string) => {
+    const current = loadDealsFromStorage();
+    const updated = current.map((d) => {
+      if (d.id !== dealId) return d;
+      const list = (d.shoppingList || []).filter((s) => s.materialKey !== materialKey);
+      return ensureDealDefaults({ ...d, shoppingList: list, updatedAt: new Date().toISOString() });
+    });
+    return persist(updated);
+  }, [persist]);
+
   // ─── Activity Log ───
   const addActivity = useCallback((dealId: string, type: ActivityType, description: string, metadata?: Record<string, unknown>) => {
     const current = loadDealsFromStorage();
@@ -685,6 +761,7 @@ export default function useDeals() {
     addExpense, updateExpense, deleteExpense,
     addMilestone, updateMilestone, toggleTask,
     addContact, deleteContact,
+    updateShoppingItem, markItemPurchased, addCustomShoppingItem, removeCustomShoppingItem,
     addActivity,
   };
 }
