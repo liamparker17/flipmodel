@@ -75,7 +75,7 @@ export default function DealDetailPage() {
     return (
       <div style={{ padding: 40, color: theme.textDim }}>
         <p>Deal not found.</p>
-        <button onClick={() => router.push("/pipeline")} style={{ background: theme.accent, color: "#000", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 12 }}>
+        <button onClick={() => router.push("/pipeline")} style={{ background: theme.accent, color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", marginTop: 12 }}>
           Back to Pipeline
         </button>
       </div>
@@ -88,15 +88,15 @@ export default function DealDetailPage() {
     <div style={{ maxWidth: 1200, margin: "0 auto" }}>
       {/* Header */}
       <div style={{
-        padding: isMobile ? "12px 16px" : "16px 32px",
+        padding: isMobile ? "10px 16px" : "12px 28px",
         borderBottom: `1px solid ${theme.cardBorder}`,
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        flexWrap: "wrap", gap: 12, paddingLeft: isMobile ? 60 : 32,
+        flexWrap: "wrap", gap: 10, paddingLeft: isMobile ? 56 : 28,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
           <button onClick={() => router.push("/pipeline")} style={{
             background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6,
-            width: 36, height: 36, color: theme.textDim, fontSize: 16, cursor: "pointer",
+            width: 32, height: 32, color: theme.textDim, fontSize: 14, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
           }}>&larr;</button>
           <div style={{ minWidth: 0, flex: 1 }}>
@@ -108,70 +108,69 @@ export default function DealDetailPage() {
                 autoFocus
                 style={{
                   background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6,
-                  padding: "6px 10px", color: theme.text, fontSize: 18, fontWeight: 700, width: "100%", outline: "none",
+                  padding: "4px 8px", color: theme.text, fontSize: 16, fontWeight: 600, width: "100%", outline: "none",
                 }}
               />
             ) : (
-              <h1 onClick={() => setEditingName(true)} style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, margin: 0, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title="Click to rename">
+              <h1 onClick={() => setEditingName(true)} style={{ fontSize: isMobile ? 16 : 20, fontWeight: 600, margin: 0, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: theme.text }} title="Click to rename">
                 {deal.name}
               </h1>
             )}
-            <div style={{ fontSize: 11, color: theme.textDim, marginTop: 2 }}>
-              {deal.address || "No address"} &middot; Created {new Date(deal.createdAt).toLocaleDateString()}
+            <div style={{ fontSize: 10, color: theme.textDim, marginTop: 1 }}>
+              {deal.address || "No address"} &middot; {new Date(deal.createdAt).toLocaleDateString()}
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <select value={deal.stage} onChange={(e) => handleStageChange(e.target.value as DealStage)} style={{
-            background: `${stageColor}18`, border: `1px solid ${stageColor}40`, borderRadius: 8,
-            padding: "8px 12px", color: stageColor, fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36,
+            background: `${stageColor}10`, border: `1px solid ${stageColor}30`, borderRadius: 6,
+            padding: "6px 10px", color: stageColor, fontSize: 11, fontWeight: 600, cursor: "pointer", minHeight: 32,
           }}>
             {DEAL_STAGES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
           <button onClick={handleDelete} style={{
-            background: "transparent", border: `1px solid ${theme.red}40`, borderRadius: 8,
-            padding: "8px 12px", color: theme.red, fontSize: 12, cursor: "pointer", minHeight: 36,
+            background: "transparent", border: `1px solid ${theme.red}30`, borderRadius: 6,
+            padding: "6px 10px", color: theme.red, fontSize: 11, cursor: "pointer", minHeight: 32,
           }}>Delete</button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 2, padding: isMobile ? "8px 16px" : "10px 32px", borderBottom: `1px solid ${theme.cardBorder}` }}>
+      <div style={{ display: "flex", gap: 1, padding: isMobile ? "6px 16px" : "8px 28px", borderBottom: `1px solid ${theme.cardBorder}` }}>
         {TABS.map((tab) => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-            background: activeTab === tab.key ? theme.accent : "transparent",
-            color: activeTab === tab.key ? "#000" : theme.textDim,
-            border: `1px solid ${activeTab === tab.key ? theme.accent : theme.cardBorder}`,
-            borderRadius: 8, padding: "8px 16px", fontSize: 13,
-            fontWeight: activeTab === tab.key ? 700 : 400, cursor: "pointer", minHeight: 36,
+            background: activeTab === tab.key ? `${theme.accent}12` : "transparent",
+            color: activeTab === tab.key ? theme.accent : theme.textDim,
+            border: activeTab === tab.key ? `1px solid ${theme.accent}25` : "1px solid transparent",
+            borderRadius: 6, padding: "6px 14px", fontSize: 12,
+            fontWeight: activeTab === tab.key ? 600 : 400, cursor: "pointer", minHeight: 32,
           }}>{tab.label}</button>
         ))}
       </div>
 
       {/* Tab Content */}
       {activeTab === "overview" && (
-        <div style={{ padding: isMobile ? 16 : 32 }}>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: 20 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.accent, textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 16px" }}>Deal Information</h3>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+        <div style={{ padding: isMobile ? 16 : 28 }}>
+          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
+            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Deal Information</h3>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
               <InfoField label="Name" value={deal.name} />
-              <InfoField label="Address" value={deal.address || "—"} />
+              <InfoField label="Address" value={deal.address || "\u2014"} />
               <InfoField label="Stage" value={getStageLabel(deal.stage)} valueColor={stageColor} />
               <InfoField label="Created" value={new Date(deal.createdAt).toLocaleDateString()} />
               <InfoField label="Purchase Price" value={fmt(deal.purchasePrice)} mono />
               <InfoField label="Expected Sale" value={fmt(deal.expectedSalePrice)} mono />
             </div>
           </div>
-          {/* Notes */}
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: 20, marginTop: 16 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.accent, textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 16px" }}>Notes</h3>
+          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginTop: 12 }}>
+            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Notes</h3>
             <textarea
               value={notesInput} onChange={(e) => setNotesInput(e.target.value)} onBlur={handleNotesSave}
               placeholder="Add notes about this deal..."
               style={{
-                width: "100%", minHeight: 150, background: theme.input, border: `1px solid ${theme.inputBorder}`,
-                borderRadius: 8, padding: 14, color: theme.text, fontSize: 14, lineHeight: 1.6,
-                resize: "vertical", outline: "none", fontFamily: "'Outfit', 'Segoe UI', sans-serif",
+                width: "100%", minHeight: 120, background: theme.input, border: `1px solid ${theme.inputBorder}`,
+                borderRadius: 6, padding: 12, color: theme.text, fontSize: 13, lineHeight: 1.6,
+                resize: "vertical", outline: "none", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               }}
             />
           </div>
@@ -183,24 +182,22 @@ export default function DealDetailPage() {
       )}
 
       {activeTab === "budget" && (
-        <div style={{ padding: isMobile ? 16 : 32 }}>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: 40, textAlign: "center" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>R</div>
-            <h3 style={{ fontSize: 18, fontWeight: 600, color: theme.text, margin: "0 0 8px" }}>Budget Tracking</h3>
-            <p style={{ fontSize: 13, color: theme.textDim, maxWidth: 400, margin: "0 auto" }}>
-              Detailed budget tracking with actual vs projected costs, expense categories, and receipt management. Coming soon.
+        <div style={{ padding: isMobile ? 16 : 28 }}>
+          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 40, textAlign: "center" }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: theme.text, margin: "0 0 6px" }}>Budget Tracking</h3>
+            <p style={{ fontSize: 12, color: theme.textDim, maxWidth: 360, margin: "0 auto" }}>
+              Detailed budget tracking with actual vs projected costs. Coming soon.
             </p>
           </div>
         </div>
       )}
 
       {activeTab === "timeline" && (
-        <div style={{ padding: isMobile ? 16 : 32 }}>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: 40, textAlign: "center" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>T</div>
-            <h3 style={{ fontSize: 18, fontWeight: 600, color: theme.text, margin: "0 0 8px" }}>Project Timeline</h3>
-            <p style={{ fontSize: 13, color: theme.textDim, maxWidth: 400, margin: "0 auto" }}>
-              Gantt-style timeline with milestones, contractor schedules, and progress tracking. Coming soon.
+        <div style={{ padding: isMobile ? 16 : 28 }}>
+          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 40, textAlign: "center" }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: theme.text, margin: "0 0 6px" }}>Project Timeline</h3>
+            <p style={{ fontSize: 12, color: theme.textDim, maxWidth: 360, margin: "0 auto" }}>
+              Gantt-style timeline with milestones and progress tracking. Coming soon.
             </p>
           </div>
         </div>
@@ -212,8 +209,8 @@ export default function DealDetailPage() {
 function InfoField({ label, value, valueColor, mono }: { label: string; value: string; valueColor?: string; mono?: boolean }) {
   return (
     <div>
-      <div style={{ fontSize: 11, color: theme.textDim, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 15, color: valueColor || theme.text, fontWeight: valueColor ? 600 : 400, fontFamily: mono ? "'JetBrains Mono', monospace" : "inherit" }}>{value}</div>
+      <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 13, color: valueColor || theme.text, fontWeight: valueColor ? 600 : 400, fontFamily: mono ? "'JetBrains Mono', monospace" : "inherit" }}>{value}</div>
     </div>
   );
 }

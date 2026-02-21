@@ -62,56 +62,51 @@ export default function DashboardPage() {
   };
 
   return (
-    <div style={{ padding: isMobile ? 16 : 32, maxWidth: 1200, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, paddingLeft: isMobile ? 48 : 0 }}>
+    <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, paddingLeft: isMobile ? 48 : 0 }}>
         <div>
-          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, margin: 0 }}>Dashboard</h1>
-          <p style={{ fontSize: 13, color: theme.textDim, margin: "4px 0 0" }}>Overview of your property deals</p>
+          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>Dashboard</h1>
+          <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>Overview of your property portfolio</p>
         </div>
         <button onClick={handleNewDeal} style={{
-          background: theme.accent, color: "#000", border: "none", borderRadius: 8,
-          padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer", minHeight: 40,
+          background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
+          padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36,
         }}>+ New Deal</button>
       </div>
 
       {/* KPI Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: 16, marginBottom: 32 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
         {[
-          { label: "Total Deals", value: String(deals.length), sub: `${activeDeals.length} active`, color: theme.accent, icon: "D" },
-          { label: "Active Projects", value: String(renovating.length), sub: "Purchased + Renovating", color: theme.orange, icon: "W" },
-          { label: "Average ROI", value: pct(avgRoi), sub: "Across all deals", color: avgRoi >= 0.15 ? theme.green : theme.orange, icon: "%" },
-          { label: "Total Expected Profit", value: fmt(totalProfit), sub: "Estimated total", color: totalProfit >= 0 ? theme.green : theme.red, icon: "$" },
+          { label: "Total Deals", value: String(deals.length), sub: `${activeDeals.length} active`, color: theme.accent },
+          { label: "Active Projects", value: String(renovating.length), sub: "In progress", color: theme.orange },
+          { label: "Average ROI", value: pct(avgRoi), sub: "Across all deals", color: avgRoi >= 0.15 ? theme.green : theme.orange },
+          { label: "Expected Profit", value: fmt(totalProfit), sub: "Portfolio total", color: totalProfit >= 0 ? theme.green : theme.red },
         ].map((kpi) => (
           <div key={kpi.label} style={{
             background: theme.card, border: `1px solid ${theme.cardBorder}`,
-            borderRadius: 12, padding: 20,
+            borderRadius: 8, padding: 16,
           }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <span style={{ fontSize: 11, color: theme.textDim, textTransform: "uppercase", letterSpacing: 1 }}>{kpi.label}</span>
-              <span style={{
-                width: 32, height: 32, borderRadius: 8, background: `${kpi.color}18`, color: kpi.color,
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700,
-              }}>{kpi.icon}</span>
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: kpi.color, fontFamily: "'JetBrains Mono', monospace", marginBottom: 4 }}>{kpi.value}</div>
-            <div style={{ fontSize: 12, color: theme.textDim }}>{kpi.sub}</div>
+            <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 500, marginBottom: 8 }}>{kpi.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: kpi.color, fontFamily: "'JetBrains Mono', monospace", marginBottom: 2 }}>{kpi.value}</div>
+            <div style={{ fontSize: 11, color: theme.textDim }}>{kpi.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Pipeline Summary */}
-      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.accent, textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 16px" }}>Pipeline Summary</h3>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
+        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Pipeline Summary</h3>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {DEAL_STAGES.map((stage) => {
             const count = deals.filter((d) => d.stage === stage.key).length;
             return (
               <div key={stage.key} style={{
-                background: `${stage.color}12`, border: `1px solid ${stage.color}30`,
-                borderRadius: 8, padding: "10px 16px", minWidth: 100, textAlign: "center", cursor: "pointer",
+                background: `${stage.color}08`, border: `1px solid ${stage.color}25`,
+                borderRadius: 6, padding: "8px 14px", minWidth: 90, textAlign: "center", cursor: "pointer",
+                transition: "border-color 0.15s",
               }} onClick={() => router.push("/pipeline")}>
-                <div style={{ fontSize: 20, fontWeight: 700, color: stage.color, fontFamily: "'JetBrains Mono', monospace" }}>{count}</div>
-                <div style={{ fontSize: 11, color: theme.textDim, marginTop: 2 }}>{stage.label}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: stage.color, fontFamily: "'JetBrains Mono', monospace" }}>{count}</div>
+                <div style={{ fontSize: 10, color: theme.textDim, marginTop: 1 }}>{stage.label}</div>
               </div>
             );
           })}
@@ -119,12 +114,17 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Deals */}
-      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: 20 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.accent, textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 16px" }}>Recent Deals</h3>
+      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>Recent Deals</h3>
+          <button onClick={() => router.push("/pipeline")} style={{
+            background: "transparent", border: "none", color: theme.accent, fontSize: 12, cursor: "pointer", padding: 0, fontWeight: 500, minHeight: "auto", minWidth: "auto",
+          }}>View all</button>
+        </div>
         {recentDeals.length === 0 ? (
-          <p style={{ fontSize: 13, color: theme.textDim }}>No deals yet. Create your first deal to get started.</p>
+          <p style={{ fontSize: 12, color: theme.textDim }}>No deals yet. Create your first deal to get started.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {recentDeals.map((deal) => {
               const m = computeQuickMetrics(deal);
               const stageInfo = DEAL_STAGES.find((s) => s.key === deal.stage);
@@ -133,24 +133,25 @@ export default function DashboardPage() {
                   key={deal.id}
                   onClick={() => router.push(`/pipeline/${deal.id}`)}
                   style={{
-                    background: theme.input, borderRadius: 8, padding: "12px 16px",
+                    background: theme.input, borderRadius: 6, padding: "10px 12px",
                     cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between",
                     borderLeft: `3px solid ${stageInfo?.color || theme.textDim}`,
+                    transition: "background 0.1s",
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>{deal.name}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: theme.text }}>{deal.name}</div>
                     <div style={{ fontSize: 11, color: theme.textDim }}>{deal.address || "No address"}</div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: m.estimatedProfit >= 0 ? theme.green : theme.red, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(m.estimatedProfit)}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: m.estimatedProfit >= 0 ? theme.green : theme.red, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(m.estimatedProfit)}</div>
                       <div style={{ fontSize: 10, color: theme.textDim }}>est. profit</div>
                     </div>
                     <span style={{
-                      fontSize: 10, fontWeight: 600, color: stageInfo?.color,
-                      background: `${stageInfo?.color}18`, padding: "3px 8px", borderRadius: 6,
-                      textTransform: "uppercase",
+                      fontSize: 9, fontWeight: 600, color: stageInfo?.color,
+                      background: `${stageInfo?.color}15`, padding: "2px 6px", borderRadius: 4,
+                      textTransform: "uppercase", letterSpacing: 0.3,
                     }}>{stageInfo?.label}</span>
                   </div>
                 </div>

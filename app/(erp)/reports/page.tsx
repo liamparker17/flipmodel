@@ -17,7 +17,6 @@ export default function ReportsPage() {
 
   if (!loaded) return <div style={{ padding: 40, color: theme.textDim }}>Loading...</div>;
 
-  // Aggregate data for reports
   const stageBreakdown = DEAL_STAGES.map((stage) => {
     const stageDeals = deals.filter((d) => d.stage === stage.key);
     let totalValue = 0;
@@ -44,45 +43,45 @@ export default function ReportsPage() {
   const overallRoi = overallPurchase > 0 ? overallProfit / overallPurchase : 0;
 
   return (
-    <div style={{ padding: isMobile ? 16 : 32, maxWidth: 1200, margin: "0 auto" }}>
-      <div style={{ marginBottom: 28, paddingLeft: isMobile ? 48 : 0 }}>
-        <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, margin: 0 }}>Reports</h1>
-        <p style={{ fontSize: 13, color: theme.textDim, margin: "4px 0 0" }}>Portfolio performance and pipeline analytics</p>
+    <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ marginBottom: 24, paddingLeft: isMobile ? 48 : 0 }}>
+        <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>Reports</h1>
+        <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>Portfolio performance and pipeline analytics</p>
       </div>
 
       {/* Portfolio Summary */}
-      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.accent, textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 16px" }}>Portfolio Summary</h3>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16 }}>
+      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
+        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Portfolio Summary</h3>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 12 }}>
           <div>
-            <div style={{ fontSize: 11, color: theme.textDim, textTransform: "uppercase", marginBottom: 4 }}>Total Deals</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: theme.accent, fontFamily: "'JetBrains Mono', monospace" }}>{deals.length}</div>
+            <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Total Deals</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: theme.accent, fontFamily: "'JetBrains Mono', monospace" }}>{deals.length}</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: theme.textDim, textTransform: "uppercase", marginBottom: 4 }}>Portfolio ROI</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: overallRoi >= 0.15 ? theme.green : theme.orange, fontFamily: "'JetBrains Mono', monospace" }}>{pct(overallRoi)}</div>
+            <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Portfolio ROI</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: overallRoi >= 0.15 ? theme.green : theme.orange, fontFamily: "'JetBrains Mono', monospace" }}>{pct(overallRoi)}</div>
           </div>
           <div>
-            <div style={{ fontSize: 11, color: theme.textDim, textTransform: "uppercase", marginBottom: 4 }}>Total Est. Profit</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: overallProfit >= 0 ? theme.green : theme.red, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(overallProfit)}</div>
+            <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Total Est. Profit</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: overallProfit >= 0 ? theme.green : theme.red, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(overallProfit)}</div>
           </div>
         </div>
       </div>
 
       {/* Stage Breakdown */}
-      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.accent, textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 16px" }}>Pipeline by Stage</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
+        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Pipeline by Stage</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {stageBreakdown.map((stage) => {
             const pctOfTotal = deals.length > 0 ? (stage.count / deals.length) * 100 : 0;
             return (
-              <div key={stage.key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 100, fontSize: 12, color: stage.color, fontWeight: 600 }}>{stage.label}</div>
-                <div style={{ flex: 1, height: 24, background: theme.input, borderRadius: 4, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${pctOfTotal}%`, background: stage.color, borderRadius: 4, opacity: 0.7, transition: "width 0.4s", minWidth: stage.count > 0 ? 8 : 0 }} />
+              <div key={stage.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 80, fontSize: 11, color: stage.color, fontWeight: 600 }}>{stage.label}</div>
+                <div style={{ flex: 1, height: 20, background: theme.input, borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${pctOfTotal}%`, background: stage.color, borderRadius: 3, opacity: 0.7, transition: "width 0.4s", minWidth: stage.count > 0 ? 6 : 0 }} />
                 </div>
-                <div style={{ width: 30, fontSize: 13, fontWeight: 700, color: stage.color, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{stage.count}</div>
-                <div style={{ width: 120, fontSize: 12, color: theme.textDim, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{fmt(stage.totalValue)}</div>
+                <div style={{ width: 24, fontSize: 12, fontWeight: 700, color: stage.color, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{stage.count}</div>
+                <div style={{ width: 100, fontSize: 11, color: theme.textDim, textAlign: "right", fontFamily: "'JetBrains Mono', monospace" }}>{fmt(stage.totalValue)}</div>
               </div>
             );
           })}
@@ -90,17 +89,17 @@ export default function ReportsPage() {
       </div>
 
       {/* Profit Distribution */}
-      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: 20 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.accent, textTransform: "uppercase", letterSpacing: 1.5, margin: "0 0 16px" }}>Profit by Stage</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
+        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Profit by Stage</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {stageBreakdown.filter((s) => s.count > 0).map((stage) => (
-            <div key={stage.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: theme.input, borderRadius: 8 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color }} />
-                <span style={{ fontSize: 13, color: theme.text }}>{stage.label}</span>
-                <span style={{ fontSize: 11, color: theme.textDim }}>({stage.count} deals)</span>
+            <div key={stage.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", background: theme.input, borderRadius: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: stage.color }} />
+                <span style={{ fontSize: 12, color: theme.text }}>{stage.label}</span>
+                <span style={{ fontSize: 10, color: theme.textDim }}>({stage.count})</span>
               </div>
-              <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: stage.totalProfit >= 0 ? theme.green : theme.red }}>
+              <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: stage.totalProfit >= 0 ? theme.green : theme.red }}>
                 {fmt(stage.totalProfit)}
               </span>
             </div>

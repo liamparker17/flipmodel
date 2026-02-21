@@ -10,12 +10,12 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: "D" },
-  { href: "/pipeline", label: "Pipeline", icon: "P" },
-  { href: "/projects", label: "Projects", icon: "W" },
-  { href: "/finance", label: "Finance", icon: "F" },
-  { href: "/reports", label: "Reports", icon: "R" },
-  { href: "/settings", label: "Settings", icon: "S" },
+  { href: "/dashboard", label: "Dashboard", icon: "\u25A6" },
+  { href: "/pipeline", label: "Pipeline", icon: "\u25B6" },
+  { href: "/projects", label: "Projects", icon: "\u2692" },
+  { href: "/finance", label: "Finance", icon: "\u2234" },
+  { href: "/reports", label: "Reports", icon: "\u2261" },
+  { href: "/settings", label: "Settings", icon: "\u2699" },
 ];
 
 interface SidebarProps {
@@ -40,7 +40,7 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
   }, []);
 
   const collapsed = isTablet;
-  const sidebarWidth = collapsed ? 56 : 240;
+  const sidebarWidth = collapsed ? 56 : 220;
 
   const isActive = (href: string): boolean => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -64,20 +64,20 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
           onClick={() => setMobileOpen(true)}
           style={{
             position: "fixed", top: 12, left: 12, zIndex: 200,
-            width: 44, height: 44, borderRadius: 10,
+            width: 40, height: 40, borderRadius: 6,
             background: theme.card, border: `1px solid ${theme.cardBorder}`,
-            color: theme.text, fontSize: 18, cursor: "pointer",
+            color: theme.textDim, fontSize: 16, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          =
+          &#9776;
         </button>
         {mobileOpen && (
           <div style={{ position: "fixed", inset: 0, zIndex: 300 }}>
             <div onClick={() => setMobileOpen(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} />
             <div style={{
-              position: "relative", width: 260, height: "100%",
-              background: theme.card, borderRight: `1px solid ${theme.cardBorder}`,
+              position: "relative", width: 240, height: "100%",
+              background: theme.bg, borderRight: `1px solid ${theme.cardBorder}`,
               display: "flex", flexDirection: "column", overflow: "auto",
             }}>
               <SidebarContent
@@ -94,7 +94,7 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
   return (
     <div style={{
       width: sidebarWidth, minHeight: "100vh", flexShrink: 0,
-      background: theme.card, borderRight: `1px solid ${theme.cardBorder}`,
+      background: theme.bg, borderRight: `1px solid ${theme.cardBorder}`,
       display: "flex", flexDirection: "column", transition: "width 0.2s",
       position: "sticky", top: 0, height: "100vh", overflow: "auto",
     }}>
@@ -115,44 +115,44 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }: Side
   return (
     <>
       <div style={{
-        padding: collapsed ? "16px 10px" : "16px 20px",
+        padding: collapsed ? "14px 8px" : "14px 16px",
         borderBottom: `1px solid ${theme.cardBorder}`,
         display: "flex", alignItems: "center", gap: 10,
         justifyContent: collapsed ? "center" : "space-between",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => onNav("/dashboard")}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => onNav("/dashboard")}>
           <div style={{
-            width: 32, height: 32, background: theme.accent, borderRadius: 8,
+            width: 28, height: 28, background: theme.accent, borderRadius: 6,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 13, fontWeight: 700, color: "#000", flexShrink: 0,
+            fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0,
           }}>JH</div>
-          {!collapsed && <span style={{ fontSize: 15, fontWeight: 700, color: theme.text }}>JustHouses</span>}
+          {!collapsed && <span style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>JustHouses</span>}
         </div>
         {onClose && (
           <button onClick={onClose} style={{
-            background: theme.input, border: "none", borderRadius: 6,
-            width: 32, height: 32, color: theme.textDim, fontSize: 14, cursor: "pointer",
+            background: "transparent", border: "none", borderRadius: 4,
+            width: 28, height: 28, color: theme.textDim, fontSize: 16, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
-          }}>X</button>
+          }}>&times;</button>
         )}
       </div>
 
-      <div style={{ padding: collapsed ? "12px 8px" : "12px 16px" }}>
+      <div style={{ padding: collapsed ? "10px 8px" : "10px 12px" }}>
         <button
           onClick={onNewDeal}
           style={{
-            width: "100%", padding: collapsed ? "10px 0" : "10px 16px",
-            background: theme.accent, color: "#000", border: "none",
-            borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer",
-            minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            width: "100%", padding: collapsed ? "8px 0" : "8px 14px",
+            background: theme.accent, color: "#fff", border: "none",
+            borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
+            minHeight: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
           }}
         >
-          <span style={{ fontSize: 16 }}>+</span>
+          <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
           {!collapsed && "New Deal"}
         </button>
       </div>
 
-      <nav style={{ flex: 1, padding: collapsed ? "4px 8px" : "4px 12px" }}>
+      <nav style={{ flex: 1, padding: collapsed ? "2px 8px" : "2px 8px" }}>
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.href);
           return (
@@ -161,21 +161,21 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }: Side
               onClick={() => onNav(item.href)}
               style={{
                 width: "100%", display: "flex", alignItems: "center",
-                gap: 10, padding: collapsed ? "10px 0" : "10px 12px",
-                background: active ? theme.accentDim : "transparent",
-                border: "none", borderRadius: 8, cursor: "pointer",
+                gap: 8, padding: collapsed ? "8px 0" : "8px 10px",
+                background: active ? `${theme.accent}12` : "transparent",
+                border: active ? `1px solid ${theme.accent}20` : "1px solid transparent",
+                borderRadius: 6, cursor: "pointer",
                 color: active ? theme.accent : theme.textDim,
                 fontSize: 13, fontWeight: active ? 600 : 400,
-                marginBottom: 2, minHeight: 40,
+                marginBottom: 1, minHeight: 36,
                 justifyContent: collapsed ? "center" : "flex-start",
-                transition: "all 0.15s",
+                transition: "all 0.1s",
               }}
             >
               <span style={{
-                width: 28, height: 28, borderRadius: 6,
-                background: active ? `${theme.accent}20` : theme.input,
+                width: 24, height: 24, borderRadius: 4,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 12, fontWeight: 700, flexShrink: 0,
+                fontSize: 13, flexShrink: 0,
               }}>
                 {item.icon}
               </span>
@@ -187,10 +187,10 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }: Side
 
       {!collapsed && (
         <div style={{
-          padding: "12px 16px", borderTop: `1px solid ${theme.cardBorder}`,
-          fontSize: 11, color: theme.textDim,
+          padding: "10px 16px", borderTop: `1px solid ${theme.cardBorder}`,
+          fontSize: 10, color: theme.textDim, letterSpacing: 0.5,
         }}>
-          JustHouses ERP
+          JustHouses ERP v1.0
         </div>
       )}
     </>

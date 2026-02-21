@@ -22,7 +22,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div style={{
       display: "flex", minHeight: "100vh",
       background: theme.bg, color: theme.text,
-      fontFamily: "'Outfit', 'Segoe UI', sans-serif",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     }}>
       <Sidebar onNewDeal={handleNewDeal} />
       <main style={{ flex: 1, minWidth: 0, overflow: "auto" }}>
