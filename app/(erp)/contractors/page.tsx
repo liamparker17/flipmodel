@@ -17,7 +17,7 @@ interface ContractorProfile {
   accountNumber?: string;
   branchCode?: string;
   accountType?: string;
-  projects: { dealId: string; dealName: string; dealAddress: string; dealStage: string; daysWorked: number; totalPaid: number; contactId: string }[];
+  projects: { dealId: string; dealName: string; dealAddress: string; dealStage: string; daysWorked: number; totalPaid: number; contactId: string; workDescription?: string }[];
   totalDaysWorked: number;
   totalEarned: number;
 }
@@ -100,6 +100,7 @@ function ContractorsPageInner() {
           daysWorked,
           totalPaid: paid,
           contactId: c.id,
+          workDescription: c.workDescription,
         });
 
         p.totalDaysWorked += daysWorked;
@@ -193,23 +194,38 @@ function ContractorsPageInner() {
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${theme.cardBorder}` }}>
             <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>Project History</h3>
           </div>
-          <div style={{ fontSize: 10, color: theme.textDim, display: "grid", gridTemplateColumns: "1.5fr 1fr 80px 100px 80px", gap: 0, padding: "8px 16px 4px", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
-            <span>Property</span><span>Stage</span><span style={{ textAlign: "right" }}>Days</span><span style={{ textAlign: "right" }}>Paid</span><span style={{ textAlign: "right" }}>Action</span>
-          </div>
           {selected.projects.map((p) => {
             const stageColor = p.dealStage === "renovating" ? theme.orange : p.dealStage === "sold" ? theme.green : theme.accent;
             return (
-              <div key={p.dealId} style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 80px 100px 80px", gap: 0, padding: "10px 16px", alignItems: "center", borderBottom: `1px solid ${theme.cardBorder}20` }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: theme.text }}>{p.dealName}</div>
-                  <div style={{ fontSize: 10, color: theme.textDim }}>{p.dealAddress}</div>
+              <div key={p.dealId} style={{ padding: "14px 16px", borderBottom: `1px solid ${theme.cardBorder}` }}>
+                {/* Top row: property info + stats */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: p.workDescription ? 10 : 0 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: theme.text }}>{p.dealName}</span>
+                      <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, fontWeight: 600, background: `${stageColor}15`, color: stageColor }}>{p.dealStage}</span>
+                    </div>
+                    <div style={{ fontSize: 10, color: theme.textDim }}>{p.dealAddress}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 16, alignItems: "center", flexShrink: 0 }}>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5 }}>Days</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, fontFamily: "'JetBrains Mono', monospace", color: theme.text }}>{p.daysWorked}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5 }}>Paid</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: theme.green }}>{fmt(p.totalPaid)}</div>
+                    </div>
+                    <a href={`/projects/${p.dealId}`} style={{ fontSize: 10, color: theme.accent, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>View &rarr;</a>
+                  </div>
                 </div>
-                <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 600, background: `${stageColor}15`, color: stageColor, display: "inline-block", width: "fit-content" }}>{p.dealStage}</span>
-                <span style={{ textAlign: "right", fontSize: 13, fontFamily: "'JetBrains Mono', monospace", color: theme.text }}>{p.daysWorked}</span>
-                <span style={{ textAlign: "right", fontSize: 13, fontWeight: 600, fontFamily: "'JetBrains Mono', monospace", color: theme.text }}>{fmt(p.totalPaid)}</span>
-                <div style={{ textAlign: "right" }}>
-                  <a href={`/projects/${p.dealId}`} style={{ fontSize: 10, color: theme.accent, fontWeight: 600, textDecoration: "none" }}>View &rarr;</a>
-                </div>
+                {/* Work description */}
+                {p.workDescription && (
+                  <div style={{ background: theme.input, borderRadius: 6, padding: "8px 12px", borderLeft: `3px solid ${theme.accent}40` }}>
+                    <div style={{ fontSize: 9, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Work Performed</div>
+                    <div style={{ fontSize: 12, color: theme.text, lineHeight: 1.5 }}>{p.workDescription}</div>
+                  </div>
+                )}
               </div>
             );
           })}

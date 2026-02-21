@@ -118,7 +118,7 @@ const MOCK_DEALS: Deal[] = [
     ],
     contacts: [
       { id: "c_1", name: "Sarah van der Merwe", role: "agent", company: "Pam Golding Properties", phone: "082 456 7890", email: "sarah@pamgolding.co.za", notes: "Listing agent, responsive" },
-      { id: "c_2", name: "Johan Coetzee", role: "contractor", company: "Johan Builders CC", phone: "076 123 4567", notes: "General builder", profession: "Builder / General Contractor", dailyRate: 1200, daysWorked: 0 },
+      { id: "c_2", name: "Johan Coetzee", role: "contractor", company: "Johan Builders CC", phone: "076 123 4567", notes: "General builder", profession: "Builder / General Contractor", dailyRate: 1200, daysWorked: 0, workDescription: "Quoted for full renovation — awaiting purchase decision" },
     ],
     expenses: [
       { id: "e_1", dealId: "deal_demo_1", category: "professional_fees", description: "Building inspection", amount: 3500, date: "2026-02-22", vendor: "Home Inspectors SA", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-22T10:00:00Z" },
@@ -244,9 +244,9 @@ const MOCK_DEALS: Deal[] = [
       { id: "a_14", type: "expense_added", description: "Added expense: Kitchen tiles R18,500", timestamp: "2026-02-15T09:00:00Z" },
     ],
     contacts: [
-      { id: "c_5", name: "Johan Coetzee", role: "contractor", company: "Johan Builders CC", phone: "076 123 4567", notes: "Main builder", profession: "Builder / General Contractor", dailyRate: 1200, daysWorked: 45 },
-      { id: "c_6", name: "Pieter Sparks", role: "contractor", company: "Sparks Electrical", phone: "082 999 1234", notes: "Electrician", profession: "Electrician", dailyRate: 900, daysWorked: 8 },
-      { id: "c_7", name: "Nadia Plumbers", role: "contractor", phone: "073 456 7890", notes: "Plumbing", profession: "Plumber", dailyRate: 800, daysWorked: 6 },
+      { id: "c_5", name: "Johan Coetzee", role: "contractor", company: "Johan Builders CC", phone: "076 123 4567", notes: "Main builder", profession: "Builder / General Contractor", dailyRate: 1200, daysWorked: 45, workDescription: "Full renovation: demolition, framing, drywall, tiling (kitchen & bathrooms), carpentry, door hanging, final finishes" },
+      { id: "c_6", name: "Pieter Sparks", role: "contractor", company: "Sparks Electrical", phone: "082 999 1234", notes: "Electrician", profession: "Electrician", dailyRate: 900, daysWorked: 8, workDescription: "Rewired kitchen & lounge, installed new DB board, LED downlights throughout, CoC issued" },
+      { id: "c_7", name: "Nadia Plumbers", role: "contractor", phone: "073 456 7890", notes: "Plumbing", profession: "Plumber", dailyRate: 800, daysWorked: 6, workDescription: "Replaced geyser, re-plumbed master bathroom, installed new kitchen mixer taps" },
     ],
     expenses: [
       { id: "e_7", dealId: "deal_demo_3", category: "legal", description: "Transfer attorney fees", amount: 38000, date: "2026-01-10", vendor: "Smith & Associates", paymentMethod: "eft", isProjected: false, createdAt: "2026-01-10T10:00:00Z" },
@@ -378,8 +378,8 @@ const MOCK_DEALS: Deal[] = [
       { id: "ms_15", title: "List & Sell", description: "", dueDate: "2026-01-15", status: "completed", completedDate: "2026-01-10", tasks: [], order: 3 },
     ],
     contacts: [
-      { id: "c_9", name: "Reliable Builders", role: "contractor", company: "Reliable Builders CC", phone: "081 234 5678", profession: "Builder / General Contractor", dailyRate: 1100, daysWorked: 50 },
-      { id: "c_10", name: "Pro Plumbing", role: "contractor", company: "Pro Plumbing", phone: "082 345 6789", profession: "Plumber", dailyRate: 850, daysWorked: 6 },
+      { id: "c_9", name: "Reliable Builders", role: "contractor", company: "Reliable Builders CC", phone: "081 234 5678", profession: "Builder / General Contractor", dailyRate: 1100, daysWorked: 50, workDescription: "Full gut renovation: structural repairs, new ceilings, tiling, kitchen install, built-in cupboards, painting" },
+      { id: "c_10", name: "Pro Plumbing", role: "contractor", company: "Pro Plumbing", phone: "082 345 6789", profession: "Plumber", dailyRate: 850, daysWorked: 6, workDescription: "New geyser installation, bathroom rough-in, kitchen plumbing, compliance certificate" },
     ],
     activities: [
       { id: "a_19", type: "deal_created", description: "Deal created", timestamp: "2025-08-10T08:00:00Z" },
@@ -556,10 +556,10 @@ const MOCK_DEALS: Deal[] = [
     ],
     contacts: [
       { id: "c_cp1_1", name: "Karen Sobel", role: "agent", company: "Jawitz Properties Johannesburg North", phone: "082 300 4567", email: "karen@jawitz.co.za", notes: "Listing and selling agent" },
-      { id: "c_cp1_2", name: "Thabo Mokoena", role: "contractor", company: "Mokoena Building Services", phone: "079 456 1234", email: "thabo@mokoenabuild.co.za", notes: "Main builder — reliable, good finish quality", profession: "Builder / General Contractor", dailyRate: 1400, daysWorked: 55, bankName: "FNB", accountNumber: "62845109234", branchCode: "250655", accountType: "cheque" },
-      { id: "c_cp1_3", name: "David Sparks", role: "contractor", company: "Sparks & Sons Electrical", phone: "082 111 3456", notes: "Licensed electrician, does CoC", profession: "Electrician", dailyRate: 950, daysWorked: 10, bankName: "Standard Bank", accountNumber: "041298756", branchCode: "051001", accountType: "business" },
-      { id: "c_cp1_4", name: "Samuel Ndlovu", role: "contractor", company: "JHB Plumbing Co", phone: "073 222 4567", notes: "Plumber — good with bathroom renovations", profession: "Plumber", dailyRate: 900, daysWorked: 12, bankName: "Capitec", accountNumber: "1350478921", branchCode: "470010", accountType: "savings" },
-      { id: "c_cp1_5", name: "Peter Mabaso", role: "contractor", company: "Perfect Painters", phone: "081 333 5678", notes: "Interior and exterior, neat work", profession: "Painter", dailyRate: 800, daysWorked: 18, bankName: "Nedbank", accountNumber: "1187654320", branchCode: "198765", accountType: "cheque" },
+      { id: "c_cp1_2", name: "Thabo Mokoena", role: "contractor", company: "Mokoena Building Services", phone: "079 456 1234", email: "thabo@mokoenabuild.co.za", notes: "Main builder — reliable, good finish quality", profession: "Builder / General Contractor", dailyRate: 1400, daysWorked: 55, workDescription: "Full renovation at 75 Lancaster: demolition & strip-out, structural repairs, new ceilings, all tiling (kitchen, 3 bathrooms, entrance), kitchen cabinetry install, built-in cupboards in 3 bedrooms, door & frame replacement, final snagging", bankName: "FNB", accountNumber: "62845109234", branchCode: "250655", accountType: "cheque" },
+      { id: "c_cp1_3", name: "David Sparks", role: "contractor", company: "Sparks & Sons Electrical", phone: "082 111 3456", notes: "Licensed electrician, does CoC", profession: "Electrician", dailyRate: 950, daysWorked: 10, workDescription: "Full rewire at 75 Lancaster: new DB board, LED downlights in all rooms, under-cabinet kitchen lights, outdoor security lights, stove point relocation, CoC issued", bankName: "Standard Bank", accountNumber: "041298756", branchCode: "051001", accountType: "business" },
+      { id: "c_cp1_4", name: "Samuel Ndlovu", role: "contractor", company: "JHB Plumbing Co", phone: "073 222 4567", notes: "Plumber — good with bathroom renovations", profession: "Plumber", dailyRate: 900, daysWorked: 12, workDescription: "Plumbing at 75 Lancaster: new geyser install, re-plumbed all 3 bathrooms (basins, toilets, showers), kitchen sink & dishwasher point, washing machine plumbing, compliance certificate", bankName: "Capitec", accountNumber: "1350478921", branchCode: "470010", accountType: "savings" },
+      { id: "c_cp1_5", name: "Peter Mabaso", role: "contractor", company: "Perfect Painters", phone: "081 333 5678", notes: "Interior and exterior, neat work", profession: "Painter", dailyRate: 800, daysWorked: 18, workDescription: "Painting at 75 Lancaster: full interior (walls & ceilings all rooms), exterior walls & fascia boards, front door & window frames, garage door, 2 coats Plascon throughout", bankName: "Nedbank", accountNumber: "1187654320", branchCode: "198765", accountType: "cheque" },
       { id: "c_cp1_6", name: "Adv. Michelle Vorster", role: "attorney", company: "Vorster & Partners", phone: "011 442 6700", email: "michelle@vorsterlaw.co.za" },
     ],
     expenses: [
@@ -673,8 +673,8 @@ const MOCK_DEALS: Deal[] = [
     ],
     contacts: [
       { id: "c_cp2_1", name: "James Wright", role: "agent", company: "Sotheby's International Realty", phone: "083 500 1234", email: "james@sothebys.co.za" },
-      { id: "c_cp2_2", name: "Thabo Mokoena", role: "contractor", company: "Mokoena Building Services", phone: "079 456 1234", email: "thabo@mokoenabuild.co.za", notes: "Main builder", profession: "Builder / General Contractor", dailyRate: 1400, daysWorked: 28 },
-      { id: "c_cp2_3", name: "Samuel Ndlovu", role: "contractor", company: "JHB Plumbing Co", phone: "073 222 4567", notes: "Plumber", profession: "Plumber", dailyRate: 900, daysWorked: 8 },
+      { id: "c_cp2_2", name: "Thabo Mokoena", role: "contractor", company: "Mokoena Building Services", phone: "079 456 1234", email: "thabo@mokoenabuild.co.za", notes: "Main builder", profession: "Builder / General Contractor", dailyRate: 1400, daysWorked: 28, workDescription: "Renovation at 4 Wendy Ave: demolition of 2 bathrooms & kitchen, structural wall removal (lounge/dining), new ceilings, tiling in progress (kitchen & en-suite done, main bath pending)" },
+      { id: "c_cp2_3", name: "Samuel Ndlovu", role: "contractor", company: "JHB Plumbing Co", phone: "073 222 4567", notes: "Plumber", profession: "Plumber", dailyRate: 900, daysWorked: 8, workDescription: "Plumbing at 4 Wendy Ave: rough-in for 2 new bathrooms, relocated kitchen waste & water points, geyser replacement" },
       { id: "c_cp2_4", name: "Adv. Michelle Vorster", role: "attorney", company: "Vorster & Partners", phone: "011 442 6700", email: "michelle@vorsterlaw.co.za" },
     ],
     expenses: [

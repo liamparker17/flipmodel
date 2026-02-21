@@ -225,6 +225,8 @@ export interface DealContact {
   profession?: string;
   dailyRate?: number;
   daysWorked?: number;
+  // Work description (what tasks they performed on this deal)
+  workDescription?: string;
   // Banking details (for contractor payments)
   bankName?: string;
   accountNumber?: string;

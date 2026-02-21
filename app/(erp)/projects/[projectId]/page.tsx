@@ -137,11 +137,12 @@ export default function ProjectDetailPage() {
             {contractors.map((c) => (
               <div key={c.id} style={{ background: theme.input, borderRadius: 6, padding: "8px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <a href={`/contractors?name=${encodeURIComponent(c.name)}`} style={{ fontSize: 12, fontWeight: 600, color: theme.accent, textDecoration: "none", cursor: "pointer" }}
+                  <span onClick={() => router.push(`/contractors?name=${encodeURIComponent(c.name)}`)}
+                    style={{ fontSize: 12, fontWeight: 600, color: theme.accent, cursor: "pointer", textDecoration: "none", display: "inline-block" }}
                     onMouseEnter={(e) => { (e.target as HTMLElement).style.textDecoration = "underline"; }}
                     onMouseLeave={(e) => { (e.target as HTMLElement).style.textDecoration = "none"; }}>
                     {c.name}
-                  </a>
+                  </span>
                   <div style={{ fontSize: 10, color: theme.textDim }}>{c.profession || c.company || "Contractor"}</div>
                   {c.phone && <div style={{ fontSize: 10, color: theme.accent, marginTop: 2 }}>{c.phone}</div>}
                 </div>
