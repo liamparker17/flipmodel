@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const recentDeals = [...deals].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 6);
 
   // Upcoming deadlines from milestones
-  const upcomingDeadlines: { deal: string; dealId: string; milestone: string; dueDate: string; status: string; overdue: boolean }[] = [];
+  const upcomingDeadlines: { deal: string; dealId: string; dealStage: string; milestone: string; dueDate: string; status: string; overdue: boolean }[] = [];
   const now = new Date();
   for (const deal of deals) {
     if (deal.stage === "sold") continue;
@@ -32,7 +32,7 @@ export default function DashboardPage() {
       if (ms.status === "completed" || ms.status === "skipped") continue;
       const due = new Date(ms.dueDate);
       const overdue = due < now;
-      upcomingDeadlines.push({ deal: deal.name, dealId: deal.id, milestone: ms.title, dueDate: ms.dueDate, status: ms.status, overdue });
+      upcomingDeadlines.push({ deal: deal.name, dealId: deal.id, dealStage: deal.stage, milestone: ms.title, dueDate: ms.dueDate, status: ms.status, overdue });
     }
   }
   upcomingDeadlines.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
@@ -146,7 +146,7 @@ export default function DashboardPage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflowY: "auto" }}>
               {upcomingDeadlines.slice(0, 8).map((dl, i) => (
-                <div key={i} onClick={() => router.push(`/pipeline/${dl.dealId}`)} style={{
+                <div key={i} onClick={() => router.push(dl.dealStage === "purchased" || dl.dealStage === "renovating" ? `/projects/${dl.dealId}` : `/pipeline/${dl.dealId}`)} style={{
                   display: "flex", alignItems: "center", gap: 8, padding: "6px 8px",
                   background: dl.overdue ? `${theme.red}08` : theme.input, borderRadius: 4,
                   borderLeft: `3px solid ${dl.overdue ? theme.red : theme.accent}`,
@@ -185,7 +185,7 @@ export default function DashboardPage() {
                 const budget = deal.data?.quickRenoEstimate || 0;
                 const budgetPct = budget > 0 ? (actualExpenses / budget) * 100 : 0;
                 return (
-                  <div key={deal.id} onClick={() => router.push(`/pipeline/${deal.id}`)} style={{
+                  <div key={deal.id} onClick={() => router.push(`/projects/${deal.id}`)} style={{
                     background: theme.input, borderRadius: 6, padding: "8px 10px", cursor: "pointer",
                     borderLeft: `3px solid ${stageColor}`,
                   }}>

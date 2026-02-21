@@ -220,6 +220,10 @@ export interface DealContact {
   phone?: string;
   email?: string;
   notes?: string;
+  // Financial fields (visible when role is "contractor")
+  profession?: string;
+  dailyRate?: number;
+  daysWorked?: number;
 }
 
 // ─── Documents ───

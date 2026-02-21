@@ -116,7 +116,7 @@ const MOCK_DEALS: Deal[] = [
     ],
     contacts: [
       { id: "c_1", name: "Sarah van der Merwe", role: "agent", company: "Pam Golding Properties", phone: "082 456 7890", email: "sarah@pamgolding.co.za", notes: "Listing agent, responsive" },
-      { id: "c_2", name: "Johan Coetzee", role: "contractor", company: "Johan Builders CC", phone: "076 123 4567", notes: "General builder, R1200/day" },
+      { id: "c_2", name: "Johan Coetzee", role: "contractor", company: "Johan Builders CC", phone: "076 123 4567", notes: "General builder", profession: "Builder / General Contractor", dailyRate: 1200, daysWorked: 0 },
     ],
     expenses: [
       { id: "e_1", dealId: "deal_demo_1", category: "professional_fees", description: "Building inspection", amount: 3500, date: "2026-02-22", vendor: "Home Inspectors SA", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-22T10:00:00Z" },
@@ -242,9 +242,9 @@ const MOCK_DEALS: Deal[] = [
       { id: "a_14", type: "expense_added", description: "Added expense: Kitchen tiles R18,500", timestamp: "2026-02-15T09:00:00Z" },
     ],
     contacts: [
-      { id: "c_5", name: "Johan Coetzee", role: "contractor", company: "Johan Builders CC", phone: "076 123 4567", notes: "Main builder" },
-      { id: "c_6", name: "Pieter Sparks", role: "contractor", company: "Sparks Electrical", phone: "082 999 1234", notes: "Electrician" },
-      { id: "c_7", name: "Nadia Plumbers", role: "contractor", phone: "073 456 7890", notes: "Plumbing" },
+      { id: "c_5", name: "Johan Coetzee", role: "contractor", company: "Johan Builders CC", phone: "076 123 4567", notes: "Main builder", profession: "Builder / General Contractor", dailyRate: 1200, daysWorked: 45 },
+      { id: "c_6", name: "Pieter Sparks", role: "contractor", company: "Sparks Electrical", phone: "082 999 1234", notes: "Electrician", profession: "Electrician", dailyRate: 900, daysWorked: 8 },
+      { id: "c_7", name: "Nadia Plumbers", role: "contractor", phone: "073 456 7890", notes: "Plumbing", profession: "Plumber", dailyRate: 800, daysWorked: 6 },
     ],
     expenses: [
       { id: "e_7", dealId: "deal_demo_3", category: "legal", description: "Transfer attorney fees", amount: 38000, date: "2026-01-10", vendor: "Smith & Associates", paymentMethod: "eft", isProjected: false, createdAt: "2026-01-10T10:00:00Z" },
@@ -374,6 +374,10 @@ const MOCK_DEALS: Deal[] = [
       { id: "ms_13", title: "Purchase & Transfer", description: "", dueDate: "2025-09-10", status: "completed", completedDate: "2025-09-10", tasks: [], order: 1 },
       { id: "ms_14", title: "Renovation", description: "", dueDate: "2025-12-10", status: "completed", completedDate: "2025-12-10", tasks: [], order: 2 },
       { id: "ms_15", title: "List & Sell", description: "", dueDate: "2026-01-15", status: "completed", completedDate: "2026-01-10", tasks: [], order: 3 },
+    ],
+    contacts: [
+      { id: "c_9", name: "Reliable Builders", role: "contractor", company: "Reliable Builders CC", phone: "081 234 5678", profession: "Builder / General Contractor", dailyRate: 1100, daysWorked: 50 },
+      { id: "c_10", name: "Pro Plumbing", role: "contractor", company: "Pro Plumbing", phone: "082 345 6789", profession: "Plumber", dailyRate: 850, daysWorked: 6 },
     ],
     activities: [
       { id: "a_19", type: "deal_created", description: "Deal created", timestamp: "2025-08-10T08:00:00Z" },

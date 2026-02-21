@@ -89,7 +89,7 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {projects.map((deal) => <ProjectCard key={deal.id} deal={deal} onClick={() => router.push(`/pipeline/${deal.id}`)} isMobile={isMobile} />)}
+          {projects.map((deal) => <ProjectCard key={deal.id} deal={deal} onClick={() => router.push(`/projects/${deal.id}`)} isMobile={isMobile} />)}
         </div>
       )}
     </div>
@@ -189,14 +189,14 @@ function ProjectCard({ deal, onClick, isMobile }: { deal: Deal; onClick: () => v
         </div>
 
         {/* Contractors */}
-        {deal.data?.contractors && deal.data.contractors.length > 0 && (
+        {(deal.contacts || []).filter((c) => c.role === "contractor").length > 0 && (
           <div style={{ borderTop: `1px solid ${theme.cardBorder}`, paddingTop: 8, marginTop: 8 }}>
             <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Contractors</div>
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              {deal.data.contractors.map((c, i) => (
-                <span key={i} style={{ fontSize: 10, color: theme.text, background: theme.input, padding: "2px 6px", borderRadius: 3, display: "flex", alignItems: "center", gap: 4 }}>
-                  {c.name || c.profession}
-                  <span style={{ fontSize: 9, color: theme.textDim }}>{fmt(c.dailyRate * c.daysWorked)}</span>
+              {(deal.contacts || []).filter((c) => c.role === "contractor").map((c) => (
+                <span key={c.id} style={{ fontSize: 10, color: theme.text, background: theme.input, padding: "2px 6px", borderRadius: 3, display: "flex", alignItems: "center", gap: 4 }}>
+                  {c.name}{c.profession ? ` (${c.profession})` : ""}
+                  {(c.dailyRate || 0) > 0 && <span style={{ fontSize: 9, color: theme.textDim }}>{fmt((c.dailyRate || 0) * (c.daysWorked || 0))}</span>}
                 </span>
               ))}
             </div>
