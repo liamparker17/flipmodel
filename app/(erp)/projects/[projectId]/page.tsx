@@ -137,7 +137,11 @@ export default function ProjectDetailPage() {
             {contractors.map((c) => (
               <div key={c.id} style={{ background: theme.input, borderRadius: 6, padding: "8px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: theme.text }}>{c.name}</div>
+                  <a href={`/contractors?name=${encodeURIComponent(c.name)}`} style={{ fontSize: 12, fontWeight: 600, color: theme.accent, textDecoration: "none", cursor: "pointer" }}
+                    onMouseEnter={(e) => { (e.target as HTMLElement).style.textDecoration = "underline"; }}
+                    onMouseLeave={(e) => { (e.target as HTMLElement).style.textDecoration = "none"; }}>
+                    {c.name}
+                  </a>
                   <div style={{ fontSize: 10, color: theme.textDim }}>{c.profession || c.company || "Contractor"}</div>
                   {c.phone && <div style={{ fontSize: 10, color: theme.accent, marginTop: 2 }}>{c.phone}</div>}
                 </div>

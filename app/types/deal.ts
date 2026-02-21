@@ -225,6 +225,11 @@ export interface DealContact {
   profession?: string;
   dailyRate?: number;
   daysWorked?: number;
+  // Banking details (for contractor payments)
+  bankName?: string;
+  accountNumber?: string;
+  branchCode?: string;
+  accountType?: "cheque" | "savings" | "business";
 }
 
 // ─── Documents ───

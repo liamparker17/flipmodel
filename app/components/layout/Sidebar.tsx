@@ -14,6 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/pipeline", label: "Pipeline", icon: "\u25B6" },
   { href: "/projects", label: "Projects", icon: "\u2692" },
   { href: "/suppliers", label: "Suppliers", icon: "\uD83D\uDED2" },
+  { href: "/contractors", label: "Contractors", icon: "\uD83D\uDC77" },
   { href: "/finance", label: "Finance", icon: "\u2234" },
   { href: "/reports", label: "Reports", icon: "\u2261" },
   { href: "/settings", label: "Settings", icon: "\u2699" },
