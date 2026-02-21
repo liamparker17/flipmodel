@@ -251,6 +251,17 @@ export interface Document {
   addedAt: string;
 }
 
+// ─── Style Preferences (for tile/paint/flooring customization) ───
+export interface StylePreferences {
+  finish?: string;          // matt/gloss/textured/silk/semi-gloss
+  color?: string;           // white/grey/beige/dark/cream/charcoal
+  size?: string;            // 300x300/600x600/300x600
+  brand?: string;           // plascon/dulux/any
+  type?: string;            // oak/grey/walnut/vinyl (flooring)
+  thickness?: string;       // 7mm/8mm/12mm (flooring)
+  [key: string]: string | undefined;
+}
+
 // ─── Shopping List ───
 export interface ShoppingListItem {
   materialKey: string;      // e.g. "floorTiles" or custom_<timestamp>
@@ -261,6 +272,7 @@ export interface ShoppingListItem {
   vendor?: string;          // where they bought it
   purchasedDate?: string;
   notes?: string;
+  stylePreferences?: StylePreferences;  // user's material style choices
   // Custom / unanticipated item fields
   isCustom?: boolean;       // true = not from estimator
   label?: string;           // display name for custom items
