@@ -71,7 +71,7 @@ export default function ProjectDetailPage() {
         <button onClick={() => router.push(`/pipeline/${deal.id}`)} style={{
           background: "transparent", border: `1px solid ${theme.accent}30`, borderRadius: 6,
           padding: "6px 12px", fontSize: 11, color: theme.accent, cursor: "pointer", whiteSpace: "nowrap",
-        }}>Deal Details →</button>
+        }}>Full Analysis →</button>
       </div>
 
       {/* Key Metrics */}

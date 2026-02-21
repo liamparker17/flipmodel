@@ -85,7 +85,7 @@ export default function ProjectsPage() {
       {projects.length === 0 ? (
         <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 40, textAlign: "center" }}>
           <p style={{ fontSize: 13, color: theme.textDim, marginBottom: 4 }}>No active projects.</p>
-          <p style={{ fontSize: 12, color: theme.textDim }}>Move deals to &ldquo;Purchased&rdquo; or &ldquo;Renovating&rdquo; stage to see them here.</p>
+          <p style={{ fontSize: 12, color: theme.textDim }}>Move properties to &ldquo;Purchased&rdquo; or &ldquo;Renovating&rdquo; stage to see them here.</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

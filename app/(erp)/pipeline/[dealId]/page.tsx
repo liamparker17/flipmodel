@@ -10,7 +10,7 @@ import type { Deal, DealData, DealStage, DealPriority, Expense, ExpenseCategory,
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "analysis", label: "Analysis" },
-  { key: "execution", label: "Execution" },
+  { key: "execution", label: "Renovation" },
   { key: "people", label: "People" },
   { key: "activity", label: "Activity" },
 ] as const;
@@ -62,12 +62,12 @@ export default function DealDetailPage() {
   const handleAddressSave = () => { updateDeal(dealId, { address: addressInput }); setEditingAddress(false); refreshDeal(); };
   const handleNotesSave = () => { updateDeal(dealId, { notes: notesInput }); addActivity(dealId, "note_added", "Notes updated"); refreshDeal(); };
   const handleTagsSave = () => { const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean); updateDeal(dealId, { tags }); refreshDeal(); };
-  const handleDelete = () => { if (window.confirm("Delete this deal? This cannot be undone.")) { deleteDeal(dealId); router.push("/pipeline"); } };
+  const handleDelete = () => { if (window.confirm("Delete this property? This cannot be undone.")) { deleteDeal(dealId); router.push("/pipeline"); } };
 
   if (!deal) {
     return (
       <div style={{ padding: 40, color: theme.textDim }}>
-        <p>Deal not found.</p>
+        <p>Property not found.</p>
         <button onClick={() => router.push("/pipeline")} style={{ background: theme.accent, color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", marginTop: 12 }}>
           Back to Pipeline
         </button>
@@ -180,7 +180,7 @@ export default function DealDetailPage() {
       )}
 
       {activeTab === "analysis" && (
-        <DealAnalysis initialData={deal.data} dealId={deal.id} onSave={handleSave} view="analysis" />
+        <DealAnalysis initialData={deal.data} dealId={deal.id} onSave={handleSave} view="analysis" embedded />
       )}
 
       {activeTab === "execution" && (
@@ -223,7 +223,7 @@ function OverviewTab({ deal, notesInput, setNotesInput, onNotesSave, tagsInput, 
     <div style={{ padding: isMobile ? 16 : 28, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
       {/* Deal Info */}
       <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Deal Information</h3>
+        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Property Details</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <InfoField label="Name" value={deal.name} />
           <InfoField label="Address" value={deal.address || "—"} />
@@ -658,7 +658,7 @@ function PeopleTab({ deal, onAddContact, onDeleteContact, isMobile }: {
 
       {contacts.length === 0 ? (
         <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 30, textAlign: "center", color: theme.textDim, fontSize: 12 }}>
-          No contacts for this deal yet.
+          No contacts for this property yet.
         </div>
       ) : (
         <>

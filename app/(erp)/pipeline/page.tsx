@@ -131,7 +131,7 @@ export default function PipelinePage() {
   if (!loaded) return <div style={{ padding: 40, color: theme.textDim }}>Loading...</div>;
 
   const handleNewDeal = () => {
-    const deal = createDeal("New Deal");
+    const deal = createDeal("New Property");
     router.push(`/pipeline/${deal.id}`);
   };
 
@@ -147,12 +147,12 @@ export default function PipelinePage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, paddingLeft: isMobile ? 48 : 0, flexWrap: "wrap", gap: 8 }}>
         <div>
           <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>Pipeline</h1>
-          <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>{filteredDeals.length} deal{filteredDeals.length !== 1 ? "s" : ""} {searchQuery ? "(filtered)" : "total"}</p>
+          <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>{filteredDeals.length} propert{filteredDeals.length !== 1 ? "ies" : "y"} {searchQuery ? "(filtered)" : "total"}</p>
         </div>
         <button onClick={handleNewDeal} style={{
           background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
           padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36,
-        }}>+ New Deal</button>
+        }}>+ New Property</button>
       </div>
 
       {/* Toolbar */}
@@ -161,7 +161,7 @@ export default function PipelinePage() {
         <div style={{ flex: isMobile ? "1 1 100%" : "0 1 240px" }}>
           <input
             value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search deals, addresses, tags..."
+            placeholder="Search properties, addresses, tags..."
             style={{
               width: "100%", background: theme.input, border: `1px solid ${theme.inputBorder}`,
               borderRadius: 6, padding: "7px 10px", color: theme.text, fontSize: 12, outline: "none", minHeight: 34,
@@ -238,7 +238,7 @@ export default function PipelinePage() {
                 <div style={{ padding: 6, flex: 1, display: "flex", flexDirection: "column", gap: 6, minHeight: 60, overflowY: "auto", maxHeight: "calc(100vh - 280px)" }}>
                   {stageDeals.map((deal) => <DealPipelineCard key={deal.id} deal={deal} onMove={handleMove} />)}
                   {stageDeals.length === 0 && (
-                    <div style={{ fontSize: 10, color: theme.textDim, textAlign: "center", padding: "20px 8px" }}>No deals</div>
+                    <div style={{ fontSize: 10, color: theme.textDim, textAlign: "center", padding: "20px 8px" }}>No properties</div>
                   )}
                 </div>
               </div>
@@ -251,7 +251,7 @@ export default function PipelinePage() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${theme.cardBorder}` }}>
-                {["Deal", "Address", "Stage", "Priority", "Purchase", "Expected Sale", "Est. Profit", "ROI", "Days", ""].map((h) => (
+                {["Property", "Address", "Stage", "Priority", "Purchase", "Expected Sale", "Est. Profit", "ROI", "Days", ""].map((h) => (
                   <th key={h} style={{ padding: "8px 10px", textAlign: "left", fontSize: 9, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 500, whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
@@ -309,8 +309,8 @@ export default function PipelinePage() {
           })}
           {filteredDeals.length === 0 && (
             <div style={{ textAlign: "center", padding: 40, color: theme.textDim }}>
-              <p style={{ marginBottom: 12, fontSize: 13 }}>{searchQuery ? "No deals match your search." : "No deals in your pipeline yet."}</p>
-              {!searchQuery && <button onClick={handleNewDeal} style={{ background: theme.accent, color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Create Your First Deal</button>}
+              <p style={{ marginBottom: 12, fontSize: 13 }}>{searchQuery ? "No properties match your search." : "No properties in your pipeline yet."}</p>
+              {!searchQuery && <button onClick={handleNewDeal} style={{ background: theme.accent, color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Add Your First Property</button>}
             </div>
           )}
         </div>

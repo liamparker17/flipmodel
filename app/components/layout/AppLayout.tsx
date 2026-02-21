@@ -14,7 +14,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { createDeal } = useDeals();
 
   const handleNewDeal = () => {
-    const deal = createDeal("New Deal");
+    const deal = createDeal("New Property");
     router.push(`/pipeline/${deal.id}`);
   };
 

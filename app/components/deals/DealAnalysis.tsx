@@ -31,9 +31,11 @@ interface DealAnalysisProps {
   dealId?: string;
   onSave?: (snapshot: DealData) => void;
   view?: "analysis" | "contractors" | "suppliers";
+  embedded?: boolean;
+  onModeChange?: (mode: "quick" | "advanced") => void;
 }
 
-export default function DealAnalysis({ initialData, dealId, onSave, view = "analysis" }: DealAnalysisProps) {
+export default function DealAnalysis({ initialData, dealId, onSave, view = "analysis", embedded = false, onModeChange }: DealAnalysisProps) {
   const calc = useCalculator(initialData);
   const [step, setStep] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
@@ -116,10 +118,15 @@ export default function DealAnalysis({ initialData, dealId, onSave, view = "anal
 
   const progressPct = ((step + 1) / STEPS.length) * 100;
 
+  const handleModeSwitch = (m: "quick" | "advanced") => {
+    calc.setMode(m);
+    onModeChange?.(m);
+  };
+
   const ModeToggle = () => (
     <div style={{ display: "flex", alignItems: "center", gap: 4, background: theme.input, borderRadius: 8, padding: 3 }}>
       {(["quick", "advanced"] as const).map((m) => (
-        <button key={m} onClick={() => calc.setMode(m)} style={{
+        <button key={m} onClick={() => handleModeSwitch(m)} style={{
           background: calc.mode === m ? theme.accent : "transparent", color: calc.mode === m ? "#000" : theme.textDim,
           border: "none", borderRadius: 6, padding: "8px 14px",
           fontSize: 13, fontWeight: calc.mode === m ? 700 : 400, cursor: "pointer", transition: "all 0.15s",
@@ -300,6 +307,66 @@ export default function DealAnalysis({ initialData, dealId, onSave, view = "anal
     );
   }
 
+  // ─── EMBEDDED MODE (inside deal detail page) ───
+  if (embedded) {
+    return (
+      <div style={{ color: theme.text }}>
+        {/* Mode toggle + reset inline */}
+        <div style={{ padding: isMobile ? "10px 16px" : "10px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${theme.cardBorder}` }}>
+          <ModeToggle />
+          <CTAButton label="Reset Calculator" onClick={resetAll} primary={false} style={{ padding: "6px 12px", fontSize: 11, borderRadius: 6, minHeight: 32 }} isMobile={isMobile} />
+        </div>
+        {calc.mode === "quick" ? (
+          <div style={{ padding: isMobile ? "16px 12px" : "24px 28px" }}>
+            {renderQuickMode()}
+          </div>
+        ) : (
+          <>
+            <div style={{ height: 3, background: theme.inputBorder }}>
+              <div style={{ height: "100%", width: `${progressPct}%`, background: theme.accent, transition: "width 0.3s ease" }} />
+            </div>
+            <div style={{ padding: isMobile ? "8px 8px" : "8px 28px", borderBottom: `1px solid ${theme.cardBorder}`, display: "flex", gap: 2, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+              {STEPS.map((s, i) => (
+                <button key={i} onClick={() => setStep(i)} style={{
+                  background: step === i ? theme.accent : "transparent",
+                  color: step === i ? "#000" : i < step ? theme.text : theme.textDim,
+                  border: `1px solid ${step === i ? theme.accent : theme.cardBorder}`, borderRadius: 8,
+                  padding: isMobile ? "6px 10px" : "6px 12px", fontSize: 11, fontWeight: step === i ? 700 : 400,
+                  cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s", flexShrink: 0, minHeight: 32,
+                }}>{isMobile ? STEP_SHORT[i] : `${i + 1}. ${s}`}</button>
+              ))}
+            </div>
+            <div ref={contentRef} style={{ maxWidth: 840, margin: "0 auto", padding: isMobile ? "16px 12px" : "20px 28px" }}>
+              <h2 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 300, marginBottom: 16, color: theme.text }}>
+                <span style={{ color: theme.accent, fontWeight: 700 }}>{step + 1}</span>
+                <span style={{ color: theme.textDim, margin: "0 8px" }}>/</span>
+                {STEPS[step]}
+              </h2>
+              {renderStep()}
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20, paddingBottom: 24, gap: 12 }}>
+                <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} style={{
+                  background: "transparent", border: `1px solid ${theme.cardBorder}`,
+                  color: step === 0 ? theme.textDim : theme.text, borderRadius: 8,
+                  padding: "10px 20px", fontSize: 13, cursor: step === 0 ? "default" : "pointer", minHeight: 40,
+                }}>Previous</button>
+                {step === STEPS.length - 1 ? (
+                  <CTAButton label="New Calculation" onClick={resetAll} style={{ borderRadius: 8 }} isMobile={isMobile} />
+                ) : (
+                  <button onClick={() => setStep(Math.min(STEPS.length - 1, step + 1))} style={{
+                    background: theme.accent, border: "none", color: "#000", borderRadius: 8,
+                    padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer", minHeight: 40,
+                  }}>{step === 6 ? "Shop Materials" : "Next Step"}</button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+        <Toast message={toastMsg} visible={toastVisible} />
+      </div>
+    );
+  }
+
+  // ─── STANDALONE MODE (full page with header/footer) ───
   if (calc.mode === "quick") {
     return (
       <div style={{ background: theme.bg, minHeight: "100vh", color: theme.text, fontFamily: "'Outfit', 'Segoe UI', sans-serif" }}>

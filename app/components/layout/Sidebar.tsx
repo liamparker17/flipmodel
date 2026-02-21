@@ -22,6 +22,7 @@ interface SidebarProps {
   onNewDeal: () => void;
 }
 
+
 export default function Sidebar({ onNewDeal }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -148,7 +149,7 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }: Side
           }}
         >
           <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
-          {!collapsed && "New Deal"}
+          {!collapsed && "New Property"}
         </button>
       </div>
 

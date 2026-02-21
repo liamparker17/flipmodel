@@ -50,7 +50,7 @@ export default function DashboardPage() {
   const cfMax = Math.max(...cashFlow.map((m) => Math.max(Math.abs(m.inflow), Math.abs(m.outflow), 1)));
 
   const handleNewDeal = () => {
-    const deal = createDeal("New Deal");
+    const deal = createDeal("New Property");
     router.push(`/pipeline/${deal.id}`);
   };
 
@@ -65,15 +65,15 @@ export default function DashboardPage() {
         <button onClick={handleNewDeal} style={{
           background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
           padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36,
-        }}>+ New Deal</button>
+        }}>+ New Property</button>
       </div>
 
       {/* KPI Row 1: Key Metrics */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
-        <KPICard label="Total Deals" value={String(metrics.totalDeals)} sub={`${metrics.activeDeals} active`} color={theme.accent} />
+        <KPICard label="Total Properties" value={String(metrics.totalDeals)} sub={`${metrics.activeDeals} active`} color={theme.accent} />
         <KPICard label="Capital Deployed" value={fmt(metrics.totalInvested)} sub="Total purchase value" color={theme.text} />
         <KPICard label="Expected Profit" value={fmt(metrics.totalProjectedProfit)} sub="Across portfolio" color={metrics.totalProjectedProfit >= 0 ? theme.green : theme.red} />
-        <KPICard label="Avg ROI" value={pct(metrics.avgRoi)} sub="Per deal average" color={metrics.avgRoi >= 0.15 ? theme.green : theme.orange} />
+        <KPICard label="Avg ROI" value={pct(metrics.avgRoi)} sub="Per property average" color={metrics.avgRoi >= 0.15 ? theme.green : theme.orange} />
         <KPICard label="Avg Days in Pipeline" value={metrics.avgDaysInPipeline > 0 ? `${metrics.avgDaysInPipeline}d` : "—"} sub={avgDaysToSell > 0 ? `${avgDaysToSell}d avg to sell` : "No sold deals"} color={theme.accent} />
       </div>
 
@@ -82,7 +82,7 @@ export default function DashboardPage() {
         <KPICard label="Active Projects" value={String(metrics.renovatingDeals)} sub="Purchased + Renovating" color={theme.orange} />
         <KPICard label="Actual Expenses" value={fmt(metrics.totalActualExpenses)} sub="Paid to date" color={theme.red} />
         <KPICard label="Projected Expenses" value={fmt(metrics.totalProjectedExpenses)} sub="Upcoming" color={theme.orange} />
-        <KPICard label="Realized Profit" value={fmt(metrics.totalActualProfit)} sub={`${metrics.soldDeals} sold deal${metrics.soldDeals !== 1 ? "s" : ""}`} color={metrics.totalActualProfit >= 0 ? theme.green : theme.red} />
+        <KPICard label="Realized Profit" value={fmt(metrics.totalActualProfit)} sub={`${metrics.soldDeals} sold propert${metrics.soldDeals !== 1 ? "ies" : "y"}`} color={metrics.totalActualProfit >= 0 ? theme.green : theme.red} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
@@ -142,7 +142,7 @@ export default function DashboardPage() {
         <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
           <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Upcoming Deadlines</h3>
           {upcomingDeadlines.length === 0 ? (
-            <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>No upcoming deadlines. Add milestones to your deals.</p>
+            <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>No upcoming deadlines. Add milestones to your properties.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflowY: "auto" }}>
               {upcomingDeadlines.slice(0, 8).map((dl, i) => (
@@ -230,7 +230,7 @@ export default function DashboardPage() {
           <button onClick={() => router.push("/pipeline")} style={{ background: "transparent", border: "none", color: theme.accent, fontSize: 11, cursor: "pointer", padding: 0, fontWeight: 500 }}>View all →</button>
         </div>
         {recentDeals.length === 0 ? (
-          <p style={{ fontSize: 12, color: theme.textDim }}>No deals yet. Create your first deal to get started.</p>
+          <p style={{ fontSize: 12, color: theme.textDim }}>No properties yet. Add your first property to get started.</p>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 6 }}>
             {recentDeals.map((deal) => {
