@@ -2,8 +2,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { theme, fmt, pct } from "../../components/theme";
-import useDeals from "../../hooks/useDeals";
+import useDeals from "../../hooks/api/useApiDeals";
 import { DEAL_STAGES, computeDealMetrics, getPortfolioMetrics, getCashFlowProjection, getDealProgress, PRIORITY_CONFIG } from "../../utils/dealHelpers";
+import { generateSuggestions } from "../../lib/automation";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -49,9 +50,62 @@ export default function DashboardPage() {
   // Cash flow chart max value
   const cfMax = Math.max(...cashFlow.map((m) => Math.max(Math.abs(m.inflow), Math.abs(m.outflow), 1)));
 
-  const handleNewDeal = () => {
-    const deal = createDeal("New Property");
+  const handleNewDeal = async () => {
+    const deal = await createDeal("New Property");
     router.push(`/pipeline/${deal.id}`);
+  };
+
+  // --- Command Center: Action Items ---
+  const suggestions = generateSuggestions(deals);
+
+  // Overdue milestones (past due, not completed)
+  const overdueMilestones: { dealId: string; dealName: string; dealStage: string; title: string; dueDate: string }[] = [];
+  for (const deal of deals) {
+    if (deal.stage === "sold") continue;
+    for (const ms of (deal.milestones || [])) {
+      if (ms.status === "completed" || ms.status === "skipped") continue;
+      if (!ms.dueDate) continue;
+      if (new Date(ms.dueDate) < now) {
+        overdueMilestones.push({ dealId: deal.id, dealName: deal.name, dealStage: deal.stage, title: ms.title, dueDate: ms.dueDate });
+      }
+    }
+  }
+
+  // Budget alerts (actual spend > 80% of renovation estimate)
+  const budgetAlerts: { dealId: string; dealName: string; actualSpend: number; budget: number; pct: number }[] = [];
+  for (const deal of deals) {
+    const actualExpenses = (deal.expenses || []).filter((e: any) => !e.isProjected).reduce((s: number, e: any) => s + e.amount, 0);
+    const budget = deal.data?.quickRenoEstimate || 0;
+    if (budget > 0 && actualExpenses > budget * 0.8) {
+      budgetAlerts.push({ dealId: deal.id, dealName: deal.name, actualSpend: actualExpenses, budget, pct: Math.round((actualExpenses / budget) * 100) });
+    }
+  }
+
+  // All action items combined
+  const actionItems: { icon: string; description: string; link: string; color: string }[] = [];
+  for (const om of overdueMilestones) {
+    const route = om.dealStage === "purchased" || om.dealStage === "renovating" ? `/projects/${om.dealId}` : `/pipeline/${om.dealId}`;
+    actionItems.push({ icon: "⏰", description: `Overdue: "${om.title}" on ${om.dealName} (due ${new Date(om.dueDate).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })})`, link: route, color: theme.red });
+  }
+  for (const ba of budgetAlerts) {
+    actionItems.push({ icon: "💸", description: `${ba.dealName} at ${ba.pct}% of budget (${fmt(ba.actualSpend)} / ${fmt(ba.budget)})`, link: `/projects/${ba.dealId}`, color: theme.orange });
+  }
+  for (const sg of suggestions.filter((s) => s.type === "stage_advance")) {
+    actionItems.push({ icon: "🚀", description: sg.message, link: `/pipeline/${sg.dealId}`, color: theme.accent });
+  }
+
+  // Recent activity timeline (last 5 deals by updatedAt)
+  const timelineDeals = [...deals].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 5);
+  const timeAgo = (dateStr: string) => {
+    const diff = now.getTime() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return `${days}d ago`;
+    return `${Math.floor(days / 7)}w ago`;
   };
 
   return (
@@ -66,6 +120,35 @@ export default function DashboardPage() {
           background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
           padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36,
         }}>+ New Property</button>
+      </div>
+
+      {/* Quick Actions Bar */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {[
+          { label: "＋ New Deal", onClick: handleNewDeal, href: undefined as string | undefined },
+          { label: "📝 Log Expense", onClick: undefined as (() => void) | undefined, href: "/projects" },
+          { label: "💳 Record Payment", onClick: undefined as (() => void) | undefined, href: "/invoices" },
+        ].map((action) => (
+          <button
+            key={action.label}
+            onClick={action.onClick || (() => router.push(action.href!))}
+            style={{
+              background: "transparent",
+              border: `1px solid ${theme.accent}`,
+              borderRadius: 6,
+              padding: "6px 14px",
+              fontSize: 11,
+              fontWeight: 600,
+              color: theme.accent,
+              cursor: "pointer",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = `${theme.accent}18`)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            {action.label}
+          </button>
+        ))}
       </div>
 
       {/* KPI Row 1: Key Metrics */}
@@ -261,6 +344,82 @@ export default function DashboardPage() {
                       {lastActivity.description} &middot; {new Date(lastActivity.timestamp).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}
                     </div>
                   )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Action Items Panel */}
+      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginTop: 16 }}>
+        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Action Items</h3>
+        {actionItems.length === 0 ? (
+          <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>No action items right now. Everything looks good.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 280, overflowY: "auto" }}>
+            {actionItems.map((item, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
+                background: theme.input, borderRadius: 6,
+                borderLeft: `3px solid ${item.color}`,
+              }}>
+                <span style={{ fontSize: 14, flexShrink: 0 }}>{item.icon}</span>
+                <span style={{ flex: 1, fontSize: 11, color: theme.text, lineHeight: 1.4 }}>{item.description}</span>
+                <button
+                  onClick={() => router.push(item.link)}
+                  style={{
+                    background: "transparent", border: `1px solid ${theme.accent}`, borderRadius: 4,
+                    padding: "3px 10px", fontSize: 10, fontWeight: 600, color: theme.accent,
+                    cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
+                  }}
+                >
+                  View →
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Recent Activity Timeline */}
+      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginTop: 16 }}>
+        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Activity Timeline</h3>
+        {timelineDeals.length === 0 ? (
+          <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>No recent activity.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {timelineDeals.map((deal, i) => {
+              const stageInfo = DEAL_STAGES.find((s) => s.key === deal.stage);
+              return (
+                <div key={deal.id} style={{ display: "flex", gap: 12, position: "relative" }}>
+                  {/* Timeline line */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 16, flexShrink: 0 }}>
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%", background: stageInfo?.color || theme.accent,
+                      border: `2px solid ${theme.card}`, flexShrink: 0, zIndex: 1, marginTop: 4,
+                    }} />
+                    {i < timelineDeals.length - 1 && (
+                      <div style={{ width: 1, flex: 1, background: theme.cardBorder, minHeight: 20 }} />
+                    )}
+                  </div>
+                  {/* Content */}
+                  <div
+                    onClick={() => router.push(`/pipeline/${deal.id}`)}
+                    style={{ flex: 1, paddingBottom: i < timelineDeals.length - 1 ? 12 : 0, cursor: "pointer" }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: theme.text }}>{deal.name}</span>
+                      <span style={{
+                        fontSize: 8, fontWeight: 600, color: stageInfo?.color,
+                        background: `${stageInfo?.color}15`, padding: "1px 6px", borderRadius: 3,
+                        textTransform: "uppercase",
+                      }}>{stageInfo?.label}</span>
+                    </div>
+                    <span style={{ fontSize: 10, color: theme.textDim, fontFamily: "'JetBrains Mono', monospace" }}>
+                      {timeAgo(deal.updatedAt)}
+                    </span>
+                  </div>
                 </div>
               );
             })}

@@ -1,0 +1,471 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Auth.js Standard Tables ───
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  company       String?
+  phone         String?
+  preferences   Json?     // { defaultCommission, defaultContingency, bondRate, ... }
+  role          String    @default("owner") // owner | manager | field_worker
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+
+  // Business data ownership
+  deals         Deal[]
+  expenses      Expense[]
+  milestones    Milestone[]
+  contacts      Contact[]
+  documents     Document[]
+  tools         Tool[]
+  toolCheckouts ToolCheckout[]
+  toolMaintenance ToolMaintenance[]
+  toolIncidents ToolIncident[]
+  activities    Activity[]
+  shoppingListItems ShoppingListItem[]
+  notifications Notification[]
+  invoices      Invoice[]
+
+  // Team membership
+  ownedTeams    Team[]       @relation("TeamOwner")
+  teamMembers   TeamMember[]
+
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Business Tables ───
+
+model Deal {
+  id                String    @id @default(cuid())
+  userId            String
+  name              String
+  address           String    @default("")
+  purchasePrice     Float     @default(0)
+  expectedSalePrice Float     @default(0)
+  actualSalePrice   Float?
+  stage             String    @default("lead") // DealStage enum
+  priority          String    @default("medium") // DealPriority enum
+  notes             String    @default("")
+  tags              Json      @default("[]") // string[]
+  data              Json      // DealData — rooms, acquisition, holding, resale
+  offerAmount       Float?
+  offerDate         DateTime?
+  purchaseDate      DateTime?
+  transferDate      DateTime?
+  listedDate        DateTime?
+  soldDate          DateTime?
+  actualSaleDate    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses          Expense[]
+  milestones        Milestone[]
+  activities        Activity[]
+  dealContacts      DealContact[]
+  documents         Document[]
+  shoppingListItems ShoppingListItem[]
+  invoices          Invoice[]
+
+  @@index([userId])
+  @@index([userId, stage])
+}
+
+model Expense {
+  id              String    @id @default(cuid())
+  userId          String
+  dealId          String
+  category        String    // ExpenseCategory
+  description     String
+  amount          Float
+  date            DateTime
+  vendor          String    @default("")
+  paymentMethod   String    @default("eft") // PaymentMethod
+  receiptRef      String?
+  notes           String?
+  isProjected     Boolean   @default(false)
+  milestoneId     String?
+  contractorId    String?
+  signOffStatus   String    @default("pending") // pending | approved | rejected
+  signOffInspectedAt DateTime?
+  signOffApprovedAt  DateTime?
+  signOffPmNotes  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal            Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId])
+  @@index([userId])
+}
+
+model Milestone {
+  id                    String    @id @default(cuid())
+  userId                String
+  dealId                String
+  title                 String
+  description           String    @default("")
+  dueDate               DateTime?
+  completedDate         DateTime?
+  status                String    @default("pending") // MilestoneStatus
+  order                 Int       @default(0)
+  assignedContractorId  String?
+  inspectionStatus      String?   // InspectionStatus
+  inspectedAt           DateTime?
+  inspectionNotes       String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal                  Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  tasks                 Task[]
+
+  @@index([dealId])
+}
+
+model Task {
+  id           String    @id @default(cuid())
+  milestoneId  String
+  title        String
+  completed    Boolean   @default(false)
+  assignedTo   String?
+  dueDate      DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  milestone    Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  @@index([milestoneId])
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  userId      String
+  dealId      String
+  type        String   // ActivityType
+  description String
+  metadata    Json?
+  timestamp   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId])
+  @@index([userId])
+  @@index([dealId, timestamp])
+}
+
+// ─── CRM: Top-level Contacts ───
+
+model Contact {
+  id           String    @id @default(cuid())
+  userId       String
+  name         String
+  role         String    @default("other") // ContactRole
+  company      String?
+  phone        String?
+  email        String?
+  notes        String?
+  profession   String?
+  dailyRate    Float?
+  bankName     String?
+  accountNumber String?
+  branchCode   String?
+  accountType  String?   // cheque | savings | business
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dealContacts DealContact[]
+
+  @@index([userId])
+  @@index([userId, role])
+}
+
+model DealContact {
+  id              String  @id @default(cuid())
+  dealId          String
+  contactId       String
+  workDescription String?
+  daysWorked      Float?
+
+  deal            Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contact         Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([dealId, contactId])
+  @@index([dealId])
+  @@index([contactId])
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  userId    String
+  dealId    String?
+  name      String
+  type      String   // DocumentType
+  url       String?
+  notes     String?
+  fileSize  Int?
+  mimeType  String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal      Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId])
+  @@index([userId])
+}
+
+model ShoppingListItem {
+  id              String   @id @default(cuid())
+  userId          String
+  dealId          String
+  materialKey     String
+  category        String
+  purchased       Boolean  @default(false)
+  actualPrice     Float?
+  actualQty       Float?
+  vendor          String?
+  purchasedDate   DateTime?
+  notes           String?
+  stylePreferences Json?
+  isCustom        Boolean  @default(false)
+  label           String?
+  qty             Float?
+  unit            String?
+  unitPrice       Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal            Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@unique([dealId, materialKey])
+  @@index([dealId])
+}
+
+// ─── Tool Locker ───
+
+model Tool {
+  id                  String   @id @default(cuid())
+  userId              String
+  name                String
+  category            String   // ToolCategoryKey
+  brand               String?
+  model               String?
+  serialNumber        String?
+  purchaseDate        DateTime?
+  purchaseCost        Float    @default(0)
+  expectedLifespanMonths Int   @default(24)
+  replacementCost     Float    @default(0)
+  status              String   @default("available") // ToolStatus
+  condition           String   @default("new") // ToolCondition
+  currentHolderType   String?
+  currentHolderId     String?
+  currentHolderName   String?
+  currentDealId       String?
+  currentDealName     String?
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkouts           ToolCheckout[]
+  maintenance         ToolMaintenance[]
+  incidents           ToolIncident[]
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+model ToolCheckout {
+  id                 String    @id @default(cuid())
+  userId             String
+  toolId             String
+  contractorName     String
+  contractorId       String?
+  dealId             String?
+  dealName           String?
+  propertyAddress    String?
+  checkedOutAt       DateTime  @default(now())
+  expectedReturnDate DateTime?
+  returnedAt         DateTime?
+  conditionOut       String    // ToolCondition
+  conditionIn        String?   // ToolCondition
+  notes              String?
+  createdAt          DateTime  @default(now())
+
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tool               Tool      @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@index([toolId])
+  @@index([userId])
+}
+
+model ToolMaintenance {
+  id          String   @id @default(cuid())
+  userId      String
+  toolId      String
+  date        DateTime
+  type        String   // service | repair | blade_change | calibration | other
+  description String
+  cost        Float?
+  performedBy String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tool        Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@index([toolId])
+}
+
+model ToolIncident {
+  id              String   @id @default(cuid())
+  userId          String
+  toolId          String
+  date            DateTime
+  type            String   // lost | stolen | damaged | broken
+  contractorName  String
+  contractorId    String?
+  dealId          String?
+  dealName        String?
+  description     String
+  estimatedCost   Float?
+  recoveryStatus  String   @default("pending") // pending | charged_back | written_off | resolved
+  recoveryAmount  Float?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tool            Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@index([toolId])
+  @@index([userId])
+}
+
+// ─── Notifications ───
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // deadline_warning | budget_alert | tool_overdue | milestone_overdue | general
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId])
+}
+
+// ─── Teams ───
+
+model Team {
+  id        String       @id @default(cuid())
+  name      String
+  ownerId   String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  owner     User         @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members   TeamMember[]
+
+  @@index([ownerId])
+}
+
+model TeamMember {
+  id       String @id @default(cuid())
+  teamId   String
+  userId   String
+  role     String @default("viewer") // owner | admin | manager | field_worker | viewer
+  joinedAt DateTime @default(now())
+
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+// ─── Invoicing (Phase 3) ───
+
+model Invoice {
+  id            String    @id @default(cuid())
+  userId        String
+  dealId        String?
+  invoiceNumber String
+  contactId     String?
+  status        String    @default("draft") // draft | sent | paid | overdue
+  issueDate     DateTime  @default(now())
+  dueDate       DateTime?
+  subtotal      Float     @default(0)
+  tax           Float     @default(0)
+  total         Float     @default(0)
+  notes         String?
+  lineItems     Json      @default("[]") // InvoiceLineItem[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal          Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([dealId])
+}

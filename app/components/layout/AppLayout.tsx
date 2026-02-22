@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { theme } from "../theme";
 import Sidebar from "./Sidebar";
-import useDeals from "../../hooks/useDeals";
+import useDeals from "../../hooks/api/useApiDeals";
 import type { ReactNode } from "react";
 
 interface AppLayoutProps {
@@ -13,8 +13,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const { createDeal } = useDeals();
 
-  const handleNewDeal = () => {
-    const deal = createDeal("New Property");
+  const handleNewDeal = async () => {
+    const deal = await createDeal("New Property");
     router.push(`/pipeline/${deal.id}`);
   };
 

@@ -2,15 +2,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { theme, fmt, pct } from "../../../components/theme";
-import useDeals from "../../../hooks/useDeals";
+import useDeals from "../../../hooks/api/useApiDeals";
 import { getStageColor, getStageLabel, computeDealMetrics, getDealProgress, getExpensesByCategory, PRIORITY_CONFIG, EXPENSE_CATEGORIES } from "../../../utils/dealHelpers";
-import type { Deal, Expense, ExpenseCategory, PaymentMethod, Milestone, MilestoneStatus } from "../../../types/deal";
+import type { Deal, Expense, ExpenseCategory, PaymentMethod, Milestone, MilestoneStatus, InspectionStatus, ExpenseSignOff } from "../../../types/deal";
 
 export default function ProjectDetailPage() {
   const params = useParams();
   const projectId = params.projectId as string;
   const router = useRouter();
-  const { getDeal, updateDeal, addExpense, deleteExpense, addMilestone, updateMilestone, toggleTask, addActivity } = useDeals();
+  const { getDeal, updateDeal, addExpense, updateExpense, deleteExpense, addMilestone, updateMilestone, toggleTask, addActivity } = useDeals();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -92,7 +92,7 @@ export default function ProjectDetailPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
         {/* Progress & Milestones */}
-        <MilestonesSection deal={deal} milestones={milestones} progress={progress}
+        <MilestonesSection deal={deal} milestones={milestones} progress={progress} contractors={contractors}
           onAddMilestone={(ms) => { addMilestone(projectId, ms); refreshDeal(); }}
           onUpdateMilestone={(msId, changes) => { updateMilestone(projectId, msId, changes); refreshDeal(); }}
           onToggleTask={(msId, taskId) => { toggleTask(projectId, msId, taskId); refreshDeal(); }}
@@ -158,8 +158,14 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
+      {/* Payment Sign-off */}
+      <PaymentSignOffSection deal={deal} milestones={milestones} contractors={contractors}
+        onUpdateExpense={(expenseId, changes) => { updateExpense(projectId, expenseId, changes); refreshDeal(); }}
+        isMobile={isMobile} />
+
       {/* Quick Expense Add */}
-      <QuickExpenseAdd dealId={projectId} onAdd={(expense) => { addExpense(projectId, expense); refreshDeal(); }} isMobile={isMobile} />
+      <QuickExpenseAdd dealId={projectId} onAdd={(expense) => { addExpense(projectId, expense); refreshDeal(); }} isMobile={isMobile}
+        milestones={milestones} contractors={contractors} />
 
       {/* Notes */}
       {deal.notes && (
@@ -173,8 +179,9 @@ export default function ProjectDetailPage() {
 }
 
 // ─── Milestones Section (editable) ───
-function MilestonesSection({ deal, milestones, progress, onAddMilestone, onUpdateMilestone, onToggleTask }: {
+function MilestonesSection({ deal, milestones, progress, contractors, onAddMilestone, onUpdateMilestone, onToggleTask }: {
   deal: Deal; milestones: Milestone[]; progress: ReturnType<typeof getDealProgress>;
+  contractors: Deal["contacts"];
   onAddMilestone: (ms: Omit<Milestone, "id">) => void;
   onUpdateMilestone: (msId: string, changes: Partial<Milestone>) => void;
   onToggleTask: (msId: string, taskId: string) => void;
@@ -233,6 +240,9 @@ function MilestonesSection({ deal, milestones, progress, onAddMilestone, onUpdat
             const tasksDone = ms.tasks.filter((t) => t.completed).length;
             const isOverdue = new Date(ms.dueDate) < new Date() && ms.status !== "completed" && ms.status !== "skipped";
             const color = isOverdue ? theme.red : statusColors[ms.status] || theme.textDim;
+            const assignedContractor = ms.assignedContractorId ? contractors.find((c) => c.id === ms.assignedContractorId) : null;
+            const needsInspection = ms.status === "completed" && (!ms.inspectionStatus || ms.inspectionStatus === "not_inspected");
+            const inspectionColors: Record<string, string> = { passed: theme.green, failed: theme.red, conditional: theme.orange, not_inspected: theme.textDim };
             return (
               <div key={ms.id} style={{ background: theme.input, borderRadius: 4, borderLeft: `3px solid ${color}`, overflow: "hidden" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 8px" }}>
@@ -240,9 +250,26 @@ function MilestonesSection({ deal, milestones, progress, onAddMilestone, onUpdat
                     {ms.status === "completed" ? "✓" : ""}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 11, color: ms.status === "completed" ? theme.textDim : theme.text, fontWeight: 600, textDecoration: ms.status === "completed" ? "line-through" : "none" }}>{ms.title}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 11, color: ms.status === "completed" ? theme.textDim : theme.text, fontWeight: 600, textDecoration: ms.status === "completed" ? "line-through" : "none" }}>{ms.title}</span>
+                      {needsInspection && <span style={{ width: 6, height: 6, borderRadius: "50%", background: theme.orange, flexShrink: 0 }} title="Completed but not inspected" />}
+                      {ms.inspectionStatus && ms.inspectionStatus !== "not_inspected" && (
+                        <span style={{ fontSize: 7, padding: "1px 4px", borderRadius: 3, fontWeight: 600, background: `${inspectionColors[ms.inspectionStatus]}15`, color: inspectionColors[ms.inspectionStatus] }}>
+                          {ms.inspectionStatus === "passed" ? "✓ Inspected" : ms.inspectionStatus === "failed" ? "✗ Failed" : "⚠ Conditional"}
+                        </span>
+                      )}
+                    </div>
+                    {assignedContractor && (
+                      <span style={{ fontSize: 8, color: theme.accent, background: `${theme.accent}10`, padding: "0 4px", borderRadius: 2 }}>{assignedContractor.name}</span>
+                    )}
                   </div>
                   {ms.tasks.length > 0 && <span style={{ fontSize: 9, color: theme.textDim }}>{tasksDone}/{ms.tasks.length}</span>}
+                  {(ms.status === "completed" || ms.status === "in_progress") && (!ms.inspectionStatus || ms.inspectionStatus === "not_inspected") && (
+                    <button onClick={(e) => { e.stopPropagation(); onUpdateMilestone(ms.id, { inspectionStatus: "passed" as InspectionStatus, inspectedAt: new Date().toISOString() }); }}
+                      style={{ background: `${theme.green}15`, border: `1px solid ${theme.green}40`, borderRadius: 3, padding: "1px 5px", fontSize: 8, fontWeight: 600, color: theme.green, cursor: "pointer", whiteSpace: "nowrap" }}>
+                      Inspect ✓
+                    </button>
+                  )}
                   <select value={ms.status} onChange={(e) => onUpdateMilestone(ms.id, { status: e.target.value as MilestoneStatus, ...(e.target.value === "completed" ? { completedDate: new Date().toISOString() } : {}) })} style={{ background: `${color}10`, border: `1px solid ${color}30`, borderRadius: 3, padding: "1px 4px", color, fontSize: 8, fontWeight: 600, cursor: "pointer" }}>
                     <option value="pending">Pending</option>
                     <option value="in_progress">In Progress</option>
@@ -287,16 +314,22 @@ function MilestonesSection({ deal, milestones, progress, onAddMilestone, onUpdat
 }
 
 // ─── Quick Expense Add ───
-function QuickExpenseAdd({ dealId, onAdd, isMobile }: { dealId: string; onAdd: (expense: Omit<Expense, "id" | "dealId" | "createdAt">) => void; isMobile: boolean }) {
+function QuickExpenseAdd({ dealId, onAdd, isMobile, milestones, contractors }: {
+  dealId: string; onAdd: (expense: Omit<Expense, "id" | "dealId" | "createdAt">) => void; isMobile: boolean;
+  milestones: Milestone[]; contractors: Deal["contacts"];
+}) {
   const [open, setOpen] = useState(false);
-  const [data, setData] = useState({ category: "materials" as ExpenseCategory, description: "", amount: 0, date: new Date().toISOString().split("T")[0], vendor: "", paymentMethod: "eft" as PaymentMethod, isProjected: false });
+  const [data, setData] = useState({ category: "materials" as ExpenseCategory, description: "", amount: 0, date: new Date().toISOString().split("T")[0], vendor: "", paymentMethod: "eft" as PaymentMethod, isProjected: false, milestoneId: "" as string, contractorId: "" as string });
 
   const handleSubmit = () => {
     if (!data.description || data.amount <= 0) return;
-    onAdd(data);
-    setData({ category: "materials", description: "", amount: 0, date: new Date().toISOString().split("T")[0], vendor: "", paymentMethod: "eft", isProjected: false });
+    const { milestoneId, contractorId, ...rest } = data;
+    onAdd({ ...rest, ...(milestoneId ? { milestoneId } : {}), ...(contractorId ? { contractorId } : {}) });
+    setData({ category: "materials", description: "", amount: 0, date: new Date().toISOString().split("T")[0], vendor: "", paymentMethod: "eft", isProjected: false, milestoneId: "", contractorId: "" });
     setOpen(false);
   };
+
+  const selectStyle = { background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, padding: "6px 8px", color: theme.text, fontSize: 11, minHeight: 32 };
 
   return (
     <div style={{ marginBottom: 16 }}>
@@ -308,14 +341,118 @@ function QuickExpenseAdd({ dealId, onAdd, isMobile }: { dealId: string; onAdd: (
       {open && (
         <div style={{ background: theme.card, border: `1px solid ${theme.accent}30`, borderRadius: "0 0 8px 8px", borderTop: "none", padding: 14 }}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 8 }}>
-            <select value={data.category} onChange={(e) => setData({ ...data, category: e.target.value as ExpenseCategory })} style={{ background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, padding: "6px 8px", color: theme.text, fontSize: 11, minHeight: 32 }}>
+            <select value={data.category} onChange={(e) => setData({ ...data, category: e.target.value as ExpenseCategory })} style={selectStyle}>
               {Object.entries(EXPENSE_CATEGORIES).map(([key, val]) => <option key={key} value={key}>{val.label}</option>)}
             </select>
-            <input value={data.description} onChange={(e) => setData({ ...data, description: e.target.value })} placeholder="Description" style={{ background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, padding: "6px 8px", color: theme.text, fontSize: 11, outline: "none", minHeight: 32 }} />
-            <input type="number" value={data.amount || ""} onChange={(e) => setData({ ...data, amount: Number(e.target.value) })} placeholder="Amount (R)" style={{ background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, padding: "6px 8px", color: theme.text, fontSize: 11, outline: "none", fontFamily: "'JetBrains Mono', monospace", minHeight: 32 }} />
-            <input value={data.vendor} onChange={(e) => setData({ ...data, vendor: e.target.value })} placeholder="Vendor" style={{ background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, padding: "6px 8px", color: theme.text, fontSize: 11, outline: "none", minHeight: 32 }} />
-            <input type="date" value={data.date} onChange={(e) => setData({ ...data, date: e.target.value })} style={{ background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, padding: "6px 8px", color: theme.text, fontSize: 11, outline: "none", minHeight: 32 }} />
+            <input value={data.description} onChange={(e) => setData({ ...data, description: e.target.value })} placeholder="Description" style={{ ...selectStyle, outline: "none" }} />
+            <input type="number" value={data.amount || ""} onChange={(e) => setData({ ...data, amount: Number(e.target.value) })} placeholder="Amount (R)" style={{ ...selectStyle, outline: "none", fontFamily: "'JetBrains Mono', monospace" }} />
+            <input value={data.vendor} onChange={(e) => setData({ ...data, vendor: e.target.value })} placeholder="Vendor" style={{ ...selectStyle, outline: "none" }} />
+            <input type="date" value={data.date} onChange={(e) => setData({ ...data, date: e.target.value })} style={{ ...selectStyle, outline: "none" }} />
+            <select value={data.milestoneId} onChange={(e) => setData({ ...data, milestoneId: e.target.value })} style={selectStyle}>
+              <option value="">Link to Milestone...</option>
+              {milestones.map((ms) => <option key={ms.id} value={ms.id}>{ms.title}</option>)}
+            </select>
+            {data.category === "labour" && contractors.length > 0 && (
+              <select value={data.contractorId} onChange={(e) => setData({ ...data, contractorId: e.target.value })} style={selectStyle}>
+                <option value="">Contractor...</option>
+                {contractors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
             <button onClick={handleSubmit} style={{ background: theme.accent, color: "#fff", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", minHeight: 32 }}>Save Expense</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Payment Sign-off Section ───
+function PaymentSignOffSection({ deal, milestones, contractors, onUpdateExpense, isMobile }: {
+  deal: Deal; milestones: Milestone[]; contractors: Deal["contacts"];
+  onUpdateExpense: (expenseId: string, changes: Partial<Expense>) => void; isMobile: boolean;
+}) {
+  const [notesInput, setNotesInput] = useState<Record<string, string>>({});
+  const expenses = (deal.expenses || []).filter((e) => !e.isProjected);
+  const linked = expenses.filter((e) => e.milestoneId || e.contractorId);
+  const unlinked = expenses.filter((e) => !e.milestoneId && !e.contractorId);
+
+  if (expenses.length === 0) return null;
+
+  const getMilestone = (id?: string) => id ? milestones.find((m) => m.id === id) : null;
+  const getContractor = (id?: string) => id ? contractors.find((c) => c.id === id) : null;
+
+  const signOffColors: Record<string, string> = { pending: theme.orange, approved: theme.green, rejected: theme.red };
+
+  const handleSignOff = (expenseId: string, status: "approved" | "rejected") => {
+    const notes = notesInput[expenseId] || "";
+    onUpdateExpense(expenseId, {
+      signOff: { status, ...(status === "approved" ? { approvedAt: new Date().toISOString() } : { inspectedAt: new Date().toISOString() }), pmNotes: notes || undefined },
+    });
+    setNotesInput({ ...notesInput, [expenseId]: "" });
+  };
+
+  const renderExpenseRow = (e: Expense) => {
+    const ms = getMilestone(e.milestoneId);
+    const contractor = getContractor(e.contractorId);
+    const signOff = e.signOff || { status: "pending" as const };
+    const paidBeforeVerified = ms && e.milestoneId && ms.status !== "completed" && !e.isProjected;
+    const signColor = signOffColors[signOff.status] || theme.textDim;
+
+    return (
+      <div key={e.id} style={{ background: theme.input, borderRadius: 4, padding: "6px 8px", borderLeft: `3px solid ${signColor}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: theme.text, flex: 1, minWidth: 120 }}>{e.description}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: theme.text, fontFamily: "'JetBrains Mono', monospace" }}>R{e.amount.toLocaleString()}</span>
+          <span style={{ fontSize: 9, color: theme.textDim }}>{new Date(e.date).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}</span>
+          <span style={{ fontSize: 8, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${signColor}15`, color: signColor, textTransform: "uppercase" }}>
+            {signOff.status}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3, flexWrap: "wrap" }}>
+          {ms && <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 2, background: `${theme.accent}10`, color: theme.accent }}>⬡ {ms.title} ({ms.status})</span>}
+          {contractor && <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 2, background: `${theme.accent}10`, color: theme.accent }}>{contractor.name}</span>}
+          {paidBeforeVerified && <span style={{ fontSize: 8, fontWeight: 600, color: theme.red }}>⚠ Paid before milestone verified</span>}
+          {signOff.pmNotes && <span style={{ fontSize: 8, color: theme.textDim, fontStyle: "italic" }}>— {signOff.pmNotes}</span>}
+        </div>
+        {signOff.status === "pending" && (
+          <div style={{ display: "flex", gap: 4, marginTop: 4, alignItems: "center" }}>
+            <input value={notesInput[e.id] || ""} onChange={(ev) => setNotesInput({ ...notesInput, [e.id]: ev.target.value })}
+              placeholder="PM notes..." style={{ flex: 1, background: theme.card, border: `1px solid ${theme.inputBorder}`, borderRadius: 3, padding: "2px 5px", color: theme.text, fontSize: 9, outline: "none", minHeight: 20 }} />
+            <button onClick={() => handleSignOff(e.id, "approved")} style={{ background: `${theme.green}15`, border: `1px solid ${theme.green}40`, borderRadius: 3, padding: "2px 6px", fontSize: 8, fontWeight: 600, color: theme.green, cursor: "pointer" }}>Approve</button>
+            <button onClick={() => handleSignOff(e.id, "rejected")} style={{ background: `${theme.red}15`, border: `1px solid ${theme.red}40`, borderRadius: 3, padding: "2px 6px", fontSize: 8, fontWeight: 600, color: theme.red, cursor: "pointer" }}>Reject</button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Group linked expenses by milestone
+  const byMilestone: Record<string, Expense[]> = {};
+  for (const e of linked) {
+    const key = e.milestoneId || "no_milestone";
+    if (!byMilestone[key]) byMilestone[key] = [];
+    byMilestone[key].push(e);
+  }
+
+  return (
+    <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
+      <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 10px" }}>Payment Sign-off</h3>
+      {Object.entries(byMilestone).map(([msId, exps]) => {
+        const ms = getMilestone(msId);
+        return (
+          <div key={msId} style={{ marginBottom: 8 }}>
+            {ms && <div style={{ fontSize: 9, fontWeight: 600, color: theme.accent, marginBottom: 4, textTransform: "uppercase" }}>⬡ {ms.title}</div>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {exps.map(renderExpenseRow)}
+            </div>
+          </div>
+        );
+      })}
+      {unlinked.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 9, fontWeight: 600, color: theme.textDim, marginBottom: 4, textTransform: "uppercase" }}>Unlinked Payments</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {unlinked.map(renderExpenseRow)}
           </div>
         </div>
       )}

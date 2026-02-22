@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { theme, fmt, pct } from "../../../components/theme";
 import DealAnalysis from "../../../components/deals/DealAnalysis";
-import useDeals from "../../../hooks/useDeals";
+import useDeals from "../../../hooks/api/useApiDeals";
 import { DEAL_STAGES, getStageColor, getStageLabel, computeDealMetrics, PRIORITY_CONFIG, getExpensesByCategory, getDealProgress, EXPENSE_CATEGORIES } from "../../../utils/dealHelpers";
 import type { Deal, DealData, DealStage, DealPriority, Expense, ExpenseCategory, PaymentMethod, Milestone, MilestoneStatus, DealContact, ContactRole, Activity } from "../../../types/deal";
 

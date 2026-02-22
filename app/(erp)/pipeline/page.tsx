@@ -2,8 +2,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { theme, fmt, pct } from "../../components/theme";
-import useDeals from "../../hooks/useDeals";
+import useDeals from "../../hooks/api/useApiDeals";
 import { DEAL_STAGES, groupDealsByStage, computeDealMetrics, PRIORITY_CONFIG, getDealProgress } from "../../utils/dealHelpers";
+import { generateSuggestions } from "../../lib/automation";
+import type { AutoSuggestion } from "../../lib/automation";
 import type { Deal, DealStage } from "../../types/deal";
 
 function DealPipelineCard({ deal, onMove }: { deal: Deal; onMove: (id: string, stage: DealStage) => void }) {
@@ -97,6 +99,7 @@ export default function PipelinePage() {
   const [sortBy, setSortBy] = useState<"updated" | "price" | "profit" | "name">("updated");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [hideSold, setHideSold] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
@@ -128,10 +131,14 @@ export default function PipelinePage() {
 
   const grouped = useMemo(() => groupDealsByStage(filteredDeals), [filteredDeals]);
 
+  const suggestions = useMemo(() => generateSuggestions(filteredDeals), [filteredDeals]);
+
+  const isSuggestionsExpanded = suggestionsOpen !== null ? suggestionsOpen : suggestions.length <= 3;
+
   if (!loaded) return <div style={{ padding: 40, color: theme.textDim }}>Loading...</div>;
 
-  const handleNewDeal = () => {
-    const deal = createDeal("New Property");
+  const handleNewDeal = async () => {
+    const deal = await createDeal("New Property");
     router.push(`/pipeline/${deal.id}`);
   };
 
@@ -208,6 +215,76 @@ export default function PipelinePage() {
           Hide Sold
         </label>
       </div>
+
+      {/* Suggestions Banner */}
+      {suggestions.length > 0 && (
+        <div style={{
+          background: theme.card, border: `1px solid ${theme.cardBorder}`, borderLeft: `3px solid ${theme.accent}`,
+          borderRadius: 8, marginBottom: 14, overflow: "hidden",
+        }}>
+          <button
+            onClick={() => setSuggestionsOpen(!isSuggestionsExpanded)}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "10px 14px", background: "transparent", border: "none", cursor: "pointer",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: theme.text }}>Suggestions</span>
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: theme.accent, background: `${theme.accent}18`,
+                padding: "2px 7px", borderRadius: 10, minWidth: 20, textAlign: "center",
+              }}>{suggestions.length}</span>
+            </div>
+            <span style={{ fontSize: 11, color: theme.textDim, transition: "transform 0.2s", display: "inline-block", transform: isSuggestionsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+              ▼
+            </span>
+          </button>
+          {isSuggestionsExpanded && (
+            <div style={{ padding: "0 14px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
+              {suggestions.map((s: AutoSuggestion, i: number) => {
+                const icon = s.type === "stage_advance" ? "→" : s.type === "deadline_warning" ? "⏰" : "💰";
+                const iconColor = s.type === "stage_advance" ? theme.green : s.type === "deadline_warning" ? theme.orange : theme.red;
+                return (
+                  <div key={`${s.dealId}-${s.type}-${i}`} style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
+                    background: theme.input, borderRadius: 6,
+                  }}>
+                    <span style={{ fontSize: 14, flexShrink: 0, width: 24, textAlign: "center", color: iconColor }}>{icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: theme.accent, marginBottom: 1 }}>{s.dealName}</div>
+                      <div style={{ fontSize: 11, color: theme.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.message}</div>
+                    </div>
+                    {s.type === "stage_advance" && s.suggestedAction ? (
+                      <button
+                        onClick={() => moveDeal(s.dealId, s.suggestedAction as DealStage)}
+                        style={{
+                          background: `${theme.green}18`, border: `1px solid ${theme.green}40`, borderRadius: 4,
+                          padding: "4px 10px", fontSize: 10, fontWeight: 600, color: theme.green,
+                          cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
+                        }}
+                      >
+                        Move to {DEAL_STAGES.find((st) => st.key === s.suggestedAction)?.label || s.suggestedAction}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => router.push(`/pipeline/${s.dealId}`)}
+                        style={{
+                          background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 4,
+                          padding: "4px 10px", fontSize: 10, fontWeight: 600, color: theme.accent,
+                          cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
+                        }}
+                      >
+                        View Deal
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Board View */}
       {(viewMode === "kanban" && !isMobile) ? (

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { theme, fmt, pct } from "../../components/theme";
-import useDeals from "../../hooks/useDeals";
+import useDeals from "../../hooks/api/useApiDeals";
 import { DEAL_STAGES, computeDealMetrics, getPortfolioMetrics, getStageIndex, getDealProgress, getExpensesByCategory } from "../../utils/dealHelpers";
 
 export default function ReportsPage() {

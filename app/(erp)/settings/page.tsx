@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { theme, CTAButton, Toast } from "../../components/theme";
-import useDeals from "../../hooks/useDeals";
+import useDeals from "../../hooks/api/useApiDeals";
 
 const DEFAULT_SETTINGS = {
   defaultBondRate: 12.75,
@@ -15,6 +15,13 @@ const DEFAULT_SETTINGS = {
 };
 
 type AppSettings = typeof DEFAULT_SETTINGS;
+
+interface UserProfile {
+  name: string;
+  email: string;
+  company: string;
+  phone: string;
+}
 
 function loadSettings(): AppSettings {
   try {
@@ -35,6 +42,14 @@ export default function SettingsPage() {
   const [toastVisible, setToastVisible] = useState(false);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [activeSection, setActiveSection] = useState<"general" | "defaults" | "data" | "about">("general");
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  // Profile state
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileDraft, setProfileDraft] = useState<Partial<UserProfile>>({});
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
@@ -46,6 +61,26 @@ export default function SettingsPage() {
   useEffect(() => {
     setSettings(loadSettings());
   }, []);
+
+  // Fetch user profile when general tab is active
+  const fetchProfile = useCallback(async () => {
+    setProfileLoading(true);
+    try {
+      const res = await fetch("/api/user/profile");
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(data);
+        setProfileDraft({});
+      }
+    } catch { /* ignore */ }
+    setProfileLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === "general") {
+      fetchProfile();
+    }
+  }, [activeSection, fetchProfile]);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -60,25 +95,58 @@ export default function SettingsPage() {
     showToast("Settings saved");
   };
 
-  const handleExport = () => {
-    const data = {
-      deals: JSON.parse(localStorage.getItem("justhousesErp_deals") || "[]"),
-      profiles: JSON.parse(localStorage.getItem("justhousesErp_profiles") || "[]"),
-      settings: JSON.parse(localStorage.getItem("justhousesErp_settings") || "{}"),
-      exportedAt: new Date().toISOString(),
-      version: "1.0",
-    };
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `justhouses-backup-${new Date().toISOString().split("T")[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast("Data exported successfully");
+  const handleProfileChange = (key: keyof UserProfile, value: string) => {
+    setProfileDraft((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleProfileSave = async () => {
+    if (!profileDraft || Object.keys(profileDraft).length === 0) return;
+    setProfileSaving(true);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profileDraft),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setProfile(updated);
+        setProfileDraft({});
+        showToast("Profile updated");
+      } else {
+        showToast("Failed to update profile");
+      }
+    } catch {
+      showToast("Failed to update profile");
+    }
+    setProfileSaving(false);
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/export");
+      if (!res.ok) {
+        showToast("Export failed");
+        setExporting(false);
+        return;
+      }
+      const data = await res.json();
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `justhouses-backup-${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Data exported successfully");
+    } catch {
+      showToast("Export failed");
+    }
+    setExporting(false);
   };
 
   const handleImport = () => {
@@ -89,19 +157,24 @@ export default function SettingsPage() {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev) => {
+      reader.onload = async (ev) => {
+        setImporting(true);
         try {
-          const data = JSON.parse(ev.target?.result as string);
-          if (data.deals) localStorage.setItem("justhousesErp_deals", JSON.stringify(data.deals));
-          if (data.profiles) localStorage.setItem("justhousesErp_profiles", JSON.stringify(data.profiles));
-          if (data.settings) {
-            localStorage.setItem("justhousesErp_settings", JSON.stringify(data.settings));
-            setSettings({ ...DEFAULT_SETTINGS, ...data.settings });
+          const parsed = JSON.parse(ev.target?.result as string);
+          const res = await fetch("/api/import", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: parsed.data }),
+          });
+          if (res.ok) {
+            showToast("Data imported successfully — refresh to see changes");
+          } else {
+            showToast("Import failed");
           }
-          showToast("Data imported — refresh to see changes");
         } catch {
           showToast("Invalid file format");
         }
+        setImporting(false);
       };
       reader.readAsText(file);
     };
@@ -109,12 +182,11 @@ export default function SettingsPage() {
   };
 
   const handleClearAll = () => {
-    if (window.confirm("Clear ALL data? This will delete all deals, profiles, and settings. This cannot be undone.")) {
-      localStorage.removeItem("justhousesErp_deals");
-      localStorage.removeItem("justhousesErp_profiles");
+    if (window.confirm("Clear local settings? This will reset your calculator defaults and preferences. Your deal data is stored in the cloud and will not be affected.")) {
       localStorage.removeItem("justhousesErp_settings");
-      localStorage.removeItem("flipmodel_profiles");
-      showToast("All data cleared — refresh to see changes");
+      localStorage.removeItem("justhousesErp_toolLocker");
+      setSettings(DEFAULT_SETTINGS);
+      showToast("Local settings cleared");
     }
   };
 
@@ -122,23 +194,6 @@ export default function SettingsPage() {
     setSettings(DEFAULT_SETTINGS);
     saveSettings(DEFAULT_SETTINGS);
     showToast("Settings reset to defaults");
-  };
-
-  // Storage usage estimate
-  const [storageUsed, setStorageUsed] = useState(0);
-  useEffect(() => {
-    let total = 0;
-    for (const key of ["justhousesErp_deals", "justhousesErp_profiles", "justhousesErp_settings"]) {
-      const item = localStorage.getItem(key);
-      if (item) total += item.length * 2;
-    }
-    setStorageUsed(total);
-  }, [deals]);
-
-  const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   if (!loaded) return <div style={{ padding: 40, color: theme.textDim }}>Loading...</div>;
@@ -149,6 +204,11 @@ export default function SettingsPage() {
     { key: "data", label: "Data Management" },
     { key: "about", label: "About" },
   ] as const;
+
+  const profileValue = (key: keyof UserProfile) =>
+    profileDraft[key] !== undefined ? profileDraft[key] : (profile?.[key] ?? "");
+
+  const hasProfileChanges = Object.keys(profileDraft).length > 0;
 
   return (
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 800, margin: "0 auto" }}>
@@ -172,6 +232,43 @@ export default function SettingsPage() {
 
       {activeSection === "general" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Profile Section */}
+          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
+            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Profile</h3>
+            {profileLoading && !profile ? (
+              <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>Loading profile...</p>
+            ) : profile ? (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+                  <SettingRow label="Name" value={profileValue("name")} type="text" onChange={(v) => handleProfileChange("name", v)} />
+                  <SettingRow label="Email" value={profileValue("email")} type="text" disabled help="Email cannot be changed" />
+                  <SettingRow label="Company" value={profileValue("company")} type="text" onChange={(v) => handleProfileChange("company", v)} />
+                  <SettingRow label="Phone" value={profileValue("phone")} type="text" onChange={(v) => handleProfileChange("phone", v)} />
+                </div>
+                {hasProfileChanges && (
+                  <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                    <CTAButton
+                      label={profileSaving ? "Saving..." : "Save Profile"}
+                      onClick={handleProfileSave}
+                      primary
+                      style={{ fontSize: 12, padding: "8px 16px", borderRadius: 6, minHeight: 36 }}
+                      isMobile={isMobile}
+                    />
+                    <button
+                      onClick={() => setProfileDraft({})}
+                      style={{
+                        background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 6,
+                        padding: "8px 16px", color: theme.textDim, fontSize: 12, cursor: "pointer", minHeight: 36,
+                      }}
+                    >Cancel</button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>Unable to load profile.</p>
+            )}
+          </div>
+
           <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
             <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Calculator Mode</h3>
             <div style={{ display: "flex", gap: 8 }}>
@@ -227,8 +324,8 @@ export default function SettingsPage() {
                 <div style={{ fontSize: 18, fontWeight: 700, color: theme.accent, fontFamily: "'JetBrains Mono', monospace" }}>{deals.length}</div>
               </div>
               <div>
-                <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", marginBottom: 2 }}>Storage Used</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: theme.text, fontFamily: "'JetBrains Mono', monospace" }}>{formatBytes(storageUsed)}</div>
+                <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", marginBottom: 2 }}>Storage</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: theme.green, fontFamily: "'JetBrains Mono', monospace" }}>Cloud</div>
               </div>
               <div>
                 <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", marginBottom: 2 }}>Total Expenses</div>
@@ -245,27 +342,28 @@ export default function SettingsPage() {
             <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Import / Export</h3>
             <p style={{ fontSize: 11, color: theme.textDim, margin: "0 0 12px" }}>Export your data for backup or import from a previous export.</p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <CTAButton label="Export All Data" onClick={handleExport} primary={false} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 6, minHeight: 36 }} isMobile={isMobile} />
-              <CTAButton label="Import Data" onClick={handleImport} primary={false} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 6, minHeight: 36 }} isMobile={isMobile} />
+              <CTAButton label={exporting ? "Exporting..." : "Export All Data"} onClick={handleExport} primary={false} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 6, minHeight: 36 }} isMobile={isMobile} />
+              <CTAButton label={importing ? "Importing..." : "Import Data"} onClick={handleImport} primary={false} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 6, minHeight: 36 }} isMobile={isMobile} />
             </div>
           </div>
 
           <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
             <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Storage</h3>
             <div style={{ fontSize: 12, color: theme.textDim, lineHeight: 1.7 }}>
-              <p style={{ margin: 0 }}>All data is stored in your browser&apos;s localStorage.</p>
-              <p style={{ margin: "6px 0 0" }}>Export your data regularly for backup. Clearing browser data will delete all deals.</p>
-              <p style={{ margin: "6px 0 0" }}>localStorage limit is typically ~5-10MB. Current usage: {formatBytes(storageUsed)}</p>
+              <p style={{ margin: 0 }}>Your deal data is stored securely in the cloud database. It is synced automatically and accessible from any device you sign in to.</p>
+              <p style={{ margin: "6px 0 0" }}>Local preferences (calculator defaults, theme) are stored in your browser. Clearing browser data will only reset these preferences.</p>
+              <p style={{ margin: "6px 0 0" }}>Export your data periodically for an offline backup.</p>
             </div>
           </div>
 
           <div style={{ background: theme.card, border: `1px solid ${theme.red}20`, borderRadius: 8, padding: 16 }}>
             <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.red, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Danger Zone</h3>
-            <p style={{ fontSize: 12, color: theme.textDim, marginBottom: 12 }}>This will permanently delete all deals, profiles, expenses, contacts, and settings.</p>
+            <p style={{ fontSize: 12, color: theme.textDim, marginBottom: 8 }}>This will clear your local settings and preferences only. Your deal data is stored in the cloud and will not be affected.</p>
+            <p style={{ fontSize: 11, color: theme.textDim, marginBottom: 12, fontStyle: "italic" }}>Note: To delete your cloud data, please contact support.</p>
             <button onClick={handleClearAll} style={{
               background: "transparent", border: `1px solid ${theme.red}30`, borderRadius: 6,
               padding: "8px 16px", color: theme.red, fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36,
-            }}>Clear All Data</button>
+            }}>Clear Local Settings</button>
           </div>
         </div>
       )}

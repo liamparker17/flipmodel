@@ -141,6 +141,13 @@ export type ExpenseCategory =
 
 export type PaymentMethod = "cash" | "eft" | "card" | "cheque" | "account";
 
+export interface ExpenseSignOff {
+  status: "pending" | "approved" | "rejected";
+  inspectedAt?: string;
+  approvedAt?: string;
+  pmNotes?: string;
+}
+
 export interface Expense {
   id: string;
   dealId: string;
@@ -154,10 +161,15 @@ export interface Expense {
   notes?: string;
   isProjected: boolean;
   createdAt: string;
+  milestoneId?: string;
+  contractorId?: string;
+  signOff?: ExpenseSignOff;
 }
 
 // ─── Milestones & Tasks ───
 export type MilestoneStatus = "pending" | "in_progress" | "completed" | "overdue" | "skipped";
+
+export type InspectionStatus = "not_inspected" | "passed" | "failed" | "conditional";
 
 export interface Milestone {
   id: string;
@@ -168,6 +180,10 @@ export interface Milestone {
   status: MilestoneStatus;
   tasks: Task[];
   order: number;
+  assignedContractorId?: string;
+  inspectionStatus?: InspectionStatus;
+  inspectedAt?: string;
+  inspectionNotes?: string;
 }
 
 export interface Task {
@@ -176,6 +192,7 @@ export interface Task {
   completed: boolean;
   assignedTo?: string;
   dueDate?: string;
+  completedAt?: string;
 }
 
 // ─── Activity Log ───
@@ -189,7 +206,10 @@ export type ActivityType =
   | "price_change"
   | "deal_created"
   | "data_updated"
-  | "task_completed";
+  | "task_completed"
+  | "signoff_approved"
+  | "signoff_rejected"
+  | "inspection_completed";
 
 export interface Activity {
   id: string;

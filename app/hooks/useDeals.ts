@@ -206,24 +206,24 @@ const MOCK_DEALS: Deal[] = [
       quickRenoEstimate: 350000,
     },
     milestones: [
-      { id: "ms_6", title: "Demolition & Strip", description: "Remove old fixtures and finishes", dueDate: "2026-01-20", status: "completed", completedDate: "2026-01-18", tasks: [
-        { id: "t_14", title: "Strip kitchen", completed: true },
-        { id: "t_15", title: "Strip bathroom", completed: true },
-        { id: "t_16", title: "Remove old flooring", completed: true },
-        { id: "t_17", title: "Dispose of rubble", completed: true },
+      { id: "ms_6", title: "Demolition & Strip", description: "Remove old fixtures and finishes", dueDate: "2026-01-20", status: "completed", completedDate: "2026-01-18", assignedContractorId: "c_5", inspectionStatus: "passed", inspectedAt: "2026-01-19T10:00:00Z", inspectionNotes: "Site cleared, no structural issues found", tasks: [
+        { id: "t_14", title: "Strip kitchen", completed: true, completedAt: "2026-01-15T16:00:00Z" },
+        { id: "t_15", title: "Strip bathroom", completed: true, completedAt: "2026-01-16T16:00:00Z" },
+        { id: "t_16", title: "Remove old flooring", completed: true, completedAt: "2026-01-17T16:00:00Z" },
+        { id: "t_17", title: "Dispose of rubble", completed: true, completedAt: "2026-01-18T12:00:00Z" },
       ], order: 1 },
-      { id: "ms_7", title: "Rough-in (Plumbing & Electrical)", description: "First fix plumbing and electrical", dueDate: "2026-02-05", status: "completed", completedDate: "2026-02-03", tasks: [
-        { id: "t_18", title: "Plumbing rough-in", completed: true },
-        { id: "t_19", title: "Electrical rough-in", completed: true },
-        { id: "t_20", title: "CoC inspection (electrical)", completed: true },
+      { id: "ms_7", title: "Rough-in (Plumbing & Electrical)", description: "First fix plumbing and electrical", dueDate: "2026-02-05", status: "completed", completedDate: "2026-02-03", assignedContractorId: "c_6", inspectionStatus: "passed", inspectedAt: "2026-02-04T09:00:00Z", inspectionNotes: "CoC issued for electrical. Plumbing pressure test passed.", tasks: [
+        { id: "t_18", title: "Plumbing rough-in", completed: true, completedAt: "2026-01-30T16:00:00Z" },
+        { id: "t_19", title: "Electrical rough-in", completed: true, completedAt: "2026-02-01T16:00:00Z" },
+        { id: "t_20", title: "CoC inspection (electrical)", completed: true, completedAt: "2026-02-03T14:00:00Z" },
       ], order: 2 },
-      { id: "ms_8", title: "Tiling & Finishes", description: "Floor and wall tiling, painting", dueDate: "2026-02-25", status: "in_progress", tasks: [
-        { id: "t_21", title: "Kitchen tiling", completed: true },
+      { id: "ms_8", title: "Tiling & Finishes", description: "Floor and wall tiling, painting", dueDate: "2026-02-25", status: "in_progress", assignedContractorId: "c_5", inspectionStatus: "not_inspected", tasks: [
+        { id: "t_21", title: "Kitchen tiling", completed: true, completedAt: "2026-02-12T16:00:00Z" },
         { id: "t_22", title: "Bathroom tiling", completed: false, dueDate: "2026-02-22" },
         { id: "t_23", title: "Interior painting", completed: false, dueDate: "2026-02-28" },
         { id: "t_24", title: "Exterior painting", completed: false, dueDate: "2026-03-02" },
       ], order: 3 },
-      { id: "ms_9", title: "Kitchen & Bathroom Install", description: "Install new kitchen and bathroom", dueDate: "2026-03-10", status: "pending", tasks: [
+      { id: "ms_9", title: "Kitchen & Bathroom Install", description: "Install new kitchen and bathroom", dueDate: "2026-03-10", status: "pending", assignedContractorId: "c_5", tasks: [
         { id: "t_25", title: "Kitchen cabinets install", completed: false },
         { id: "t_26", title: "Countertops install", completed: false },
         { id: "t_27", title: "Bathroom vanity install", completed: false },
@@ -252,10 +252,10 @@ const MOCK_DEALS: Deal[] = [
     expenses: [
       { id: "e_7", dealId: "deal_demo_3", category: "legal", description: "Transfer attorney fees", amount: 38000, date: "2026-01-10", vendor: "Smith & Associates", paymentMethod: "eft", isProjected: false, createdAt: "2026-01-10T10:00:00Z" },
       { id: "e_8", dealId: "deal_demo_3", category: "legal", description: "Bond registration", amount: 22000, date: "2026-01-10", vendor: "Bond Attorneys", paymentMethod: "eft", isProjected: false, createdAt: "2026-01-10T10:00:00Z" },
-      { id: "e_9", dealId: "deal_demo_3", category: "labour", description: "Johan Builders — Jan (24 days)", amount: 28800, date: "2026-01-31", vendor: "Johan Builders CC", paymentMethod: "eft", isProjected: false, createdAt: "2026-01-31T10:00:00Z" },
-      { id: "e_9b", dealId: "deal_demo_3", category: "labour", description: "Johan Builders — Feb (8 days)", amount: 9600, date: "2026-02-15", vendor: "Johan Builders CC", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-15T10:00:00Z" },
-      { id: "e_10", dealId: "deal_demo_3", category: "labour", description: "Sparks Electrical (8 days)", amount: 7200, date: "2026-02-03", vendor: "Sparks Electrical", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-03T10:00:00Z" },
-      { id: "e_10b", dealId: "deal_demo_3", category: "labour", description: "Nadia Plumbers (6 days)", amount: 4800, date: "2026-02-05", vendor: "Nadia Plumbers", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-05T10:00:00Z" },
+      { id: "e_9", dealId: "deal_demo_3", category: "labour", description: "Johan Builders — Jan (24 days)", amount: 28800, date: "2026-01-31", vendor: "Johan Builders CC", paymentMethod: "eft", isProjected: false, createdAt: "2026-01-31T10:00:00Z", milestoneId: "ms_6", contractorId: "c_5", signOff: { status: "approved", approvedAt: "2026-02-01T10:00:00Z", pmNotes: "Demolition complete, site cleared" } },
+      { id: "e_9b", dealId: "deal_demo_3", category: "labour", description: "Johan Builders — Feb (8 days)", amount: 9600, date: "2026-02-15", vendor: "Johan Builders CC", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-15T10:00:00Z", milestoneId: "ms_8", contractorId: "c_5", signOff: { status: "pending" } },
+      { id: "e_10", dealId: "deal_demo_3", category: "labour", description: "Sparks Electrical (8 days)", amount: 7200, date: "2026-02-03", vendor: "Sparks Electrical", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-03T10:00:00Z", milestoneId: "ms_7", contractorId: "c_6", signOff: { status: "approved", approvedAt: "2026-02-04T09:00:00Z", pmNotes: "CoC issued, work verified" } },
+      { id: "e_10b", dealId: "deal_demo_3", category: "labour", description: "Nadia Plumbers (6 days)", amount: 4800, date: "2026-02-05", vendor: "Nadia Plumbers", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-05T10:00:00Z", milestoneId: "ms_7", contractorId: "c_7", signOff: { status: "approved", approvedAt: "2026-02-06T10:00:00Z" } },
       { id: "e_11", dealId: "deal_demo_3", category: "materials", description: "Demolition & rubble removal", amount: 8500, date: "2026-01-20", vendor: "Rubble Removals", paymentMethod: "cash", isProjected: false, createdAt: "2026-01-20T10:00:00Z" },
       { id: "e_12", dealId: "deal_demo_3", category: "materials", description: "Electrical materials", amount: 12400, date: "2026-01-25", vendor: "Builders Warehouse", paymentMethod: "card", isProjected: false, createdAt: "2026-01-25T10:00:00Z" },
       { id: "e_13", dealId: "deal_demo_3", category: "materials", description: "Plumbing materials", amount: 9800, date: "2026-01-25", vendor: "Plumb City", paymentMethod: "card", isProjected: false, createdAt: "2026-01-25T10:00:00Z" },
@@ -510,37 +510,37 @@ const MOCK_DEALS: Deal[] = [
         { id: "t_cp1_2", title: "Bond approval", completed: true },
         { id: "t_cp1_3", title: "Transfer registration", completed: true },
       ], order: 1 },
-      { id: "ms_cp1_2", title: "Demolition & Strip-out", description: "Remove old kitchen, strip bathrooms", dueDate: "2025-10-20", status: "completed", completedDate: "2025-10-19", tasks: [
-        { id: "t_cp1_4", title: "Strip kitchen", completed: true },
-        { id: "t_cp1_5", title: "Strip 3 bathrooms", completed: true },
-        { id: "t_cp1_6", title: "Remove old flooring", completed: true },
-        { id: "t_cp1_7", title: "Rubble removal", completed: true },
+      { id: "ms_cp1_2", title: "Demolition & Strip-out", description: "Remove old kitchen, strip bathrooms", dueDate: "2025-10-20", status: "completed", completedDate: "2025-10-19", assignedContractorId: "c_cp1_2", inspectionStatus: "passed", inspectedAt: "2025-10-19T16:00:00Z", inspectionNotes: "All areas stripped clean, rubble removed", tasks: [
+        { id: "t_cp1_4", title: "Strip kitchen", completed: true, completedAt: "2025-10-12T16:00:00Z" },
+        { id: "t_cp1_5", title: "Strip 3 bathrooms", completed: true, completedAt: "2025-10-15T16:00:00Z" },
+        { id: "t_cp1_6", title: "Remove old flooring", completed: true, completedAt: "2025-10-17T16:00:00Z" },
+        { id: "t_cp1_7", title: "Rubble removal", completed: true, completedAt: "2025-10-19T12:00:00Z" },
       ], order: 2 },
-      { id: "ms_cp1_3", title: "Plumbing & Electrical", description: "First fix rough-in", dueDate: "2025-11-05", status: "completed", completedDate: "2025-11-03", tasks: [
-        { id: "t_cp1_8", title: "Plumbing rough-in", completed: true },
-        { id: "t_cp1_9", title: "Electrical rough-in", completed: true },
-        { id: "t_cp1_10", title: "Geyser check", completed: true },
-        { id: "t_cp1_11", title: "CoC inspection", completed: true },
+      { id: "ms_cp1_3", title: "Plumbing & Electrical", description: "First fix rough-in", dueDate: "2025-11-05", status: "completed", completedDate: "2025-11-03", assignedContractorId: "c_cp1_4", inspectionStatus: "passed", inspectedAt: "2025-11-04T10:00:00Z", inspectionNotes: "CoC issued. Plumbing pressure test OK.", tasks: [
+        { id: "t_cp1_8", title: "Plumbing rough-in", completed: true, completedAt: "2025-10-28T16:00:00Z" },
+        { id: "t_cp1_9", title: "Electrical rough-in", completed: true, completedAt: "2025-10-31T16:00:00Z" },
+        { id: "t_cp1_10", title: "Geyser check", completed: true, completedAt: "2025-11-01T14:00:00Z" },
+        { id: "t_cp1_11", title: "CoC inspection", completed: true, completedAt: "2025-11-03T14:00:00Z" },
       ], order: 3 },
-      { id: "ms_cp1_4", title: "Tiling & Flooring", description: "All tiling and laminate installation", dueDate: "2025-11-20", status: "completed", completedDate: "2025-11-18", tasks: [
-        { id: "t_cp1_12", title: "Bathroom tiling (3 bathrooms)", completed: true },
-        { id: "t_cp1_13", title: "Kitchen splashback", completed: true },
-        { id: "t_cp1_14", title: "Entrance tiles", completed: true },
-        { id: "t_cp1_15", title: "Laminate in bedrooms & lounge", completed: true },
+      { id: "ms_cp1_4", title: "Tiling & Flooring", description: "All tiling and laminate installation", dueDate: "2025-11-20", status: "completed", completedDate: "2025-11-18", assignedContractorId: "c_cp1_2", inspectionStatus: "passed", inspectedAt: "2025-11-19T09:00:00Z", inspectionNotes: "All tiling level, grout consistent, laminate well fitted", tasks: [
+        { id: "t_cp1_12", title: "Bathroom tiling (3 bathrooms)", completed: true, completedAt: "2025-11-10T16:00:00Z" },
+        { id: "t_cp1_13", title: "Kitchen splashback", completed: true, completedAt: "2025-11-12T16:00:00Z" },
+        { id: "t_cp1_14", title: "Entrance tiles", completed: true, completedAt: "2025-11-14T16:00:00Z" },
+        { id: "t_cp1_15", title: "Laminate in bedrooms & lounge", completed: true, completedAt: "2025-11-18T16:00:00Z" },
       ], order: 4 },
-      { id: "ms_cp1_5", title: "Kitchen & Finishes", description: "Install kitchen, paint, cornices", dueDate: "2025-12-10", status: "completed", completedDate: "2025-12-08", tasks: [
-        { id: "t_cp1_16", title: "Kitchen cabinet install", completed: true },
-        { id: "t_cp1_17", title: "Countertop install", completed: true },
-        { id: "t_cp1_18", title: "Full interior paint", completed: true },
-        { id: "t_cp1_19", title: "Exterior paint", completed: true },
-        { id: "t_cp1_20", title: "Cornices & ceiling roses", completed: true },
+      { id: "ms_cp1_5", title: "Kitchen & Finishes", description: "Install kitchen, paint, cornices", dueDate: "2025-12-10", status: "completed", completedDate: "2025-12-08", assignedContractorId: "c_cp1_2", inspectionStatus: "passed", inspectedAt: "2025-12-09T10:00:00Z", inspectionNotes: "Kitchen aligned, paint finish excellent", tasks: [
+        { id: "t_cp1_16", title: "Kitchen cabinet install", completed: true, completedAt: "2025-11-28T16:00:00Z" },
+        { id: "t_cp1_17", title: "Countertop install", completed: true, completedAt: "2025-11-30T16:00:00Z" },
+        { id: "t_cp1_18", title: "Full interior paint", completed: true, completedAt: "2025-12-05T16:00:00Z" },
+        { id: "t_cp1_19", title: "Exterior paint", completed: true, completedAt: "2025-12-07T16:00:00Z" },
+        { id: "t_cp1_20", title: "Cornices & ceiling roses", completed: true, completedAt: "2025-12-08T14:00:00Z" },
       ], order: 5 },
-      { id: "ms_cp1_6", title: "Snag & List", description: "Final touches and list for sale", dueDate: "2026-01-15", status: "completed", completedDate: "2026-01-15", tasks: [
-        { id: "t_cp1_21", title: "Snag list walkthrough", completed: true },
-        { id: "t_cp1_22", title: "Garden cleanup", completed: true },
-        { id: "t_cp1_23", title: "Professional cleaning", completed: true },
-        { id: "t_cp1_24", title: "Professional photography", completed: true },
-        { id: "t_cp1_25", title: "List on Property24 & Private Property", completed: true },
+      { id: "ms_cp1_6", title: "Snag & List", description: "Final touches and list for sale", dueDate: "2026-01-15", status: "completed", completedDate: "2026-01-15", inspectionStatus: "passed", inspectedAt: "2026-01-14T10:00:00Z", tasks: [
+        { id: "t_cp1_21", title: "Snag list walkthrough", completed: true, completedAt: "2026-01-08T16:00:00Z" },
+        { id: "t_cp1_22", title: "Garden cleanup", completed: true, completedAt: "2026-01-10T12:00:00Z" },
+        { id: "t_cp1_23", title: "Professional cleaning", completed: true, completedAt: "2026-01-12T16:00:00Z" },
+        { id: "t_cp1_24", title: "Professional photography", completed: true, completedAt: "2026-01-13T14:00:00Z" },
+        { id: "t_cp1_25", title: "List on Property24 & Private Property", completed: true, completedAt: "2026-01-15T10:00:00Z" },
       ], order: 6 },
     ],
     activities: [
@@ -568,10 +568,10 @@ const MOCK_DEALS: Deal[] = [
     expenses: [
       { id: "e_cp1_1", dealId: "deal_demo_cp1", category: "legal", description: "Transfer attorney fees", amount: 58000, date: "2025-10-08", vendor: "Vorster & Partners", paymentMethod: "eft", isProjected: false, createdAt: "2025-10-08T10:00:00Z" },
       { id: "e_cp1_2", dealId: "deal_demo_cp1", category: "legal", description: "Bond registration", amount: 30000, date: "2025-10-08", vendor: "Bond Attorneys", paymentMethod: "eft", isProjected: false, createdAt: "2025-10-08T10:00:00Z" },
-      { id: "e_cp1_3", dealId: "deal_demo_cp1", category: "labour", description: "Thabo Mokoena — Builder (55 days)", amount: 77000, date: "2025-12-15", vendor: "Mokoena Building Services", paymentMethod: "eft", isProjected: false, createdAt: "2025-12-15T10:00:00Z" },
-      { id: "e_cp1_4", dealId: "deal_demo_cp1", category: "labour", description: "Sparks & Sons — Electrical (10 days)", amount: 9500, date: "2025-11-05", vendor: "Sparks & Sons Electrical", paymentMethod: "eft", isProjected: false, createdAt: "2025-11-05T10:00:00Z" },
-      { id: "e_cp1_5", dealId: "deal_demo_cp1", category: "labour", description: "JHB Plumbing Co (12 days)", amount: 10800, date: "2025-11-10", vendor: "JHB Plumbing Co", paymentMethod: "eft", isProjected: false, createdAt: "2025-11-10T10:00:00Z" },
-      { id: "e_cp1_6", dealId: "deal_demo_cp1", category: "labour", description: "Perfect Painters (18 days)", amount: 14400, date: "2025-12-10", vendor: "Perfect Painters", paymentMethod: "eft", isProjected: false, createdAt: "2025-12-10T10:00:00Z" },
+      { id: "e_cp1_3", dealId: "deal_demo_cp1", category: "labour", description: "Thabo Mokoena — Builder (55 days)", amount: 77000, date: "2025-12-15", vendor: "Mokoena Building Services", paymentMethod: "eft", isProjected: false, createdAt: "2025-12-15T10:00:00Z", milestoneId: "ms_cp1_5", contractorId: "c_cp1_2", signOff: { status: "approved", approvedAt: "2025-12-16T10:00:00Z", pmNotes: "All milestones verified, quality excellent" } },
+      { id: "e_cp1_4", dealId: "deal_demo_cp1", category: "labour", description: "Sparks & Sons — Electrical (10 days)", amount: 9500, date: "2025-11-05", vendor: "Sparks & Sons Electrical", paymentMethod: "eft", isProjected: false, createdAt: "2025-11-05T10:00:00Z", milestoneId: "ms_cp1_3", contractorId: "c_cp1_3", signOff: { status: "approved", approvedAt: "2025-11-06T09:00:00Z", pmNotes: "CoC received" } },
+      { id: "e_cp1_5", dealId: "deal_demo_cp1", category: "labour", description: "JHB Plumbing Co (12 days)", amount: 10800, date: "2025-11-10", vendor: "JHB Plumbing Co", paymentMethod: "eft", isProjected: false, createdAt: "2025-11-10T10:00:00Z", milestoneId: "ms_cp1_3", contractorId: "c_cp1_4", signOff: { status: "approved", approvedAt: "2025-11-11T10:00:00Z" } },
+      { id: "e_cp1_6", dealId: "deal_demo_cp1", category: "labour", description: "Perfect Painters (18 days)", amount: 14400, date: "2025-12-10", vendor: "Perfect Painters", paymentMethod: "eft", isProjected: false, createdAt: "2025-12-10T10:00:00Z", milestoneId: "ms_cp1_5", contractorId: "c_cp1_5", signOff: { status: "approved", approvedAt: "2025-12-11T10:00:00Z", pmNotes: "Paint finish consistent throughout" } },
       { id: "e_cp1_7", dealId: "deal_demo_cp1", category: "materials", description: "All renovation materials", amount: 152000, date: "2025-11-30", vendor: "Cashbuild / Builders", paymentMethod: "card", isProjected: false, createdAt: "2025-11-30T10:00:00Z" },
       { id: "e_cp1_8", dealId: "deal_demo_cp1", category: "materials", description: "Kitchen cabinets & countertops", amount: 66500, date: "2025-11-28", vendor: "Kitchen Studio / Stone World", paymentMethod: "eft", isProjected: false, createdAt: "2025-11-28T10:00:00Z" },
       { id: "e_cp1_9", dealId: "deal_demo_cp1", category: "marketing", description: "Professional photography", amount: 4500, date: "2026-01-12", vendor: "Estate Shots JHB", paymentMethod: "eft", isProjected: false, createdAt: "2026-01-12T10:00:00Z" },
@@ -645,22 +645,22 @@ const MOCK_DEALS: Deal[] = [
         { id: "t_cp2_2", title: "Bond approved", completed: true },
         { id: "t_cp2_3", title: "Transfer registered", completed: true },
       ], order: 1 },
-      { id: "ms_cp2_2", title: "Demolition", description: "Strip kitchen and bathrooms", dueDate: "2026-02-05", status: "completed", completedDate: "2026-02-04", tasks: [
-        { id: "t_cp2_4", title: "Strip kitchen", completed: true },
-        { id: "t_cp2_5", title: "Strip bathrooms (4)", completed: true },
-        { id: "t_cp2_6", title: "Remove old carpets", completed: true },
+      { id: "ms_cp2_2", title: "Demolition", description: "Strip kitchen and bathrooms", dueDate: "2026-02-05", status: "completed", completedDate: "2026-02-04", assignedContractorId: "c_cp2_2", inspectionStatus: "passed", inspectedAt: "2026-02-04T16:00:00Z", inspectionNotes: "All areas stripped, ready for rough-in", tasks: [
+        { id: "t_cp2_4", title: "Strip kitchen", completed: true, completedAt: "2026-01-28T16:00:00Z" },
+        { id: "t_cp2_5", title: "Strip bathrooms (4)", completed: true, completedAt: "2026-02-02T16:00:00Z" },
+        { id: "t_cp2_6", title: "Remove old carpets", completed: true, completedAt: "2026-02-04T12:00:00Z" },
       ], order: 2 },
-      { id: "ms_cp2_3", title: "Plumbing & Electrical", description: "Rough-in services", dueDate: "2026-02-20", status: "completed", completedDate: "2026-02-18", tasks: [
-        { id: "t_cp2_7", title: "Plumbing rough-in", completed: true },
-        { id: "t_cp2_8", title: "Electrical rough-in", completed: true },
+      { id: "ms_cp2_3", title: "Plumbing & Electrical", description: "Rough-in services", dueDate: "2026-02-20", status: "completed", completedDate: "2026-02-18", assignedContractorId: "c_cp2_3", inspectionStatus: "passed", inspectedAt: "2026-02-19T09:00:00Z", inspectionNotes: "Plumbing pressure test passed, electrical to be done when Sparks arrives", tasks: [
+        { id: "t_cp2_7", title: "Plumbing rough-in", completed: true, completedAt: "2026-02-14T16:00:00Z" },
+        { id: "t_cp2_8", title: "Electrical rough-in", completed: true, completedAt: "2026-02-18T16:00:00Z" },
       ], order: 3 },
-      { id: "ms_cp2_4", title: "Tiling & Flooring", description: "Tile bathrooms, lay laminate", dueDate: "2026-03-10", status: "in_progress", tasks: [
-        { id: "t_cp2_9", title: "Main bathroom tiling", completed: true },
+      { id: "ms_cp2_4", title: "Tiling & Flooring", description: "Tile bathrooms, lay laminate", dueDate: "2026-03-10", status: "in_progress", assignedContractorId: "c_cp2_2", inspectionStatus: "not_inspected", tasks: [
+        { id: "t_cp2_9", title: "Main bathroom tiling", completed: true, completedAt: "2026-02-20T16:00:00Z" },
         { id: "t_cp2_10", title: "En-suite tiling", completed: false, dueDate: "2026-02-25" },
         { id: "t_cp2_11", title: "Family bathroom tiling", completed: false },
         { id: "t_cp2_12", title: "Laminate flooring", completed: false },
       ], order: 4 },
-      { id: "ms_cp2_5", title: "Kitchen & Paint", description: "Install kitchen, full repaint", dueDate: "2026-03-25", status: "pending", tasks: [
+      { id: "ms_cp2_5", title: "Kitchen & Paint", description: "Install kitchen, full repaint", dueDate: "2026-03-25", status: "pending", assignedContractorId: "c_cp2_2", tasks: [
         { id: "t_cp2_13", title: "Kitchen install", completed: false },
         { id: "t_cp2_14", title: "Interior paint", completed: false },
         { id: "t_cp2_15", title: "Exterior paint", completed: false },
@@ -683,8 +683,8 @@ const MOCK_DEALS: Deal[] = [
     expenses: [
       { id: "e_cp2_1", dealId: "deal_demo_cp2", category: "legal", description: "Transfer attorney fees", amount: 65000, date: "2026-01-22", vendor: "Vorster & Partners", paymentMethod: "eft", isProjected: false, createdAt: "2026-01-22T10:00:00Z" },
       { id: "e_cp2_2", dealId: "deal_demo_cp2", category: "legal", description: "Bond registration", amount: 32000, date: "2026-01-22", vendor: "Bond Attorneys", paymentMethod: "eft", isProjected: false, createdAt: "2026-01-22T10:00:00Z" },
-      { id: "e_cp2_3", dealId: "deal_demo_cp2", category: "labour", description: "Thabo Mokoena — Jan/Feb", amount: 39200, date: "2026-02-15", vendor: "Mokoena Building Services", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-15T10:00:00Z" },
-      { id: "e_cp2_4", dealId: "deal_demo_cp2", category: "labour", description: "JHB Plumbing Co (8 days)", amount: 7200, date: "2026-02-18", vendor: "JHB Plumbing Co", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-18T10:00:00Z" },
+      { id: "e_cp2_3", dealId: "deal_demo_cp2", category: "labour", description: "Thabo Mokoena — Jan/Feb", amount: 39200, date: "2026-02-15", vendor: "Mokoena Building Services", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-15T10:00:00Z", milestoneId: "ms_cp2_4", contractorId: "c_cp2_2", signOff: { status: "pending" } },
+      { id: "e_cp2_4", dealId: "deal_demo_cp2", category: "labour", description: "JHB Plumbing Co (8 days)", amount: 7200, date: "2026-02-18", vendor: "JHB Plumbing Co", paymentMethod: "eft", isProjected: false, createdAt: "2026-02-18T10:00:00Z", milestoneId: "ms_cp2_3", contractorId: "c_cp2_3", signOff: { status: "approved", approvedAt: "2026-02-19T10:00:00Z", pmNotes: "Plumbing complete, pressure test passed" } },
       { id: "e_cp2_5", dealId: "deal_demo_cp2", category: "materials", description: "Tiles & adhesives (Cashbuild)", amount: 17540, date: "2026-02-01", vendor: "Cashbuild", paymentMethod: "card", isProjected: false, createdAt: "2026-02-01T10:00:00Z" },
       { id: "e_cp2_6", dealId: "deal_demo_cp2", category: "materials", description: "Plumbing fixtures (Cashbuild)", amount: 8200, date: "2026-02-05", vendor: "Cashbuild", paymentMethod: "card", isProjected: false, createdAt: "2026-02-05T10:00:00Z" },
       { id: "e_cp2_7", dealId: "deal_demo_cp2", category: "materials", description: "Paint & flooring (projected)", amount: 35000, date: "2026-03-10", vendor: "Builders / Cashbuild", paymentMethod: "card", isProjected: true, createdAt: "2026-02-15T10:00:00Z" },
@@ -955,7 +955,7 @@ export default function useDeals() {
       if (d.id !== dealId) return d;
       const milestones = (d.milestones || []).map((m) => {
         if (m.id !== milestoneId) return m;
-        const tasks = m.tasks.map((t) => t.id === taskId ? { ...t, completed: !t.completed } : t);
+        const tasks = m.tasks.map((t) => t.id === taskId ? { ...t, completed: !t.completed, completedAt: !t.completed ? new Date().toISOString() : undefined } : t);
         const allDone = tasks.length > 0 && tasks.every((t) => t.completed);
         return { ...m, tasks, status: allDone ? "completed" as MilestoneStatus : m.status === "completed" ? "in_progress" as MilestoneStatus : m.status };
       });
