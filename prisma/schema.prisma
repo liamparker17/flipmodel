@@ -222,7 +222,7 @@ model AccountingSync {
 
 model Deal {
   id                String    @id @default(cuid())
-  orgId             String
+  orgId             String?
   userId            String
   name              String
   address           String    @default("")
@@ -244,7 +244,7 @@ model Deal {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  org               Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org               Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   expenses          Expense[]
   milestones        Milestone[]
@@ -261,7 +261,7 @@ model Deal {
 
 model Expense {
   id              String    @id @default(cuid())
-  orgId           String
+  orgId           String?
   userId          String
   dealId          String
   category        String    // ExpenseCategory
@@ -282,7 +282,7 @@ model Expense {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org             Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal            Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
@@ -293,7 +293,7 @@ model Expense {
 
 model Milestone {
   id                    String    @id @default(cuid())
-  orgId                 String
+  orgId                 String?
   userId                String
   dealId                String
   title                 String
@@ -311,7 +311,7 @@ model Milestone {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  org                   Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org                   Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal                  Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
   tasks                 Task[]
@@ -338,7 +338,7 @@ model Task {
 
 model Activity {
   id          String   @id @default(cuid())
-  orgId       String
+  orgId       String?
   userId      String
   dealId      String
   type        String   // ActivityType
@@ -346,7 +346,7 @@ model Activity {
   metadata    Json?
   timestamp   DateTime @default(now())
 
-  org         Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org         Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
@@ -360,7 +360,7 @@ model Activity {
 
 model Contact {
   id           String    @id @default(cuid())
-  orgId        String
+  orgId        String?
   userId       String
   name         String
   role         String    @default("other") // ContactRole
@@ -377,7 +377,7 @@ model Contact {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  org          Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org          Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   dealContacts DealContact[]
 
@@ -388,13 +388,13 @@ model Contact {
 
 model DealContact {
   id              String  @id @default(cuid())
-  orgId           String
+  orgId           String?
   dealId          String
   contactId       String
   workDescription String?
   daysWorked      Float?
 
-  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org             Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   deal            Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
   contact         Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
@@ -406,7 +406,7 @@ model DealContact {
 
 model Document {
   id        String   @id @default(cuid())
-  orgId     String
+  orgId     String?
   userId    String
   dealId    String?
   name      String
@@ -417,7 +417,7 @@ model Document {
   mimeType  String?
   createdAt DateTime @default(now())
 
-  org       Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org       Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal      Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
@@ -428,7 +428,7 @@ model Document {
 
 model ShoppingListItem {
   id              String   @id @default(cuid())
-  orgId           String
+  orgId           String?
   userId          String
   dealId          String
   materialKey     String
@@ -448,7 +448,7 @@ model ShoppingListItem {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org             Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal            Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
@@ -461,7 +461,7 @@ model ShoppingListItem {
 
 model Tool {
   id                  String   @id @default(cuid())
-  orgId               String
+  orgId               String?
   userId              String
   name                String
   category            String   // ToolCategoryKey
@@ -483,7 +483,7 @@ model Tool {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  org                 Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org                 Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   checkouts           ToolCheckout[]
   maintenance         ToolMaintenance[]
@@ -496,7 +496,7 @@ model Tool {
 
 model ToolCheckout {
   id                 String    @id @default(cuid())
-  orgId              String
+  orgId              String?
   userId             String
   toolId             String
   contractorName     String
@@ -512,7 +512,7 @@ model ToolCheckout {
   notes              String?
   createdAt          DateTime  @default(now())
 
-  org                Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org                Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tool               Tool      @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
@@ -523,7 +523,7 @@ model ToolCheckout {
 
 model ToolMaintenance {
   id          String   @id @default(cuid())
-  orgId       String
+  orgId       String?
   userId      String
   toolId      String
   date        DateTime
@@ -534,7 +534,7 @@ model ToolMaintenance {
   notes       String?
   createdAt   DateTime @default(now())
 
-  org         Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org         Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tool        Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
@@ -544,7 +544,7 @@ model ToolMaintenance {
 
 model ToolIncident {
   id              String   @id @default(cuid())
-  orgId           String
+  orgId           String?
   userId          String
   toolId          String
   date            DateTime
@@ -560,7 +560,7 @@ model ToolIncident {
   notes           String?
   createdAt       DateTime @default(now())
 
-  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org             Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tool            Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
@@ -573,7 +573,7 @@ model ToolIncident {
 
 model Notification {
   id        String   @id @default(cuid())
-  orgId     String
+  orgId     String?
   userId    String
   type      String   // deadline_warning | budget_alert | tool_overdue | milestone_overdue | general
   title     String
@@ -582,7 +582,7 @@ model Notification {
   metadata  Json?
   createdAt DateTime @default(now())
 
-  org       Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org       Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([orgId])
@@ -594,7 +594,7 @@ model Notification {
 
 model Invoice {
   id            String    @id @default(cuid())
-  orgId         String
+  orgId         String?
   userId        String
   dealId        String?
   invoiceNumber String
@@ -610,7 +610,7 @@ model Invoice {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  org           Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org           Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal          Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
 
