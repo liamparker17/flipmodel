@@ -1,15 +1,15 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, apiSuccess, handleApiError } from "@/lib/api-helpers";
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const page = parseInt(req.nextUrl.searchParams.get("page") || "1");
     const limit = parseInt(req.nextUrl.searchParams.get("limit") || "20");
     const unreadOnly = req.nextUrl.searchParams.get("unread") === "true";
 
-    const where: Record<string, unknown> = { userId };
+    const where: Record<string, unknown> = { userId: ctx.userId, orgId: ctx.orgId };
     if (unreadOnly) where.read = false;
 
     const [notifications, total] = await Promise.all([
@@ -30,23 +30,21 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const body = await req.json();
 
-    // Mark notifications as read
     if (body.action === "markRead") {
       const ids = body.ids as string[];
       await prisma.notification.updateMany({
-        where: { id: { in: ids }, userId },
+        where: { id: { in: ids }, userId: ctx.userId, orgId: ctx.orgId },
         data: { read: true },
       });
       return apiSuccess({ updated: ids.length });
     }
 
-    // Mark all as read
     if (body.action === "markAllRead") {
       const result = await prisma.notification.updateMany({
-        where: { userId, read: false },
+        where: { userId: ctx.userId, orgId: ctx.orgId, read: false },
         data: { read: true },
       });
       return apiSuccess({ updated: result.count });

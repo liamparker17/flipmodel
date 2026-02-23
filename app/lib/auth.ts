@@ -5,6 +5,27 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import prisma from "./db";
 
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      orgId?: string | null;
+      orgRole?: string | null;
+    };
+  }
+}
+
+declare module "@auth/core/jwt" {
+  interface JWT {
+    id?: string;
+    orgId?: string | null;
+    orgRole?: string | null;
+  }
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
@@ -51,15 +72,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       : []),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
       }
+
+      // Refresh org membership on sign-in or when triggered
+      if (user || trigger === "update") {
+        const userId = token.id as string;
+        if (userId) {
+          const member = await prisma.orgMember.findFirst({
+            where: { userId, isActive: true },
+            orderBy: { joinedAt: "asc" },
+          });
+          token.orgId = member?.orgId ?? null;
+          token.orgRole = member?.role ?? null;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (token?.id) {
         session.user.id = token.id as string;
+        session.user.orgId = (token.orgId as string) ?? null;
+        session.user.orgRole = (token.orgRole as string) ?? null;
       }
       return session;
     },

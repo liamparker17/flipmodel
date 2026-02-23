@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 import { z } from "zod";
 
 const createInvoiceSchema = z.object({
@@ -19,10 +19,10 @@ const createInvoiceSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const dealId = req.nextUrl.searchParams.get("dealId");
 
-    const where: Record<string, unknown> = { userId };
+    const where: Record<string, unknown> = { orgId: ctx.orgId };
     if (dealId) where.dealId = dealId;
 
     const invoices = await prisma.invoice.findMany({
@@ -37,13 +37,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("invoices:write");
     const body = await req.json();
     const data = createInvoiceSchema.parse(body);
 
     const invoice = await prisma.invoice.create({
       data: {
-        userId,
+        orgId: ctx.orgId,
+        userId: ctx.userId,
         dealId: data.dealId,
         invoiceNumber: data.invoiceNumber,
         contactId: data.contactId,

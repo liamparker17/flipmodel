@@ -1,35 +1,36 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { updateToolSchema, checkoutToolSchema, returnToolSchema } from "@/lib/validations/tool";
+import type { OrgContext } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ toolId: string }> };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const { toolId } = await params;
     const body = await req.json();
 
     // Handle special actions
     if (body._action === "checkout") {
-      return handleCheckout(userId, toolId, body);
+      return handleCheckout(ctx, toolId, body);
     }
     if (body._action === "return") {
-      return handleReturn(userId, body);
+      return handleReturn(ctx, body);
     }
     if (body._action === "maintenance") {
-      return handleMaintenance(userId, toolId, body);
+      return handleMaintenance(ctx, toolId, body);
     }
     if (body._action === "incident") {
-      return handleIncident(userId, toolId, body);
+      return handleIncident(ctx, toolId, body);
     }
     if (body._action === "resolveIncident") {
-      return handleResolveIncident(userId, body);
+      return handleResolveIncident(ctx, body);
     }
 
     const data = updateToolSchema.parse(body);
-    const existing = await prisma.tool.findFirst({ where: { id: toolId, userId } });
+    const existing = await prisma.tool.findFirst({ where: { id: toolId, orgId: ctx.orgId } });
     if (!existing) return apiError("Tool not found", 404);
 
     const tool = await prisma.tool.update({
@@ -46,14 +47,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 }
 
-async function handleCheckout(userId: string, toolId: string, body: Record<string, unknown>) {
+async function handleCheckout(ctx: OrgContext, toolId: string, body: Record<string, unknown>) {
   const data = checkoutToolSchema.parse(body);
-  const tool = await prisma.tool.findFirst({ where: { id: toolId, userId } });
+  const tool = await prisma.tool.findFirst({ where: { id: toolId, orgId: ctx.orgId } });
   if (!tool) return apiError("Tool not found", 404);
 
   await prisma.toolCheckout.create({
     data: {
-      userId,
+      orgId: ctx.orgId,
+      userId: ctx.userId,
       toolId,
       contractorName: data.contractorName,
       contractorId: data.contractorId,
@@ -81,10 +83,10 @@ async function handleCheckout(userId: string, toolId: string, body: Record<strin
   return apiSuccess(updated);
 }
 
-async function handleReturn(userId: string, body: Record<string, unknown>) {
+async function handleReturn(ctx: OrgContext, body: Record<string, unknown>) {
   const data = returnToolSchema.parse(body);
   const checkout = await prisma.toolCheckout.findFirst({
-    where: { id: data.checkoutId, userId },
+    where: { id: data.checkoutId, orgId: ctx.orgId },
   });
   if (!checkout) return apiError("Checkout not found", 404);
 
@@ -113,10 +115,11 @@ async function handleReturn(userId: string, body: Record<string, unknown>) {
   return apiSuccess(updated);
 }
 
-async function handleMaintenance(userId: string, toolId: string, body: Record<string, unknown>) {
+async function handleMaintenance(ctx: OrgContext, toolId: string, body: Record<string, unknown>) {
   const entry = await prisma.toolMaintenance.create({
     data: {
-      userId,
+      orgId: ctx.orgId,
+      userId: ctx.userId,
       toolId,
       date: new Date(body.date as string),
       type: body.type as string,
@@ -129,10 +132,11 @@ async function handleMaintenance(userId: string, toolId: string, body: Record<st
   return apiSuccess(entry, 201);
 }
 
-async function handleIncident(userId: string, toolId: string, body: Record<string, unknown>) {
+async function handleIncident(ctx: OrgContext, toolId: string, body: Record<string, unknown>) {
   const incident = await prisma.toolIncident.create({
     data: {
-      userId,
+      orgId: ctx.orgId,
+      userId: ctx.userId,
       toolId,
       date: new Date(body.date as string),
       type: body.type as string,
@@ -158,9 +162,9 @@ async function handleIncident(userId: string, toolId: string, body: Record<strin
   return apiSuccess(incident, 201);
 }
 
-async function handleResolveIncident(userId: string, body: Record<string, unknown>) {
+async function handleResolveIncident(ctx: OrgContext, body: Record<string, unknown>) {
   const incident = await prisma.toolIncident.findFirst({
-    where: { id: body.incidentId as string, userId },
+    where: { id: body.incidentId as string, orgId: ctx.orgId },
   });
   if (!incident) return apiError("Incident not found", 404);
 
@@ -178,10 +182,10 @@ async function handleResolveIncident(userId: string, body: Record<string, unknow
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("tools:write");
     const { toolId } = await params;
 
-    const existing = await prisma.tool.findFirst({ where: { id: toolId, userId } });
+    const existing = await prisma.tool.findFirst({ where: { id: toolId, orgId: ctx.orgId } });
     if (!existing) return apiError("Tool not found", 404);
 
     await prisma.tool.delete({ where: { id: toolId } });

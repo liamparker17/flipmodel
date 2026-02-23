@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, apiSuccess, handleApiError } from "@/lib/api-helpers";
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const dealId = req.nextUrl.searchParams.get("dealId");
 
-    const where: Record<string, unknown> = { userId };
+    const where: Record<string, unknown> = { orgId: ctx.orgId };
     if (dealId) where.dealId = dealId;
 
     const activities = await prisma.activity.findMany({

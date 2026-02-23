@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 import { createDealSchema } from "@/lib/validations/deal";
 
 export async function GET() {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const deals = await prisma.deal.findMany({
-      where: { userId },
+      where: { orgId: ctx.orgId },
       include: {
         expenses: true,
         milestones: { include: { tasks: true } },
@@ -26,13 +26,14 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("deals:write");
     const body = await req.json();
     const data = createDealSchema.parse(body);
 
     const deal = await prisma.deal.create({
       data: {
-        userId,
+        orgId: ctx.orgId,
+        userId: ctx.userId,
         name: data.name,
         address: data.address || "",
         purchasePrice: data.purchasePrice || 0,

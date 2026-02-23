@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { auth } from "./auth";
 import { type ZodSchema } from "zod";
 import { ZodError } from "zod";
+import prisma from "./db";
+import { hasPermission, canAccessModule } from "./permissions";
+import type { Permission, ModuleKey } from "@/types/org";
+
+// ─── Auth Helpers ───
 
 export async function getAuthUserId(): Promise<string | null> {
   const session = await auth();
@@ -16,12 +21,91 @@ export async function requireAuth(): Promise<string> {
   return userId;
 }
 
+// ─── Org Context ───
+
+export interface OrgContext {
+  userId: string;
+  orgId: string;
+  member: {
+    id: string;
+    role: string;
+    departmentId: string | null;
+    title: string | null;
+    moduleOverrides: Record<string, boolean> | null;
+    permissionOverrides: Record<string, boolean> | null;
+    isActive: boolean;
+  };
+}
+
+export async function requireOrgMember(): Promise<OrgContext> {
+  const userId = await requireAuth();
+
+  const member = await prisma.orgMember.findFirst({
+    where: { userId, isActive: true },
+    orderBy: { joinedAt: "asc" },
+  });
+
+  if (!member) {
+    throw new NoOrgError();
+  }
+
+  return {
+    userId,
+    orgId: member.orgId,
+    member: {
+      id: member.id,
+      role: member.role,
+      departmentId: member.departmentId,
+      title: member.title,
+      moduleOverrides: member.moduleOverrides as Record<string, boolean> | null,
+      permissionOverrides: member.permissionOverrides as Record<string, boolean> | null,
+      isActive: member.isActive,
+    },
+  };
+}
+
+export async function requirePermission(permission: Permission): Promise<OrgContext> {
+  const ctx = await requireOrgMember();
+  if (!hasPermission(ctx.member, permission)) {
+    throw new ForbiddenError(`Missing permission: ${permission}`);
+  }
+  return ctx;
+}
+
+export async function requireModuleAccess(module: ModuleKey): Promise<OrgContext> {
+  const ctx = await requireOrgMember();
+  if (!canAccessModule(ctx.member, module)) {
+    throw new ForbiddenError(`No access to module: ${module}`);
+  }
+  return ctx;
+}
+
+// ─── Error Classes ───
+
 export class AuthError extends Error {
   constructor() {
     super("Unauthorized");
     this.name = "AuthError";
   }
 }
+
+export class NoOrgError extends Error {
+  constructor() {
+    super("No organisation membership");
+    this.name = "NoOrgError";
+  }
+}
+
+export class ForbiddenError extends Error {
+  message: string;
+  constructor(message = "Forbidden") {
+    super(message);
+    this.name = "ForbiddenError";
+    this.message = message;
+  }
+}
+
+// ─── Validation & Response Helpers ───
 
 export function validateBody<T>(schema: ZodSchema<T>, data: unknown): T {
   return schema.parse(data);
@@ -38,6 +122,12 @@ export function apiError(message: string, status = 400) {
 export function handleApiError(error: unknown) {
   if (error instanceof AuthError) {
     return apiError("Unauthorized", 401);
+  }
+  if (error instanceof NoOrgError) {
+    return apiError("No organisation membership. Please create or join an organisation.", 403);
+  }
+  if (error instanceof ForbiddenError) {
+    return apiError(error.message, 403);
   }
   if (error instanceof ZodError) {
     return apiError((error as ZodError).issues.map((e) => e.message).join(", "), 400);

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { theme, fmt } from "../../components/theme";
+import { theme, fmt, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
 import { estimateMaterials } from "../../utils/materialEstimator";
 import { getSupplierUrl, trackOutboundClick } from "../../utils/trackOutbound";

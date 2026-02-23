@@ -1,17 +1,17 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 import { createToolSchema } from "@/lib/validations/tool";
 
 export async function GET() {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
 
     const [tools, checkouts, maintenance, incidents] = await Promise.all([
-      prisma.tool.findMany({ where: { userId }, orderBy: { updatedAt: "desc" } }),
-      prisma.toolCheckout.findMany({ where: { userId }, orderBy: { checkedOutAt: "desc" } }),
-      prisma.toolMaintenance.findMany({ where: { userId }, orderBy: { date: "desc" } }),
-      prisma.toolIncident.findMany({ where: { userId }, orderBy: { date: "desc" } }),
+      prisma.tool.findMany({ where: { orgId: ctx.orgId }, orderBy: { updatedAt: "desc" } }),
+      prisma.toolCheckout.findMany({ where: { orgId: ctx.orgId }, orderBy: { checkedOutAt: "desc" } }),
+      prisma.toolMaintenance.findMany({ where: { orgId: ctx.orgId }, orderBy: { date: "desc" } }),
+      prisma.toolIncident.findMany({ where: { orgId: ctx.orgId }, orderBy: { date: "desc" } }),
     ]);
 
     return apiSuccess({ tools, checkouts, maintenance, incidents });
@@ -22,13 +22,14 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("tools:write");
     const body = await req.json();
     const data = createToolSchema.parse(body);
 
     const tool = await prisma.tool.create({
       data: {
-        userId,
+        orgId: ctx.orgId,
+        userId: ctx.userId,
         name: data.name,
         category: data.category,
         brand: data.brand,

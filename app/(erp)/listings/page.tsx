@@ -1,14 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { theme, fmt, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
-
-const theme = {
-  bg: "#0B0E13", card: "#12151C", cardBorder: "#1C2030", accent: "#3B82F6",
-  text: "#E2E4E9", textDim: "#6B7280", green: "#22C55E", orange: "#F59E0B",
-};
-
-const fmt = (n: number) => new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" }).format(n);
 
 export default function ListingsPage() {
   const { deals, loaded } = useDeals();

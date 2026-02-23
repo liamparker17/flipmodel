@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, Suspense } from "react";
-import { theme, fmt } from "../../components/theme";
+import { theme, fmt, styles } from "../../components/theme";
 import useTools from "../../hooks/api/useApiTools";
 import useDeals from "../../hooks/api/useApiDeals";
 import type { Tool, ToolCheckout, ToolMaintenanceEntry, ToolIncident, ToolCategoryKey, ToolStatus, ToolCondition } from "../../types/tool";
@@ -169,8 +169,8 @@ function ToolsPageInner() {
 
         {/* Lifecycle Panel */}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 24 }}>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Lifecycle</h3>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Lifecycle</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
               <DetailRow label="Purchase Date" value={formatDate(selectedTool.purchaseDate)} />
               <DetailRow label="Age" value={`${ageMonths} months`} />
@@ -186,8 +186,8 @@ function ToolsPageInner() {
               </div>
             </div>
           </div>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Financials</h3>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Financials</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
               <DetailRow label="Purchase Cost" value={fmt(selectedTool.purchaseCost)} mono />
               <DetailRow label="Current Value (est.)" value={fmt(depreciatedValue)} mono />
@@ -213,16 +213,16 @@ function ToolsPageInner() {
         )}
 
         {selectedTool.notes && (
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginBottom: 24 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 8px" }}>Notes</h3>
+          <div style={{ ...styles.card, marginBottom: 24 }}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 8px" }}>Notes</h3>
             <p style={{ fontSize: 12, color: theme.text, margin: 0, lineHeight: 1.6 }}>{selectedTool.notes}</p>
           </div>
         )}
 
         {/* Checkout History */}
-        <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, overflow: "hidden", marginBottom: 24 }}>
+        <div style={{ ...styles.card, overflow: "hidden", padding: 0, marginBottom: 24 }}>
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${theme.cardBorder}` }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>Checkout History</h3>
+            <h3 style={styles.sectionHeading}>Checkout History</h3>
           </div>
           {toolCheckouts.length === 0 ? (
             <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: theme.textDim }}>No checkout history</div>
@@ -260,9 +260,9 @@ function ToolsPageInner() {
         </div>
 
         {/* Maintenance Log */}
-        <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, overflow: "hidden", marginBottom: 24 }}>
+        <div style={{ ...styles.card, overflow: "hidden", padding: 0, marginBottom: 24 }}>
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${theme.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>Maintenance Log</h3>
+            <h3 style={styles.sectionHeading}>Maintenance Log</h3>
             <button onClick={() => setShowMaintenance(true)} style={{ background: "transparent", border: `1px solid ${theme.accent}30`, borderRadius: 4, padding: "3px 10px", color: theme.accent, fontSize: 10, fontWeight: 600, cursor: "pointer" }}>+ Add Entry</button>
           </div>
           {toolMaintenance.length === 0 ? (

@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 import { createExpenseSchema } from "@/lib/validations/expense";
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const dealId = req.nextUrl.searchParams.get("dealId");
 
-    const where: Record<string, unknown> = { userId };
+    const where: Record<string, unknown> = { orgId: ctx.orgId };
     if (dealId) where.dealId = dealId;
 
     const expenses = await prisma.expense.findMany({
@@ -23,13 +23,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("expenses:write");
     const body = await req.json();
     const data = createExpenseSchema.parse(body);
 
     const expense = await prisma.expense.create({
       data: {
-        userId,
+        orgId: ctx.orgId,
+        userId: ctx.userId,
         dealId: data.dealId,
         category: data.category,
         description: data.description,

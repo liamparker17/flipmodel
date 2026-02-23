@@ -1,13 +1,13 @@
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, apiSuccess, handleApiError } from "@/lib/api-helpers";
 
 export async function GET() {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
 
     const [deals, tools, contacts, documents, invoices] = await Promise.all([
       prisma.deal.findMany({
-        where: { userId },
+        where: { orgId: ctx.orgId },
         include: {
           expenses: true,
           milestones: { include: { tasks: true } },
@@ -17,16 +17,16 @@ export async function GET() {
           shoppingListItems: true,
         },
       }),
-      prisma.tool.findMany({ where: { userId } }),
-      prisma.contact.findMany({ where: { userId } }),
-      prisma.document.findMany({ where: { userId } }),
-      prisma.invoice.findMany({ where: { userId } }),
+      prisma.tool.findMany({ where: { orgId: ctx.orgId } }),
+      prisma.contact.findMany({ where: { orgId: ctx.orgId } }),
+      prisma.document.findMany({ where: { orgId: ctx.orgId } }),
+      prisma.invoice.findMany({ where: { orgId: ctx.orgId } }),
     ]);
 
     const [checkouts, maintenance, incidents] = await Promise.all([
-      prisma.toolCheckout.findMany({ where: { userId } }),
-      prisma.toolMaintenance.findMany({ where: { userId } }),
-      prisma.toolIncident.findMany({ where: { userId } }),
+      prisma.toolCheckout.findMany({ where: { orgId: ctx.orgId } }),
+      prisma.toolMaintenance.findMany({ where: { orgId: ctx.orgId } }),
+      prisma.toolIncident.findMany({ where: { orgId: ctx.orgId } }),
     ]);
 
     return apiSuccess({

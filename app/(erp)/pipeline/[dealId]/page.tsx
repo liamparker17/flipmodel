@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { theme, fmt, pct } from "../../../components/theme";
+import { theme, fmt, pct, styles } from "../../../components/theme";
 import DealAnalysis from "../../../components/deals/DealAnalysis";
 import useDeals from "../../../hooks/api/useApiDeals";
 import { DEAL_STAGES, getStageColor, getStageLabel, computeDealMetrics, PRIORITY_CONFIG, getExpensesByCategory, getDealProgress, EXPENSE_CATEGORIES } from "../../../utils/dealHelpers";
@@ -222,8 +222,8 @@ function OverviewTab({ deal, notesInput, setNotesInput, onNotesSave, tagsInput, 
   return (
     <div style={{ padding: isMobile ? 16 : 28, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
       {/* Deal Info */}
-      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Property Details</h3>
+      <div style={styles.card}>
+        <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Property Details</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <InfoField label="Name" value={deal.name} />
           <InfoField label="Address" value={deal.address || "—"} />
@@ -240,8 +240,8 @@ function OverviewTab({ deal, notesInput, setNotesInput, onNotesSave, tagsInput, 
       </div>
 
       {/* Financial Summary */}
-      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Financial Summary</h3>
+      <div style={styles.card}>
+        <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Financial Summary</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <InfoField label="Est. Profit" value={fmt(metrics.estimatedProfit)} mono valueColor={metrics.estimatedProfit >= 0 ? theme.green : theme.red} />
           <InfoField label="Est. ROI" value={pct(metrics.estimatedRoi)} mono valueColor={metrics.estimatedRoi >= 0.15 ? theme.green : theme.orange} />
@@ -264,8 +264,8 @@ function OverviewTab({ deal, notesInput, setNotesInput, onNotesSave, tagsInput, 
       </div>
 
       {/* Notes */}
-      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Notes</h3>
+      <div style={styles.card}>
+        <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Notes</h3>
         <textarea value={notesInput} onChange={(e) => setNotesInput(e.target.value)} onBlur={onNotesSave}
           placeholder="Add notes about this deal..."
           style={{
@@ -277,8 +277,8 @@ function OverviewTab({ deal, notesInput, setNotesInput, onNotesSave, tagsInput, 
       </div>
 
       {/* Tags */}
-      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Tags</h3>
+      <div style={styles.card}>
+        <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Tags</h3>
         <input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} onBlur={onTagsSave}
           placeholder="Enter tags separated by commas..."
           style={{
@@ -397,7 +397,7 @@ function ExecutionTab({ deal, onAddExpense, onDeleteExpense, onAddMilestone, onU
         {/* Milestones */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>Milestones</h3>
+            <h3 style={styles.sectionHeading}>Milestones</h3>
             <button onClick={() => setShowMilestoneForm(!showMilestoneForm)} style={{
               background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
               padding: "5px 10px", fontSize: 10, fontWeight: 600, cursor: "pointer",
@@ -480,8 +480,8 @@ function ExecutionTab({ deal, onAddExpense, onDeleteExpense, onAddMilestone, onU
         {/* Category Breakdown + Expenses */}
         <div>
           {categoryBreakdown.length > 0 && (
-            <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 14, marginBottom: 12 }}>
-              <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 8px" }}>Spending by Category</h3>
+            <div style={{ ...styles.card, padding: 14, marginBottom: 12 }}>
+              <h3 style={{ ...styles.sectionHeading, margin: "0 0 8px" }}>Spending by Category</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {categoryBreakdown.map((cat) => (
                   <div key={cat.category} style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -498,7 +498,7 @@ function ExecutionTab({ deal, onAddExpense, onDeleteExpense, onAddMilestone, onU
           )}
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>Expenses ({expenses.length})</h3>
+            <h3 style={styles.sectionHeading}>Expenses ({expenses.length})</h3>
             <button onClick={() => setShowExpenseForm(!showExpenseForm)} style={{
               background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
               padding: "5px 10px", fontSize: 10, fontWeight: 600, cursor: "pointer",
@@ -595,7 +595,7 @@ function PeopleTab({ deal, onAddContact, onDeleteContact, isMobile }: {
   return (
     <div style={{ padding: isMobile ? 16 : 28 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>People ({contacts.length})</h3>
+        <h3 style={styles.sectionHeading}>People ({contacts.length})</h3>
         <button onClick={() => setShowForm(!showForm)} style={{
           background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
           padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", minHeight: 30,
@@ -747,7 +747,7 @@ function ActivityTab({ deal, isMobile }: { deal: Deal; isMobile: boolean }) {
 
   return (
     <div style={{ padding: isMobile ? 16 : 28 }}>
-      <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 16px" }}>Activity Timeline ({activities.length})</h3>
+      <h3 style={{ ...styles.sectionHeading, margin: "0 0 16px" }}>Activity Timeline ({activities.length})</h3>
       {activities.length === 0 ? (
         <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 30, textAlign: "center", color: theme.textDim, fontSize: 12 }}>
           No activity recorded yet.

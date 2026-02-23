@@ -15,6 +15,16 @@ export declare const theme: {
   inputBorder: string;
 };
 
+export declare const styles: {
+  card: CSSProperties;
+  cardMb: CSSProperties;
+  sectionHeading: CSSProperties;
+  flexBetween: CSSProperties;
+  flexCenter: CSSProperties;
+  mono: CSSProperties;
+  linkBtn: CSSProperties;
+};
+
 export declare function fmt(n: number | undefined | null): string;
 export declare function pct(n: number): string;
 export declare function calcTransferDuty(price: number): number;

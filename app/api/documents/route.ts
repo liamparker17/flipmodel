@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 import { z } from "zod";
 
 const createDocumentSchema = z.object({
@@ -13,10 +13,10 @@ const createDocumentSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const dealId = req.nextUrl.searchParams.get("dealId");
 
-    const where: Record<string, unknown> = { userId };
+    const where: Record<string, unknown> = { orgId: ctx.orgId };
     if (dealId) where.dealId = dealId;
 
     const documents = await prisma.document.findMany({
@@ -31,13 +31,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("documents:write");
     const body = await req.json();
     const data = createDocumentSchema.parse(body);
 
     const document = await prisma.document.create({
       data: {
-        userId,
+        orgId: ctx.orgId,
+        userId: ctx.userId,
         dealId: data.dealId,
         name: data.name,
         type: data.type,

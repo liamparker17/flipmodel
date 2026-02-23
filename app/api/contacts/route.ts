@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 import { createContactSchema } from "@/lib/validations/contact";
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const role = req.nextUrl.searchParams.get("role");
 
-    const where: Record<string, unknown> = { userId };
+    const where: Record<string, unknown> = { orgId: ctx.orgId };
     if (role) where.role = role;
 
     const contacts = await prisma.contact.findMany({
@@ -24,13 +24,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("contacts:write");
     const body = await req.json();
     const data = createContactSchema.parse(body);
 
     const contact = await prisma.contact.create({
       data: {
-        userId,
+        orgId: ctx.orgId,
+        userId: ctx.userId,
         name: data.name,
         role: data.role || "other",
         company: data.company,

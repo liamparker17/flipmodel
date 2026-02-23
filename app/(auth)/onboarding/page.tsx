@@ -2,18 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-const theme = {
-  bg: "#0B0E13",
-  card: "#12151C",
-  cardBorder: "#1C2030",
-  accent: "#3B82F6",
-  text: "#E2E4E9",
-  textDim: "#6B7280",
-  input: "#161A24",
-  inputBorder: "#252B3B",
-  green: "#22C55E",
-};
+import { theme } from "../../components/theme";
 
 const STEPS = [
   "Company Profile",

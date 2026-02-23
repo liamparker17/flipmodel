@@ -18,14 +18,16 @@ model User {
   company       String?
   phone         String?
   preferences   Json?     // { defaultCommission, defaultContingency, bondRate, ... }
-  role          String    @default("owner") // owner | manager | field_worker
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   accounts      Account[]
   sessions      Session[]
 
-  // Business data ownership
+  // Organisation membership
+  orgMembers    OrgMember[]
+
+  // Business data ownership (userId retained for audit trail)
   deals         Deal[]
   expenses      Expense[]
   milestones    Milestone[]
@@ -39,10 +41,6 @@ model User {
   shoppingListItems ShoppingListItem[]
   notifications Notification[]
   invoices      Invoice[]
-
-  // Team membership
-  ownedTeams    Team[]       @relation("TeamOwner")
-  teamMembers   TeamMember[]
 
   @@index([email])
 }
@@ -83,10 +81,148 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// ─── Organisation ───
+
+model Organisation {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  currency  String   @default("ZAR")
+  timezone  String   @default("Africa/Johannesburg")
+  settings  Json?    // OrgSettings
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members              OrgMember[]
+  departments          Department[]
+  deals                Deal[]
+  expenses             Expense[]
+  milestones           Milestone[]
+  contacts             Contact[]
+  documents            Document[]
+  tools                Tool[]
+  toolCheckouts        ToolCheckout[]
+  toolMaintenance      ToolMaintenance[]
+  toolIncidents        ToolIncident[]
+  activities           Activity[]
+  shoppingListItems    ShoppingListItem[]
+  notifications        Notification[]
+  invoices             Invoice[]
+  dealContacts         DealContact[]
+  accountingConnections AccountingConnection[]
+  chartOfAccounts      ChartOfAccount[]
+  accountingSyncs      AccountingSync[]
+
+  @@index([slug])
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org       Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children  Department[] @relation("DepartmentHierarchy")
+  members   OrgMember[]
+
+  @@index([orgId])
+}
+
+model OrgMember {
+  id                  String   @id @default(cuid())
+  orgId               String
+  userId              String
+  role                String   @default("viewer") // OrgRole
+  departmentId        String?
+  title               String?
+  moduleOverrides     Json?    // { [ModuleKey]: boolean }
+  permissionOverrides Json?    // { [Permission]: boolean }
+  isActive            Boolean  @default(true)
+  invitedBy           String?
+  joinedAt            DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  org        Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department Department?  @relation(fields: [departmentId], references: [id])
+
+  @@unique([orgId, userId])
+  @@index([orgId])
+  @@index([userId])
+}
+
+// ─── Accounting ───
+
+model AccountingConnection {
+  id             String   @id @default(cuid())
+  orgId          String
+  provider       String   // AccountingProvider
+  status         String   @default("disconnected") // AccountingConnectionStatus
+  accessToken    String?  @db.Text
+  refreshToken   String?  @db.Text
+  tokenExpiresAt DateTime?
+  externalOrgId  String?
+  lastSyncAt     DateTime?
+  settings       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  org Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+}
+
+model ChartOfAccount {
+  id              String   @id @default(cuid())
+  orgId           String
+  code            String
+  name            String
+  type            String   // AccountType
+  subtype         String   // AccountSubtype
+  externalId      String?
+  isActive        Boolean  @default(true)
+  isSystemAccount Boolean  @default(false)
+  parentId        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  org    Organisation   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent ChartOfAccount? @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children ChartOfAccount[] @relation("AccountHierarchy")
+
+  @@unique([orgId, code])
+  @@index([orgId])
+}
+
+model AccountingSync {
+  id            String    @id @default(cuid())
+  orgId         String
+  entityType    String
+  entityId      String
+  externalId    String?
+  direction     String    // SyncDirection
+  status        String    @default("pending") // SyncStatus
+  errorMessage  String?
+  lastSyncedAt  DateTime?
+  createdAt     DateTime  @default(now())
+
+  org Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([orgId, entityType, entityId])
+}
+
 // ─── Business Tables ───
 
 model Deal {
   id                String    @id @default(cuid())
+  orgId             String
   userId            String
   name              String
   address           String    @default("")
@@ -108,6 +244,7 @@ model Deal {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  org               Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   expenses          Expense[]
   milestones        Milestone[]
@@ -117,12 +254,14 @@ model Deal {
   shoppingListItems ShoppingListItem[]
   invoices          Invoice[]
 
+  @@index([orgId])
+  @@index([orgId, stage])
   @@index([userId])
-  @@index([userId, stage])
 }
 
 model Expense {
   id              String    @id @default(cuid())
+  orgId           String
   userId          String
   dealId          String
   category        String    // ExpenseCategory
@@ -143,15 +282,18 @@ model Expense {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal            Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
+  @@index([orgId])
   @@index([dealId])
   @@index([userId])
 }
 
 model Milestone {
   id                    String    @id @default(cuid())
+  orgId                 String
   userId                String
   dealId                String
   title                 String
@@ -161,16 +303,20 @@ model Milestone {
   status                String    @default("pending") // MilestoneStatus
   order                 Int       @default(0)
   assignedContractorId  String?
+  assignedToMemberId    String?
+  roomId                String?
   inspectionStatus      String?   // InspectionStatus
   inspectedAt           DateTime?
   inspectionNotes       String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
+  org                   Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal                  Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
   tasks                 Task[]
 
+  @@index([orgId])
   @@index([dealId])
 }
 
@@ -192,6 +338,7 @@ model Task {
 
 model Activity {
   id          String   @id @default(cuid())
+  orgId       String
   userId      String
   dealId      String
   type        String   // ActivityType
@@ -199,9 +346,11 @@ model Activity {
   metadata    Json?
   timestamp   DateTime @default(now())
 
+  org         Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
+  @@index([orgId])
   @@index([dealId])
   @@index([userId])
   @@index([dealId, timestamp])
@@ -211,6 +360,7 @@ model Activity {
 
 model Contact {
   id           String    @id @default(cuid())
+  orgId        String
   userId       String
   name         String
   role         String    @default("other") // ContactRole
@@ -227,30 +377,36 @@ model Contact {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  org          Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   dealContacts DealContact[]
 
+  @@index([orgId])
+  @@index([orgId, role])
   @@index([userId])
-  @@index([userId, role])
 }
 
 model DealContact {
   id              String  @id @default(cuid())
+  orgId           String
   dealId          String
   contactId       String
   workDescription String?
   daysWorked      Float?
 
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   deal            Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
   contact         Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
   @@unique([dealId, contactId])
+  @@index([orgId])
   @@index([dealId])
   @@index([contactId])
 }
 
 model Document {
   id        String   @id @default(cuid())
+  orgId     String
   userId    String
   dealId    String?
   name      String
@@ -261,15 +417,18 @@ model Document {
   mimeType  String?
   createdAt DateTime @default(now())
 
+  org       Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal      Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
+  @@index([orgId])
   @@index([dealId])
   @@index([userId])
 }
 
 model ShoppingListItem {
   id              String   @id @default(cuid())
+  orgId           String
   userId          String
   dealId          String
   materialKey     String
@@ -289,10 +448,12 @@ model ShoppingListItem {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal            Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
   @@unique([dealId, materialKey])
+  @@index([orgId])
   @@index([dealId])
 }
 
@@ -300,6 +461,7 @@ model ShoppingListItem {
 
 model Tool {
   id                  String   @id @default(cuid())
+  orgId               String
   userId              String
   name                String
   category            String   // ToolCategoryKey
@@ -321,17 +483,20 @@ model Tool {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  org                 Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   checkouts           ToolCheckout[]
   maintenance         ToolMaintenance[]
   incidents           ToolIncident[]
 
+  @@index([orgId])
+  @@index([orgId, status])
   @@index([userId])
-  @@index([userId, status])
 }
 
 model ToolCheckout {
   id                 String    @id @default(cuid())
+  orgId              String
   userId             String
   toolId             String
   contractorName     String
@@ -347,15 +512,18 @@ model ToolCheckout {
   notes              String?
   createdAt          DateTime  @default(now())
 
+  org                Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tool               Tool      @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
+  @@index([orgId])
   @@index([toolId])
   @@index([userId])
 }
 
 model ToolMaintenance {
   id          String   @id @default(cuid())
+  orgId       String
   userId      String
   toolId      String
   date        DateTime
@@ -366,14 +534,17 @@ model ToolMaintenance {
   notes       String?
   createdAt   DateTime @default(now())
 
+  org         Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tool        Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
+  @@index([orgId])
   @@index([toolId])
 }
 
 model ToolIncident {
   id              String   @id @default(cuid())
+  orgId           String
   userId          String
   toolId          String
   date            DateTime
@@ -389,9 +560,11 @@ model ToolIncident {
   notes           String?
   createdAt       DateTime @default(now())
 
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tool            Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
+  @@index([orgId])
   @@index([toolId])
   @@index([userId])
 }
@@ -400,6 +573,7 @@ model ToolIncident {
 
 model Notification {
   id        String   @id @default(cuid())
+  orgId     String
   userId    String
   type      String   // deadline_warning | budget_alert | tool_overdue | milestone_overdue | general
   title     String
@@ -408,46 +582,19 @@ model Notification {
   metadata  Json?
   createdAt DateTime @default(now())
 
+  org       Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([orgId])
   @@index([userId, read])
   @@index([userId])
 }
 
-// ─── Teams ───
-
-model Team {
-  id        String       @id @default(cuid())
-  name      String
-  ownerId   String
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-
-  owner     User         @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members   TeamMember[]
-
-  @@index([ownerId])
-}
-
-model TeamMember {
-  id       String @id @default(cuid())
-  teamId   String
-  userId   String
-  role     String @default("viewer") // owner | admin | manager | field_worker | viewer
-  joinedAt DateTime @default(now())
-
-  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([teamId, userId])
-  @@index([teamId])
-  @@index([userId])
-}
-
-// ─── Invoicing (Phase 3) ───
+// ─── Invoicing ───
 
 model Invoice {
   id            String    @id @default(cuid())
+  orgId         String
   userId        String
   dealId        String?
   invoiceNumber String
@@ -463,9 +610,11 @@ model Invoice {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  org           Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal          Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
 
+  @@index([orgId])
   @@index([userId])
   @@index([dealId])
 }

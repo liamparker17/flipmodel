@@ -181,6 +181,8 @@ export interface Milestone {
   tasks: Task[];
   order: number;
   assignedContractorId?: string;
+  assignedToMemberId?: string;
+  roomId?: string;
   inspectionStatus?: InspectionStatus;
   inspectedAt?: string;
   inspectionNotes?: string;

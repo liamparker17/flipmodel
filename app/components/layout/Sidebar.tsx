@@ -2,27 +2,32 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { theme } from "../theme";
+import type { ModuleKey } from "@/types/org";
+import useOrgContext from "@/hooks/useOrgContext";
 
 interface NavItem {
   href: string;
   label: string;
   icon: string;
+  module?: ModuleKey;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: "\u25A6" },
-  { href: "/pipeline", label: "Pipeline", icon: "\u25B6" },
-  { href: "/projects", label: "Projects", icon: "\u2692" },
-  { href: "/contacts", label: "Contacts", icon: "\uD83D\uDCCB" },
-  { href: "/suppliers", label: "Suppliers", icon: "\uD83D\uDED2" },
-  { href: "/contractors", label: "Contractors", icon: "\uD83D\uDC77" },
-  { href: "/tools", label: "Tool Locker", icon: "\uD83D\uDD27" },
-  { href: "/finance", label: "Finance", icon: "\u2234" },
-  { href: "/invoices", label: "Invoices", icon: "\uD83D\uDCC4" },
-  { href: "/documents", label: "Documents", icon: "\uD83D\uDCC2" },
-  { href: "/listings", label: "Listings", icon: "\uD83C\uDFE0" },
-  { href: "/reports", label: "Reports", icon: "\u2261" },
-  { href: "/settings", label: "Settings", icon: "\u2699" },
+  { href: "/dashboard", label: "Dashboard", icon: "\u25A6", module: "dashboard" },
+  { href: "/pipeline", label: "Pipeline", icon: "\u25B6", module: "pipeline" },
+  { href: "/projects", label: "Projects", icon: "\u2692", module: "projects" },
+  { href: "/assignments", label: "My Work", icon: "\u2611", module: "projects" },
+  { href: "/contacts", label: "Contacts", icon: "\uD83D\uDCCB", module: "contacts" },
+  { href: "/suppliers", label: "Suppliers", icon: "\uD83D\uDED2", module: "suppliers" },
+  { href: "/contractors", label: "Contractors", icon: "\uD83D\uDC77", module: "contacts" },
+  { href: "/tools", label: "Tool Locker", icon: "\uD83D\uDD27", module: "tools" },
+  { href: "/finance", label: "Finance", icon: "\u2234", module: "finance" },
+  { href: "/invoices", label: "Invoices", icon: "\uD83D\uDCC4", module: "invoices" },
+  { href: "/documents", label: "Documents", icon: "\uD83D\uDCC2", module: "documents" },
+  { href: "/listings", label: "Listings", icon: "\uD83C\uDFE0", module: "pipeline" },
+  { href: "/reports", label: "Reports", icon: "\u2261", module: "reports" },
+  { href: "/team", label: "Team", icon: "\uD83D\uDC65", module: "team" },
+  { href: "/settings", label: "Settings", icon: "\u2699", module: "settings" },
 ];
 
 interface SidebarProps {
@@ -36,6 +41,7 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { canAccessModule, hasOrg } = useOrgContext();
 
   useEffect(() => {
     const check = () => {
@@ -65,6 +71,11 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
     setMobileOpen(false);
   };
 
+  // Filter nav items based on module access
+  const filteredNavItems = hasOrg
+    ? NAV_ITEMS.filter((item) => !item.module || canAccessModule(item.module))
+    : NAV_ITEMS;
+
   if (isMobile) {
     return (
       <>
@@ -91,6 +102,7 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
               <SidebarContent
                 collapsed={false} isActive={isActive} onNav={handleNav}
                 onNewDeal={handleNewDeal} onClose={() => setMobileOpen(false)}
+                navItems={filteredNavItems}
               />
             </div>
           </div>
@@ -106,7 +118,7 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
       display: "flex", flexDirection: "column", transition: "width 0.2s",
       position: "sticky", top: 0, height: "100vh", overflow: "auto",
     }}>
-      <SidebarContent collapsed={collapsed} isActive={isActive} onNav={handleNav} onNewDeal={handleNewDeal} />
+      <SidebarContent collapsed={collapsed} isActive={isActive} onNav={handleNav} onNewDeal={handleNewDeal} navItems={filteredNavItems} />
     </div>
   );
 }
@@ -117,9 +129,10 @@ interface SidebarContentProps {
   onNav: (href: string) => void;
   onNewDeal: () => void;
   onClose?: () => void;
+  navItems: NavItem[];
 }
 
-function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }: SidebarContentProps) {
+function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose, navItems }: SidebarContentProps) {
   return (
     <>
       <div style={{
@@ -148,6 +161,7 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }: Side
       <div style={{ padding: collapsed ? "10px 8px" : "10px 12px" }}>
         <button
           onClick={onNewDeal}
+          data-tour="new-deal"
           style={{
             width: "100%", padding: collapsed ? "8px 0" : "8px 14px",
             background: theme.accent, color: "#fff", border: "none",
@@ -161,12 +175,13 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose }: Side
       </div>
 
       <nav style={{ flex: 1, padding: collapsed ? "2px 8px" : "2px 8px" }}>
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = isActive(item.href);
           return (
             <button
               key={item.href}
               onClick={() => onNav(item.href)}
+              data-tour={`nav-${item.href.replace("/", "")}`}
               style={{
                 width: "100%", display: "flex", alignItems: "center",
                 gap: 8, padding: collapsed ? "8px 0" : "8px 10px",

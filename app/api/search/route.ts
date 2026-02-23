@@ -1,17 +1,17 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, apiSuccess, handleApiError } from "@/lib/api-helpers";
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const q = req.nextUrl.searchParams.get("q") || "";
     if (q.length < 2) return apiSuccess({ deals: [], contacts: [], tools: [] });
 
     const [deals, contacts, tools] = await Promise.all([
       prisma.deal.findMany({
         where: {
-          userId,
+          orgId: ctx.orgId,
           OR: [
             { name: { contains: q, mode: "insensitive" } },
             { address: { contains: q, mode: "insensitive" } },
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.contact.findMany({
         where: {
-          userId,
+          orgId: ctx.orgId,
           OR: [
             { name: { contains: q, mode: "insensitive" } },
             { company: { contains: q, mode: "insensitive" } },
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.tool.findMany({
         where: {
-          userId,
+          orgId: ctx.orgId,
           OR: [
             { name: { contains: q, mode: "insensitive" } },
             { brand: { contains: q, mode: "insensitive" } },

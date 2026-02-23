@@ -1,16 +1,15 @@
 import { NextRequest } from "next/server";
-import { requireAuth, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth();
+    await requireOrgMember();
     const body = await req.json();
 
     if (!body.data) {
       return apiError("Invalid import format. Expected { data: { deals, tools, ... } }", 400);
     }
 
-    // Delegate to individual import endpoints
     const results: Record<string, number> = {};
 
     if (body.data.deals?.length > 0) {

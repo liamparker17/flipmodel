@@ -80,6 +80,8 @@ function dbToClientMilestone(raw: Record<string, unknown>): Milestone {
     tasks: ((raw.tasks as Record<string, unknown>[]) || []).map(dbToClientTask),
     order: (raw.order as number) || 0,
     assignedContractorId: raw.assignedContractorId as string | undefined,
+    assignedToMemberId: raw.assignedToMemberId as string | undefined,
+    roomId: raw.roomId as string | undefined,
     inspectionStatus: raw.inspectionStatus as Milestone["inspectionStatus"],
     inspectedAt: raw.inspectedAt as string | undefined,
     inspectionNotes: raw.inspectionNotes as string | undefined,

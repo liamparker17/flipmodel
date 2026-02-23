@@ -21,7 +21,6 @@ async function main() {
       name: "Demo User",
       company: "FlipModel Properties",
       passwordHash,
-      role: "owner",
       preferences: {
         defaultCommission: 5,
         defaultContingency: 10,
@@ -32,9 +31,49 @@ async function main() {
 
   console.log(`User: ${user.email} (${user.id})`);
 
+  // ─── Organisation ───
+  let org = await prisma.organisation.findUnique({ where: { slug: "flipmodel-properties" } });
+  if (!org) {
+    org = await prisma.organisation.create({
+      data: {
+        name: "FlipModel Properties",
+        slug: "flipmodel-properties",
+        currency: "ZAR",
+        timezone: "Africa/Johannesburg",
+        settings: {
+          defaultCurrency: "ZAR",
+          timezone: "Africa/Johannesburg",
+          fiscalYearStart: 3,
+          defaultBondRate: 12.75,
+          defaultAgentCommission: 5,
+          defaultContingencyPct: 10,
+          defaultPmPct: 8,
+          defaultRenovationMonths: 4,
+        },
+      },
+    });
+  }
+
+  // Ensure OrgMember exists
+  await prisma.orgMember.upsert({
+    where: { orgId_userId: { orgId: org.id, userId: user.id } },
+    update: {},
+    create: {
+      orgId: org.id,
+      userId: user.id,
+      role: "executive",
+      title: "Owner",
+    },
+  });
+
+  console.log(`Organisation: ${org.name} (${org.id})`);
+
+  const orgId = org.id;
+
   // ─── Contacts ───
   const plumber = await prisma.contact.create({
     data: {
+      orgId,
       userId: user.id,
       name: "Sipho Ndlovu",
       role: "contractor",
@@ -53,6 +92,7 @@ async function main() {
 
   const electrician = await prisma.contact.create({
     data: {
+      orgId,
       userId: user.id,
       name: "Johan van der Merwe",
       role: "contractor",
@@ -71,6 +111,7 @@ async function main() {
 
   const agent = await prisma.contact.create({
     data: {
+      orgId,
       userId: user.id,
       name: "Lerato Moloi",
       role: "agent",
@@ -84,6 +125,7 @@ async function main() {
 
   const contractor = await prisma.contact.create({
     data: {
+      orgId,
       userId: user.id,
       name: "Thabo Mokoena",
       role: "contractor",
@@ -105,6 +147,7 @@ async function main() {
   // ─── Deal 1: Rosebank (renovation) ───
   const deal1 = await prisma.deal.create({
     data: {
+      orgId,
       userId: user.id,
       name: "12 Oak Lane, Rosebank",
       address: "12 Oak Lane, Rosebank, Johannesburg, 2196",
@@ -125,28 +168,23 @@ async function main() {
     },
   });
 
-  // Expenses for Deal 1
   await prisma.expense.createMany({
     data: [
-      { userId: user.id, dealId: deal1.id, category: "materials", description: "Kitchen cabinets and countertops", amount: 45000, date: new Date("2026-01-10"), vendor: "Builders Warehouse", paymentMethod: "eft" },
-      { userId: user.id, dealId: deal1.id, category: "labour", description: "Kitchen installation labour", amount: 18000, date: new Date("2026-01-15"), vendor: "Mokoena Builders", paymentMethod: "eft" },
-      { userId: user.id, dealId: deal1.id, category: "plumbing", description: "Bathroom replumbing and fixtures", amount: 32000, date: new Date("2026-01-20"), vendor: "Ndlovu Plumbing Services", paymentMethod: "eft" },
-      { userId: user.id, dealId: deal1.id, category: "electrical", description: "Rewiring and new DB board", amount: 28000, date: new Date("2026-02-01"), vendor: "Sparks Electrical CC", paymentMethod: "eft" },
-      { userId: user.id, dealId: deal1.id, category: "materials", description: "Floor tiles (porcelain 60x60)", amount: 15500, date: new Date("2026-02-05"), vendor: "CTM", paymentMethod: "card" },
+      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Kitchen cabinets and countertops", amount: 45000, date: new Date("2026-01-10"), vendor: "Builders Warehouse", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Kitchen installation labour", amount: 18000, date: new Date("2026-01-15"), vendor: "Mokoena Builders", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal1.id, category: "plumbing", description: "Bathroom replumbing and fixtures", amount: 32000, date: new Date("2026-01-20"), vendor: "Ndlovu Plumbing Services", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal1.id, category: "electrical", description: "Rewiring and new DB board", amount: 28000, date: new Date("2026-02-01"), vendor: "Sparks Electrical CC", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Floor tiles (porcelain 60x60)", amount: 15500, date: new Date("2026-02-05"), vendor: "CTM", paymentMethod: "card" },
     ],
   });
 
-  // Milestones for Deal 1
-  const m1a = await prisma.milestone.create({
+  await prisma.milestone.create({
     data: {
-      userId: user.id,
-      dealId: deal1.id,
+      orgId, userId: user.id, dealId: deal1.id,
       title: "Demolition & Strip-out",
       description: "Remove old kitchen, strip bathrooms, remove damaged flooring",
-      status: "completed",
-      order: 1,
-      dueDate: new Date("2026-01-08"),
-      completedDate: new Date("2026-01-07"),
+      status: "completed", order: 1,
+      dueDate: new Date("2026-01-08"), completedDate: new Date("2026-01-07"),
       tasks: {
         create: [
           { title: "Remove old kitchen units", completed: true, completedAt: new Date("2026-01-05") },
@@ -157,14 +195,12 @@ async function main() {
     },
   });
 
-  const m1b = await prisma.milestone.create({
+  await prisma.milestone.create({
     data: {
-      userId: user.id,
-      dealId: deal1.id,
+      orgId, userId: user.id, dealId: deal1.id,
       title: "Plumbing & Electrical Rough-in",
       description: "First fix plumbing and electrical work before tiling",
-      status: "in_progress",
-      order: 2,
+      status: "in_progress", order: 2,
       dueDate: new Date("2026-02-15"),
       assignedContractorId: plumber.id,
       tasks: {
@@ -178,14 +214,12 @@ async function main() {
     },
   });
 
-  const m1c = await prisma.milestone.create({
+  await prisma.milestone.create({
     data: {
-      userId: user.id,
-      dealId: deal1.id,
+      orgId, userId: user.id, dealId: deal1.id,
       title: "Kitchen & Bathroom Fit-out",
       description: "Install new kitchen, tile bathrooms, fit vanities and shower",
-      status: "pending",
-      order: 3,
+      status: "pending", order: 3,
       dueDate: new Date("2026-03-10"),
       tasks: {
         create: [
@@ -197,12 +231,11 @@ async function main() {
     },
   });
 
-  // Link contacts to Deal 1
   await prisma.dealContact.createMany({
     data: [
-      { dealId: deal1.id, contactId: plumber.id, workDescription: "Full bathroom replumbing" },
-      { dealId: deal1.id, contactId: electrician.id, workDescription: "Rewiring and compliance certificate" },
-      { dealId: deal1.id, contactId: contractor.id, workDescription: "Kitchen demo and tiling", daysWorked: 12 },
+      { orgId, dealId: deal1.id, contactId: plumber.id, workDescription: "Full bathroom replumbing" },
+      { orgId, dealId: deal1.id, contactId: electrician.id, workDescription: "Rewiring and compliance certificate" },
+      { orgId, dealId: deal1.id, contactId: contractor.id, workDescription: "Kitchen demo and tiling", daysWorked: 12 },
     ],
   });
 
@@ -211,6 +244,7 @@ async function main() {
   // ─── Deal 2: Camps Bay (listed) ───
   const deal2 = await prisma.deal.create({
     data: {
+      orgId,
       userId: user.id,
       name: "45 Beach Road, Camps Bay",
       address: "45 Beach Road, Camps Bay, Cape Town, 8005",
@@ -234,77 +268,58 @@ async function main() {
 
   await prisma.expense.createMany({
     data: [
-      { userId: user.id, dealId: deal2.id, category: "materials", description: "Imported Italian floor tiles", amount: 95000, date: new Date("2025-08-10"), vendor: "Tile Africa", paymentMethod: "eft" },
-      { userId: user.id, dealId: deal2.id, category: "labour", description: "Full renovation labour (8 weeks)", amount: 120000, date: new Date("2025-10-15"), vendor: "Mokoena Builders", paymentMethod: "eft" },
-      { userId: user.id, dealId: deal2.id, category: "plumbing", description: "Complete replumbing with copper", amount: 68000, date: new Date("2025-09-01"), vendor: "Ndlovu Plumbing Services", paymentMethod: "eft" },
-      { userId: user.id, dealId: deal2.id, category: "electrical", description: "Full rewire, smart home prep, LED downlights", amount: 52000, date: new Date("2025-09-20"), vendor: "Sparks Electrical CC", paymentMethod: "eft" },
-      { userId: user.id, dealId: deal2.id, category: "materials", description: "Kitchen appliances (Smeg)", amount: 78000, date: new Date("2025-10-01"), vendor: "Hirsch's", paymentMethod: "card" },
+      { orgId, userId: user.id, dealId: deal2.id, category: "materials", description: "Imported Italian floor tiles", amount: 95000, date: new Date("2025-08-10"), vendor: "Tile Africa", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal2.id, category: "labour", description: "Full renovation labour (8 weeks)", amount: 120000, date: new Date("2025-10-15"), vendor: "Mokoena Builders", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal2.id, category: "plumbing", description: "Complete replumbing with copper", amount: 68000, date: new Date("2025-09-01"), vendor: "Ndlovu Plumbing Services", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal2.id, category: "electrical", description: "Full rewire, smart home prep, LED downlights", amount: 52000, date: new Date("2025-09-20"), vendor: "Sparks Electrical CC", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal2.id, category: "materials", description: "Kitchen appliances (Smeg)", amount: 78000, date: new Date("2025-10-01"), vendor: "Hirsch's", paymentMethod: "card" },
     ],
   });
 
-  // Milestones for Deal 2 (all completed)
   await prisma.milestone.create({
     data: {
-      userId: user.id,
-      dealId: deal2.id,
-      title: "Structural Repairs",
-      status: "completed",
-      order: 1,
-      dueDate: new Date("2025-08-15"),
-      completedDate: new Date("2025-08-12"),
-      tasks: {
-        create: [
-          { title: "Repair roof leaks", completed: true, completedAt: new Date("2025-08-05") },
-          { title: "Damp proofing on south wall", completed: true, completedAt: new Date("2025-08-10") },
-          { title: "Replace rotted window frames", completed: true, completedAt: new Date("2025-08-12") },
-        ],
-      },
+      orgId, userId: user.id, dealId: deal2.id,
+      title: "Structural Repairs", status: "completed", order: 1,
+      dueDate: new Date("2025-08-15"), completedDate: new Date("2025-08-12"),
+      tasks: { create: [
+        { title: "Repair roof leaks", completed: true, completedAt: new Date("2025-08-05") },
+        { title: "Damp proofing on south wall", completed: true, completedAt: new Date("2025-08-10") },
+        { title: "Replace rotted window frames", completed: true, completedAt: new Date("2025-08-12") },
+      ] },
     },
   });
 
   await prisma.milestone.create({
     data: {
-      userId: user.id,
-      dealId: deal2.id,
-      title: "Interior Renovation",
-      status: "completed",
-      order: 2,
-      dueDate: new Date("2025-10-30"),
-      completedDate: new Date("2025-10-28"),
-      tasks: {
-        create: [
-          { title: "Install new kitchen", completed: true, completedAt: new Date("2025-10-10") },
-          { title: "Renovate all 3 bathrooms", completed: true, completedAt: new Date("2025-10-20") },
-          { title: "Install flooring throughout", completed: true, completedAt: new Date("2025-10-25") },
-          { title: "Paint interior", completed: true, completedAt: new Date("2025-10-28") },
-        ],
-      },
+      orgId, userId: user.id, dealId: deal2.id,
+      title: "Interior Renovation", status: "completed", order: 2,
+      dueDate: new Date("2025-10-30"), completedDate: new Date("2025-10-28"),
+      tasks: { create: [
+        { title: "Install new kitchen", completed: true, completedAt: new Date("2025-10-10") },
+        { title: "Renovate all 3 bathrooms", completed: true, completedAt: new Date("2025-10-20") },
+        { title: "Install flooring throughout", completed: true, completedAt: new Date("2025-10-25") },
+        { title: "Paint interior", completed: true, completedAt: new Date("2025-10-28") },
+      ] },
     },
   });
 
   await prisma.milestone.create({
     data: {
-      userId: user.id,
-      dealId: deal2.id,
-      title: "Staging & Listing",
-      status: "completed",
-      order: 3,
-      dueDate: new Date("2026-01-20"),
-      completedDate: new Date("2026-01-18"),
-      tasks: {
-        create: [
-          { title: "Professional staging", completed: true, completedAt: new Date("2026-01-15") },
-          { title: "Professional photography", completed: true, completedAt: new Date("2026-01-16") },
-          { title: "List on Property24 and Private Property", completed: true, completedAt: new Date("2026-01-18") },
-        ],
-      },
+      orgId, userId: user.id, dealId: deal2.id,
+      title: "Staging & Listing", status: "completed", order: 3,
+      dueDate: new Date("2026-01-20"), completedDate: new Date("2026-01-18"),
+      tasks: { create: [
+        { title: "Professional staging", completed: true, completedAt: new Date("2026-01-15") },
+        { title: "Professional photography", completed: true, completedAt: new Date("2026-01-16") },
+        { title: "List on Property24 and Private Property", completed: true, completedAt: new Date("2026-01-18") },
+      ] },
     },
   });
 
   await prisma.dealContact.createMany({
     data: [
-      { dealId: deal2.id, contactId: agent.id, workDescription: "Listing and sales agent" },
-      { dealId: deal2.id, contactId: contractor.id, workDescription: "Full renovation", daysWorked: 40 },
+      { orgId, dealId: deal2.id, contactId: agent.id, workDescription: "Listing and sales agent" },
+      { orgId, dealId: deal2.id, contactId: contractor.id, workDescription: "Full renovation", daysWorked: 40 },
     ],
   });
 
@@ -313,6 +328,7 @@ async function main() {
   // ─── Deal 3: Sandton (lead) ───
   const deal3 = await prisma.deal.create({
     data: {
+      orgId,
       userId: user.id,
       name: "8 Main Street, Sandton",
       address: "8 Main Street, Sandton, Johannesburg, 2196",
@@ -335,9 +351,9 @@ async function main() {
 
   await prisma.expense.createMany({
     data: [
-      { userId: user.id, dealId: deal3.id, category: "materials", description: "Estimated renovation materials", amount: 85000, date: new Date("2026-02-10"), isProjected: true },
-      { userId: user.id, dealId: deal3.id, category: "labour", description: "Estimated labour costs", amount: 65000, date: new Date("2026-02-10"), isProjected: true },
-      { userId: user.id, dealId: deal3.id, category: "plumbing", description: "Estimated plumbing overhaul", amount: 40000, date: new Date("2026-02-10"), isProjected: true },
+      { orgId, userId: user.id, dealId: deal3.id, category: "materials", description: "Estimated renovation materials", amount: 85000, date: new Date("2026-02-10"), isProjected: true },
+      { orgId, userId: user.id, dealId: deal3.id, category: "labour", description: "Estimated labour costs", amount: 65000, date: new Date("2026-02-10"), isProjected: true },
+      { orgId, userId: user.id, dealId: deal3.id, category: "plumbing", description: "Estimated plumbing overhaul", amount: 40000, date: new Date("2026-02-10"), isProjected: true },
     ],
   });
 
@@ -346,6 +362,7 @@ async function main() {
   // ─── Deal 4: Stellenbosch (sold) ───
   const deal4 = await prisma.deal.create({
     data: {
+      orgId,
       userId: user.id,
       name: "22 Protea Avenue, Stellenbosch",
       address: "22 Protea Avenue, Stellenbosch, Western Cape, 7600",
@@ -372,19 +389,19 @@ async function main() {
 
   await prisma.expense.createMany({
     data: [
-      { userId: user.id, dealId: deal4.id, category: "materials", description: "Paint (Plascon double velvet, 60L)", amount: 12000, date: new Date("2025-05-05"), vendor: "Mica Hardware", paymentMethod: "card" },
-      { userId: user.id, dealId: deal4.id, category: "labour", description: "Painting labour (interior and exterior)", amount: 22000, date: new Date("2025-05-20"), vendor: "Mokoena Builders", paymentMethod: "eft" },
-      { userId: user.id, dealId: deal4.id, category: "materials", description: "Landscaping plants and irrigation", amount: 18000, date: new Date("2025-06-01"), vendor: "Stodels Nursery", paymentMethod: "eft" },
-      { userId: user.id, dealId: deal4.id, category: "electrical", description: "COC certificate and minor fixes", amount: 8500, date: new Date("2025-06-10"), vendor: "Sparks Electrical CC", paymentMethod: "eft" },
-      { userId: user.id, dealId: deal4.id, category: "plumbing", description: "Plumbing COC and geyser service", amount: 6500, date: new Date("2025-06-12"), vendor: "Ndlovu Plumbing Services", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal4.id, category: "materials", description: "Paint (Plascon double velvet, 60L)", amount: 12000, date: new Date("2025-05-05"), vendor: "Mica Hardware", paymentMethod: "card" },
+      { orgId, userId: user.id, dealId: deal4.id, category: "labour", description: "Painting labour (interior and exterior)", amount: 22000, date: new Date("2025-05-20"), vendor: "Mokoena Builders", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal4.id, category: "materials", description: "Landscaping plants and irrigation", amount: 18000, date: new Date("2025-06-01"), vendor: "Stodels Nursery", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal4.id, category: "electrical", description: "COC certificate and minor fixes", amount: 8500, date: new Date("2025-06-10"), vendor: "Sparks Electrical CC", paymentMethod: "eft" },
+      { orgId, userId: user.id, dealId: deal4.id, category: "plumbing", description: "Plumbing COC and geyser service", amount: 6500, date: new Date("2025-06-12"), vendor: "Ndlovu Plumbing Services", paymentMethod: "eft" },
     ],
   });
 
   await prisma.dealContact.createMany({
     data: [
-      { dealId: deal4.id, contactId: agent.id, workDescription: "Sales agent for Stellenbosch property" },
-      { dealId: deal4.id, contactId: electrician.id, workDescription: "COC certificate" },
-      { dealId: deal4.id, contactId: plumber.id, workDescription: "Plumbing COC and geyser service" },
+      { orgId, dealId: deal4.id, contactId: agent.id, workDescription: "Sales agent for Stellenbosch property" },
+      { orgId, dealId: deal4.id, contactId: electrician.id, workDescription: "COC certificate" },
+      { orgId, dealId: deal4.id, contactId: plumber.id, workDescription: "Plumbing COC and geyser service" },
     ],
   });
 
@@ -394,52 +411,29 @@ async function main() {
   await prisma.tool.createMany({
     data: [
       {
-        userId: user.id,
-        name: "Angle Grinder",
-        category: "power_tools",
-        brand: "Bosch",
-        model: "GWS 750-115",
-        serialNumber: "BSH-AG-2024-001",
-        purchaseDate: new Date("2024-06-15"),
-        purchaseCost: 1299,
-        expectedLifespanMonths: 36,
-        replacementCost: 1499,
-        status: "checked_out",
-        condition: "good",
-        currentHolderName: "Thabo Mokoena",
-        currentHolderId: contractor.id,
-        currentDealId: deal1.id,
-        currentDealName: "12 Oak Lane, Rosebank",
+        orgId, userId: user.id,
+        name: "Angle Grinder", category: "power_tools", brand: "Bosch", model: "GWS 750-115",
+        serialNumber: "BSH-AG-2024-001", purchaseDate: new Date("2024-06-15"),
+        purchaseCost: 1299, expectedLifespanMonths: 36, replacementCost: 1499,
+        status: "checked_out", condition: "good",
+        currentHolderName: "Thabo Mokoena", currentHolderId: contractor.id,
+        currentDealId: deal1.id, currentDealName: "12 Oak Lane, Rosebank",
         notes: "115mm disc. Used for tile cutting and general grinding.",
       },
       {
-        userId: user.id,
-        name: "Cordless Drill",
-        category: "power_tools",
-        brand: "Makita",
-        model: "DHP482",
-        serialNumber: "MKT-CD-2024-003",
-        purchaseDate: new Date("2024-03-10"),
-        purchaseCost: 3499,
-        expectedLifespanMonths: 48,
-        replacementCost: 3799,
-        status: "available",
-        condition: "good",
+        orgId, userId: user.id,
+        name: "Cordless Drill", category: "power_tools", brand: "Makita", model: "DHP482",
+        serialNumber: "MKT-CD-2024-003", purchaseDate: new Date("2024-03-10"),
+        purchaseCost: 3499, expectedLifespanMonths: 48, replacementCost: 3799,
+        status: "available", condition: "good",
         notes: "18V Li-ion with 2x 3.0Ah batteries. Comes with full bit set.",
       },
       {
-        userId: user.id,
-        name: "Laser Level",
-        category: "measuring",
-        brand: "Bosch",
-        model: "GLL 3-80",
-        serialNumber: "BSH-LL-2025-002",
-        purchaseDate: new Date("2025-01-20"),
-        purchaseCost: 5999,
-        expectedLifespanMonths: 60,
-        replacementCost: 6499,
-        status: "available",
-        condition: "new",
+        orgId, userId: user.id,
+        name: "Laser Level", category: "measuring", brand: "Bosch", model: "GLL 3-80",
+        serialNumber: "BSH-LL-2025-002", purchaseDate: new Date("2025-01-20"),
+        purchaseCost: 5999, expectedLifespanMonths: 60, replacementCost: 6499,
+        status: "available", condition: "new",
         notes: "360-degree line laser. Essential for tiling and cabinetry.",
       },
     ],
@@ -450,16 +444,10 @@ async function main() {
   // ─── Invoices ───
   await prisma.invoice.create({
     data: {
-      userId: user.id,
-      dealId: deal1.id,
-      invoiceNumber: "INV-2026-001",
-      contactId: plumber.id,
-      status: "paid",
-      issueDate: new Date("2026-01-25"),
-      dueDate: new Date("2026-02-08"),
-      subtotal: 32000,
-      tax: 4800,
-      total: 36800,
+      orgId, userId: user.id, dealId: deal1.id,
+      invoiceNumber: "INV-2026-001", contactId: plumber.id,
+      status: "paid", issueDate: new Date("2026-01-25"), dueDate: new Date("2026-02-08"),
+      subtotal: 32000, tax: 4800, total: 36800,
       notes: "Bathroom replumbing - 12 Oak Lane, Rosebank",
       lineItems: [
         { description: "Labour - bathroom replumbing (5 days)", quantity: 5, unitPrice: 1800, amount: 9000 },
@@ -472,16 +460,10 @@ async function main() {
 
   await prisma.invoice.create({
     data: {
-      userId: user.id,
-      dealId: deal1.id,
-      invoiceNumber: "INV-2026-002",
-      contactId: electrician.id,
-      status: "sent",
-      issueDate: new Date("2026-02-05"),
-      dueDate: new Date("2026-02-19"),
-      subtotal: 28000,
-      tax: 4200,
-      total: 32200,
+      orgId, userId: user.id, dealId: deal1.id,
+      invoiceNumber: "INV-2026-002", contactId: electrician.id,
+      status: "sent", issueDate: new Date("2026-02-05"), dueDate: new Date("2026-02-19"),
+      subtotal: 28000, tax: 4200, total: 32200,
       notes: "Electrical rewiring and DB board - 12 Oak Lane, Rosebank",
       lineItems: [
         { description: "Labour - rewiring (6 days)", quantity: 6, unitPrice: 2200, amount: 13200 },

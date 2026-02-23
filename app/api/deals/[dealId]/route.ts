@@ -1,17 +1,17 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { updateDealSchema } from "@/lib/validations/deal";
 
 type Params = { params: Promise<{ dealId: string }> };
 
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const { dealId } = await params;
 
     const deal = await prisma.deal.findFirst({
-      where: { id: dealId, userId },
+      where: { id: dealId, orgId: ctx.orgId },
       include: {
         expenses: true,
         milestones: { include: { tasks: true }, orderBy: { order: "asc" } },
@@ -31,12 +31,12 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("deals:write");
     const { dealId } = await params;
     const body = await req.json();
     const data = updateDealSchema.parse(body);
 
-    const existing = await prisma.deal.findFirst({ where: { id: dealId, userId } });
+    const existing = await prisma.deal.findFirst({ where: { id: dealId, orgId: ctx.orgId } });
     if (!existing) return apiError("Deal not found", 404);
 
     const updateData: Record<string, unknown> = {};
@@ -79,10 +79,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("deals:delete");
     const { dealId } = await params;
 
-    const existing = await prisma.deal.findFirst({ where: { id: dealId, userId } });
+    const existing = await prisma.deal.findFirst({ where: { id: dealId, orgId: ctx.orgId } });
     if (!existing) return apiError("Deal not found", 404);
 
     await prisma.deal.delete({ where: { id: dealId } });

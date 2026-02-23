@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { z } from "zod";
 
 type Params = { params: Promise<{ milestoneId: string }> };
@@ -13,18 +13,20 @@ const updateMilestoneSchema = z.object({
   status: z.string().optional(),
   order: z.number().int().optional(),
   assignedContractorId: z.string().nullable().optional(),
+  assignedToMemberId: z.string().nullable().optional(),
+  roomId: z.string().nullable().optional(),
   inspectionStatus: z.string().nullable().optional(),
   inspectionNotes: z.string().nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("milestones:write");
     const { milestoneId } = await params;
     const body = await req.json();
     const data = updateMilestoneSchema.parse(body);
 
-    const existing = await prisma.milestone.findFirst({ where: { id: milestoneId, userId } });
+    const existing = await prisma.milestone.findFirst({ where: { id: milestoneId, orgId: ctx.orgId } });
     if (!existing) return apiError("Milestone not found", 404);
 
     const updateData: Record<string, unknown> = {};
@@ -35,6 +37,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (data.status !== undefined) updateData.status = data.status;
     if (data.order !== undefined) updateData.order = data.order;
     if (data.assignedContractorId !== undefined) updateData.assignedContractorId = data.assignedContractorId;
+    if (data.assignedToMemberId !== undefined) updateData.assignedToMemberId = data.assignedToMemberId;
+    if (data.roomId !== undefined) updateData.roomId = data.roomId;
     if (data.inspectionStatus !== undefined) {
       updateData.inspectionStatus = data.inspectionStatus;
       updateData.inspectedAt = new Date();
@@ -55,10 +59,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("milestones:write");
     const { milestoneId } = await params;
 
-    const existing = await prisma.milestone.findFirst({ where: { id: milestoneId, userId } });
+    const existing = await prisma.milestone.findFirst({ where: { id: milestoneId, orgId: ctx.orgId } });
     if (!existing) return apiError("Milestone not found", 404);
 
     await prisma.milestone.delete({ where: { id: milestoneId } });

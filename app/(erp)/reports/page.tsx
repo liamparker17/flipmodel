@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { theme, fmt, pct } from "../../components/theme";
+import { theme, fmt, pct, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
 import { DEAL_STAGES, computeDealMetrics, getPortfolioMetrics, getStageIndex, getDealProgress, getExpensesByCategory } from "../../utils/dealHelpers";
 
@@ -112,8 +112,8 @@ export default function ReportsPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
         {/* Conversion Funnel */}
-        <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-          <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Pipeline Conversion Funnel</h3>
+        <div style={styles.card}>
+          <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Pipeline Conversion Funnel</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {funnel.map((stage) => (
               <div key={stage.key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -132,8 +132,8 @@ export default function ReportsPage() {
         </div>
 
         {/* ROI Distribution */}
-        <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-          <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>ROI Distribution</h3>
+        <div style={styles.card}>
+          <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>ROI Distribution</h3>
           {deals.length === 0 ? (
             <div style={{ fontSize: 12, color: theme.textDim }}>No deals to analyze.</div>
           ) : (
@@ -160,8 +160,8 @@ export default function ReportsPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
         {/* Deal Velocity */}
-        <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-          <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Deal Velocity (Days per Stage)</h3>
+        <div style={styles.card}>
+          <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Deal Velocity (Days per Stage)</h3>
           {dealVelocity.length === 0 ? (
             <div style={{ fontSize: 12, color: theme.textDim }}>No active deals.</div>
           ) : (
@@ -185,8 +185,8 @@ export default function ReportsPage() {
         </div>
 
         {/* Expense Categories */}
-        <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-          <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Portfolio Expense Breakdown</h3>
+        <div style={styles.card}>
+          <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Portfolio Expense Breakdown</h3>
           {expenseCategories.length === 0 ? (
             <div style={{ fontSize: 12, color: theme.textDim }}>No expenses recorded.</div>
           ) : (
@@ -209,8 +209,8 @@ export default function ReportsPage() {
 
       {/* Sold Deals Performance */}
       {soldPerformance.length > 0 && (
-        <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
-          <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Completed Flips Performance</h3>
+        <div style={styles.cardMb}>
+          <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Completed Flips Performance</h3>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
             <div>
               <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase", marginBottom: 2 }}>Avg Profit</div>
@@ -256,8 +256,8 @@ export default function ReportsPage() {
       )}
 
       {/* Pipeline by Stage */}
-      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Pipeline Value by Stage</h3>
+      <div style={styles.card}>
+        <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Pipeline Value by Stage</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {stageBreakdown.map((stage) => (
             <div key={stage.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 8px", background: theme.input, borderRadius: 4 }}>

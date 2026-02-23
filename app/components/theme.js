@@ -17,6 +17,17 @@ export const theme = {
   inputBorder: "#252B3B",
 };
 
+// ─── Reusable Style Patterns ───
+export const styles = {
+  card: { background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 },
+  cardMb: { background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginBottom: 16 },
+  sectionHeading: { fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 },
+  flexBetween: { display: "flex", alignItems: "center", justifyContent: "space-between" },
+  flexCenter: { display: "flex", alignItems: "center", justifyContent: "center" },
+  mono: { fontFamily: "'JetBrains Mono', monospace" },
+  linkBtn: { background: "transparent", border: "none", color: theme.accent, fontSize: 11, cursor: "pointer", padding: 0, fontWeight: 500 },
+};
+
 // ─── Helpers ───
 export const fmt = (n) => {
   if (n === undefined || n === null || isNaN(n)) return "R 0";

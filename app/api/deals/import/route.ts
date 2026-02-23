@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("deals:write");
     const body = await req.json();
     const deals = body.deals as Record<string, unknown>[];
 
@@ -13,7 +13,8 @@ export async function POST(req: NextRequest) {
     for (const deal of deals) {
       const created = await prisma.deal.create({
         data: {
-          userId,
+          orgId: ctx.orgId,
+          userId: ctx.userId,
           name: (deal.name as string) || "Imported Deal",
           address: (deal.address as string) || "",
           purchasePrice: (deal.purchasePrice as number) || 0,
@@ -33,7 +34,8 @@ export async function POST(req: NextRequest) {
           actualSaleDate: deal.actualSaleDate ? new Date(deal.actualSaleDate as string) : null,
           expenses: {
             create: ((deal.expenses as Record<string, unknown>[]) || []).map((e) => ({
-              user: { connect: { id: userId } },
+              org: { connect: { id: ctx.orgId } },
+              user: { connect: { id: ctx.userId } },
               category: (e.category as string) || "other",
               description: (e.description as string) || "",
               amount: (e.amount as number) || 0,
@@ -47,7 +49,8 @@ export async function POST(req: NextRequest) {
           },
           milestones: {
             create: ((deal.milestones as Record<string, unknown>[]) || []).map((m) => ({
-              user: { connect: { id: userId } },
+              org: { connect: { id: ctx.orgId } },
+              user: { connect: { id: ctx.userId } },
               title: (m.title as string) || "",
               description: (m.description as string) || "",
               dueDate: m.dueDate ? new Date(m.dueDate as string) : null,
@@ -65,7 +68,8 @@ export async function POST(req: NextRequest) {
           },
           activities: {
             create: ((deal.activities as Record<string, unknown>[]) || []).map((a) => ({
-              user: { connect: { id: userId } },
+              org: { connect: { id: ctx.orgId } },
+              user: { connect: { id: ctx.userId } },
               type: (a.type as string) || "deal_created",
               description: (a.description as string) || "",
               timestamp: new Date((a.timestamp as string) || new Date().toISOString()),

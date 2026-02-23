@@ -1,9 +1,13 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { theme, CTAButton, Toast } from "../../components/theme";
+import { theme, CTAButton, Toast, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
+import useOrgContext from "@/hooks/useOrgContext";
+import { ORG_ROLE_LABELS, DEFAULT_ORG_SETTINGS } from "@/types/org";
+import type { OrgRole, ModuleKey } from "@/types/org";
+import { DEFAULT_ROLE_MODULES } from "@/lib/permissions";
 
-const DEFAULT_SETTINGS = {
+const SETTING_DEFAULTS = {
   defaultBondRate: 12.75,
   defaultContingencyPct: 10,
   defaultPmPct: 8,
@@ -14,7 +18,7 @@ const DEFAULT_SETTINGS = {
   dateFormat: "DD/MM/YYYY",
 };
 
-type AppSettings = typeof DEFAULT_SETTINGS;
+type AppSettings = typeof SETTING_DEFAULTS;
 
 interface UserProfile {
   name: string;
@@ -23,12 +27,21 @@ interface UserProfile {
   phone: string;
 }
 
+interface ChartOfAccountEntry {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+  subtype: string;
+  isActive: boolean;
+}
+
 function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem("justhousesErp_settings");
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    if (raw) return { ...SETTING_DEFAULTS, ...JSON.parse(raw) };
   } catch { /* ignore */ }
-  return { ...DEFAULT_SETTINGS };
+  return { ...SETTING_DEFAULTS };
 }
 
 function saveSettings(settings: AppSettings) {
@@ -37,11 +50,12 @@ function saveSettings(settings: AppSettings) {
 
 export default function SettingsPage() {
   const { deals, loaded } = useDeals();
+  const { org, hasPermission, canAccessModule, refetch: refetchOrg } = useOrgContext();
   const [isMobile, setIsMobile] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [activeSection, setActiveSection] = useState<"general" | "defaults" | "data" | "about">("general");
+  const [settings, setSettings] = useState(SETTING_DEFAULTS);
+  const [activeSection, setActiveSection] = useState<"general" | "defaults" | "data" | "about" | "organisation" | "roles" | "accounting">("general");
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
 
@@ -51,10 +65,21 @@ export default function SettingsPage() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileDraft, setProfileDraft] = useState<Partial<UserProfile>>({});
 
+  // Org settings state
+  const [orgName, setOrgName] = useState("");
+  const [orgSlug, setOrgSlug] = useState("");
+  const [orgCurrency, setOrgCurrency] = useState("ZAR");
+  const [orgTimezone, setOrgTimezone] = useState("Africa/Johannesburg");
+  const [orgSaving, setOrgSaving] = useState(false);
+
+  // Accounting state
+  const [accountingConnection, setAccountingConnection] = useState<{ provider: string; status: string } | null>(null);
+  const [chartOfAccounts, setChartOfAccounts] = useState<ChartOfAccountEntry[]>([]);
+  const [accountingLoading, setAccountingLoading] = useState(false);
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener("resize", check);
+    check(); window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
@@ -62,7 +87,15 @@ export default function SettingsPage() {
     setSettings(loadSettings());
   }, []);
 
-  // Fetch user profile when general tab is active
+  useEffect(() => {
+    if (org) {
+      setOrgName(org.name);
+      setOrgSlug(org.slug);
+      setOrgCurrency(org.currency);
+      setOrgTimezone(org.timezone);
+    }
+  }, [org]);
+
   const fetchProfile = useCallback(async () => {
     setProfileLoading(true);
     try {
@@ -77,10 +110,30 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    if (activeSection === "general") {
-      fetchProfile();
-    }
+    if (activeSection === "general") fetchProfile();
   }, [activeSection, fetchProfile]);
+
+  const fetchAccounting = useCallback(async () => {
+    setAccountingLoading(true);
+    try {
+      const [connRes, coaRes] = await Promise.all([
+        fetch("/api/accounting"),
+        fetch("/api/accounting/chart-of-accounts"),
+      ]);
+      if (connRes.ok) {
+        const data = await connRes.json();
+        setAccountingConnection(data.connection);
+      }
+      if (coaRes.ok) {
+        setChartOfAccounts(await coaRes.json());
+      }
+    } catch { /* ignore */ }
+    setAccountingLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === "accounting") fetchAccounting();
+  }, [activeSection, fetchAccounting]);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -122,15 +175,70 @@ export default function SettingsPage() {
     setProfileSaving(false);
   };
 
+  const handleOrgSave = async () => {
+    setOrgSaving(true);
+    try {
+      const res = await fetch("/api/org", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: orgName, slug: orgSlug, currency: orgCurrency, timezone: orgTimezone }),
+      });
+      if (res.ok) {
+        showToast("Organisation updated");
+        refetchOrg();
+      } else {
+        const data = await res.json();
+        showToast(data.error || "Failed to update");
+      }
+    } catch { showToast("Failed to update"); }
+    setOrgSaving(false);
+  };
+
+  const handleSeedChartOfAccounts = async () => {
+    const res = await fetch("/api/accounting/chart-of-accounts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "seedDefaults" }),
+    });
+    if (res.ok) {
+      showToast("Default chart of accounts seeded");
+      fetchAccounting();
+    } else {
+      const data = await res.json();
+      showToast(data.error || "Failed to seed");
+    }
+  };
+
+  const handleConnectManual = async () => {
+    const res = await fetch("/api/accounting", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider: "manual" }),
+    });
+    if (res.ok) {
+      showToast("Manual accounting connected");
+      fetchAccounting();
+    } else {
+      const data = await res.json();
+      showToast(data.error || "Failed to connect");
+    }
+  };
+
+  const handleDisconnectAccounting = async () => {
+    if (!window.confirm("Disconnect accounting integration?")) return;
+    const res = await fetch("/api/accounting", { method: "DELETE" });
+    if (res.ok) {
+      showToast("Disconnected");
+      setAccountingConnection(null);
+      fetchAccounting();
+    }
+  };
+
   const handleExport = async () => {
     setExporting(true);
     try {
       const res = await fetch("/api/export");
-      if (!res.ok) {
-        showToast("Export failed");
-        setExporting(false);
-        return;
-      }
+      if (!res.ok) { showToast("Export failed"); setExporting(false); return; }
       const data = await res.json();
       const json = JSON.stringify(data, null, 2);
       const blob = new Blob([json], { type: "application/json" });
@@ -143,16 +251,13 @@ export default function SettingsPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       showToast("Data exported successfully");
-    } catch {
-      showToast("Export failed");
-    }
+    } catch { showToast("Export failed"); }
     setExporting(false);
   };
 
   const handleImport = () => {
     const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
+    input.type = "file"; input.accept = ".json";
     input.onchange = (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
@@ -166,14 +271,9 @@ export default function SettingsPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ data: parsed.data }),
           });
-          if (res.ok) {
-            showToast("Data imported successfully — refresh to see changes");
-          } else {
-            showToast("Import failed");
-          }
-        } catch {
-          showToast("Invalid file format");
-        }
+          if (res.ok) showToast("Data imported successfully — refresh to see changes");
+          else showToast("Import failed");
+        } catch { showToast("Invalid file format"); }
         setImporting(false);
       };
       reader.readAsText(file);
@@ -185,41 +285,53 @@ export default function SettingsPage() {
     if (window.confirm("Clear local settings? This will reset your calculator defaults and preferences. Your deal data is stored in the cloud and will not be affected.")) {
       localStorage.removeItem("justhousesErp_settings");
       localStorage.removeItem("justhousesErp_toolLocker");
-      setSettings(DEFAULT_SETTINGS);
+      setSettings(SETTING_DEFAULTS);
       showToast("Local settings cleared");
     }
   };
 
   const handleResetSettings = () => {
-    setSettings(DEFAULT_SETTINGS);
-    saveSettings(DEFAULT_SETTINGS);
+    setSettings(SETTING_DEFAULTS);
+    saveSettings(SETTING_DEFAULTS);
     showToast("Settings reset to defaults");
   };
 
   if (!loaded) return <div style={{ padding: 40, color: theme.textDim }}>Loading...</div>;
 
-  const sections = [
-    { key: "general", label: "General" },
-    { key: "defaults", label: "Calculator Defaults" },
-    { key: "data", label: "Data Management" },
-    { key: "about", label: "About" },
-  ] as const;
+  const allSections = [
+    { key: "general" as const, label: "General" },
+    { key: "defaults" as const, label: "Calculator Defaults" },
+    { key: "organisation" as const, label: "Organisation" },
+    { key: "roles" as const, label: "Roles & Permissions" },
+    ...(canAccessModule("accounting") ? [{ key: "accounting" as const, label: "Accounting" }] : []),
+    { key: "data" as const, label: "Data Management" },
+    { key: "about" as const, label: "About" },
+  ];
 
   const profileValue = (key: keyof UserProfile) =>
     profileDraft[key] !== undefined ? profileDraft[key] : (profile?.[key] ?? "");
 
   const hasProfileChanges = Object.keys(profileDraft).length > 0;
 
+  const MODULE_LABELS: Record<ModuleKey, string> = {
+    dashboard: "Dashboard", pipeline: "Pipeline", projects: "Projects", contacts: "Contacts",
+    finance: "Finance", invoices: "Invoices", tools: "Tools", reports: "Reports",
+    team: "Team", accounting: "Accounting", settings: "Settings", suppliers: "Suppliers", documents: "Documents",
+  };
+
+  const allModules: ModuleKey[] = ["dashboard", "pipeline", "projects", "contacts", "finance", "invoices", "tools", "reports", "team", "accounting", "settings", "suppliers", "documents"];
+  const allRoles: OrgRole[] = ["executive", "finance_manager", "project_manager", "site_supervisor", "field_worker", "viewer"];
+
   return (
-    <div style={{ padding: isMobile ? 16 : 28, maxWidth: 800, margin: "0 auto" }}>
+    <div style={{ padding: isMobile ? 16 : 28, maxWidth: 900, margin: "0 auto" }}>
       <div style={{ marginBottom: 20, paddingLeft: isMobile ? 48 : 0 }}>
         <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>Settings</h1>
-        <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>App preferences, defaults, and data management</p>
+        <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>App preferences, organisation, and data management</p>
       </div>
 
       {/* Section Tabs */}
       <div style={{ display: "flex", gap: 4, marginBottom: 16, overflowX: "auto" }}>
-        {sections.map((s) => (
+        {allSections.map((s) => (
           <button key={s.key} onClick={() => setActiveSection(s.key)} style={{
             background: activeSection === s.key ? theme.accent : "transparent",
             color: activeSection === s.key ? "#000" : theme.textDim,
@@ -232,9 +344,8 @@ export default function SettingsPage() {
 
       {activeSection === "general" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Profile Section */}
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Profile</h3>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Profile</h3>
             {profileLoading && !profile ? (
               <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>Loading profile...</p>
             ) : profile ? (
@@ -247,20 +358,8 @@ export default function SettingsPage() {
                 </div>
                 {hasProfileChanges && (
                   <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                    <CTAButton
-                      label={profileSaving ? "Saving..." : "Save Profile"}
-                      onClick={handleProfileSave}
-                      primary
-                      style={{ fontSize: 12, padding: "8px 16px", borderRadius: 6, minHeight: 36 }}
-                      isMobile={isMobile}
-                    />
-                    <button
-                      onClick={() => setProfileDraft({})}
-                      style={{
-                        background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 6,
-                        padding: "8px 16px", color: theme.textDim, fontSize: 12, cursor: "pointer", minHeight: 36,
-                      }}
-                    >Cancel</button>
+                    <CTAButton label={profileSaving ? "Saving..." : "Save Profile"} onClick={handleProfileSave} primary style={{ fontSize: 12, padding: "8px 16px", borderRadius: 6, minHeight: 36 }} isMobile={isMobile} />
+                    <button onClick={() => setProfileDraft({})} style={{ background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 6, padding: "8px 16px", color: theme.textDim, fontSize: 12, cursor: "pointer", minHeight: 36 }}>Cancel</button>
                   </div>
                 )}
               </>
@@ -268,9 +367,8 @@ export default function SettingsPage() {
               <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>Unable to load profile.</p>
             )}
           </div>
-
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Calculator Mode</h3>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Calculator Mode</h3>
             <div style={{ display: "flex", gap: 8 }}>
               {(["quick", "advanced"] as const).map((mode) => (
                 <button key={mode} onClick={() => handleSettingChange("defaultMode", mode)} style={{
@@ -282,42 +380,197 @@ export default function SettingsPage() {
                 }}>{mode}</button>
               ))}
             </div>
-            <p style={{ fontSize: 11, color: theme.textDim, margin: "8px 0 0" }}>Default mode when creating new deal analyses.</p>
           </div>
-
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Display</h3>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Display</h3>
             <SettingRow label="Currency" value={settings.currency} type="text" disabled help="South African Rand (ZAR) — fixed for SA market" />
+          </div>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Tutorial</h3>
+            <p style={{ fontSize: 12, color: theme.textDim, margin: "0 0 12px" }}>Replay the guided walkthrough to learn about key features.</p>
+            <button
+              onClick={async () => {
+                try {
+                  await fetch("/api/user/profile", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ preferences: { tutorialCompleted: false } }),
+                  });
+                  showToast("Tutorial will restart on next page load");
+                  setTimeout(() => window.location.reload(), 1500);
+                } catch {
+                  showToast("Failed to reset tutorial");
+                }
+              }}
+              style={{
+                background: "transparent",
+                border: `1px solid ${theme.cardBorder}`,
+                borderRadius: 6,
+                padding: "8px 16px",
+                color: theme.accent,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                minHeight: 36,
+              }}
+            >
+              Replay Tutorial
+            </button>
           </div>
         </div>
       )}
 
       {activeSection === "defaults" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Financial Defaults</h3>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Financial Defaults</h3>
             <p style={{ fontSize: 11, color: theme.textDim, margin: "0 0 12px" }}>These values are used as defaults when creating new deals.</p>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
               <SettingRow label="Bond Rate (Prime + %)" value={settings.defaultBondRate} type="number" onChange={(v) => handleSettingChange("defaultBondRate", Number(v))} suffix="%" help="Current SA prime rate is 11.75%" />
-              <SettingRow label="Agent Commission" value={settings.defaultAgentCommission} type="number" onChange={(v) => handleSettingChange("defaultAgentCommission", Number(v))} suffix="%" help="Standard is 5-7%" />
-              <SettingRow label="Contingency %" value={settings.defaultContingencyPct} type="number" onChange={(v) => handleSettingChange("defaultContingencyPct", Number(v))} suffix="%" help="Recommend 10-15% for renovation projects" />
-              <SettingRow label="Project Management %" value={settings.defaultPmPct} type="number" onChange={(v) => handleSettingChange("defaultPmPct", Number(v))} suffix="%" help="PM oversight cost as % of reno budget" />
-              <SettingRow label="Default Reno Timeline" value={settings.defaultRenovationMonths} type="number" onChange={(v) => handleSettingChange("defaultRenovationMonths", Number(v))} suffix="months" help="Typical renovation duration" />
+              <SettingRow label="Agent Commission" value={settings.defaultAgentCommission} type="number" onChange={(v) => handleSettingChange("defaultAgentCommission", Number(v))} suffix="%" />
+              <SettingRow label="Contingency %" value={settings.defaultContingencyPct} type="number" onChange={(v) => handleSettingChange("defaultContingencyPct", Number(v))} suffix="%" />
+              <SettingRow label="Project Management %" value={settings.defaultPmPct} type="number" onChange={(v) => handleSettingChange("defaultPmPct", Number(v))} suffix="%" />
+              <SettingRow label="Default Reno Timeline" value={settings.defaultRenovationMonths} type="number" onChange={(v) => handleSettingChange("defaultRenovationMonths", Number(v))} suffix="months" />
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <button onClick={handleResetSettings} style={{
-              background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 6,
-              padding: "8px 16px", color: theme.textDim, fontSize: 12, cursor: "pointer", minHeight: 36,
-            }}>Reset to Defaults</button>
+            <button onClick={handleResetSettings} style={{ background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 6, padding: "8px 16px", color: theme.textDim, fontSize: 12, cursor: "pointer", minHeight: 36 }}>Reset to Defaults</button>
+          </div>
+        </div>
+      )}
+
+      {activeSection === "organisation" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Organisation Details</h3>
+            {org ? (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+                  <SettingRow label="Name" value={orgName} type="text" onChange={hasPermission("org:write") ? setOrgName : undefined} disabled={!hasPermission("org:write")} />
+                  <SettingRow label="Slug" value={orgSlug} type="text" onChange={hasPermission("org:write") ? setOrgSlug : undefined} disabled={!hasPermission("org:write")} help="Used in URLs" />
+                  <SettingRow label="Currency" value={orgCurrency} type="text" onChange={hasPermission("org:write") ? setOrgCurrency : undefined} disabled={!hasPermission("org:write")} />
+                  <SettingRow label="Timezone" value={orgTimezone} type="text" onChange={hasPermission("org:write") ? setOrgTimezone : undefined} disabled={!hasPermission("org:write")} />
+                </div>
+                {hasPermission("org:write") && (
+                  <div style={{ marginTop: 12 }}>
+                    <CTAButton label={orgSaving ? "Saving..." : "Save Organisation"} onClick={handleOrgSave} primary style={{ fontSize: 12, padding: "8px 16px", borderRadius: 6, minHeight: 36 }} isMobile={isMobile} />
+                  </div>
+                )}
+              </>
+            ) : (
+              <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>No organisation found. Create one from the onboarding flow.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeSection === "roles" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Module Access by Role</h3>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, color: theme.text }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: `1px solid ${theme.cardBorder}`, color: theme.textDim }}>Module</th>
+                    {allRoles.map((r) => (
+                      <th key={r} style={{ textAlign: "center", padding: "6px 4px", borderBottom: `1px solid ${theme.cardBorder}`, color: theme.textDim, fontSize: 10 }}>
+                        {ORG_ROLE_LABELS[r].split(" ")[0]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {allModules.map((mod) => (
+                    <tr key={mod}>
+                      <td style={{ padding: "5px 8px", borderBottom: `1px solid ${theme.cardBorder}10` }}>{MODULE_LABELS[mod]}</td>
+                      {allRoles.map((r) => (
+                        <td key={r} style={{ textAlign: "center", padding: "5px 4px", borderBottom: `1px solid ${theme.cardBorder}10` }}>
+                          {DEFAULT_ROLE_MODULES[r].includes(mod) ? (
+                            <span style={{ color: theme.green }}>Y</span>
+                          ) : (
+                            <span style={{ color: theme.textDim }}>-</span>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeSection === "accounting" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Connection Status</h3>
+            {accountingLoading ? (
+              <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>Loading...</p>
+            ) : accountingConnection ? (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: accountingConnection.status === "connected" ? theme.green : theme.red }} />
+                  <span style={{ fontSize: 13, color: theme.text, textTransform: "capitalize" }}>{accountingConnection.provider} — {accountingConnection.status}</span>
+                </div>
+                {hasPermission("accounting:write") && (
+                  <button onClick={handleDisconnectAccounting} style={{ background: "transparent", border: `1px solid ${theme.red}30`, borderRadius: 6, padding: "6px 12px", color: theme.red, fontSize: 12, cursor: "pointer" }}>Disconnect</button>
+                )}
+              </div>
+            ) : (
+              <div>
+                <p style={{ fontSize: 12, color: theme.textDim, margin: "0 0 12px" }}>No accounting integration connected.</p>
+                {hasPermission("accounting:write") && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button onClick={handleConnectManual} style={{ padding: "8px 16px", background: theme.accent, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Use Manual Accounting</button>
+                    <button disabled style={{ padding: "8px 16px", background: theme.input, color: theme.textDim, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, fontSize: 12, cursor: "not-allowed" }}>QuickBooks (Coming Soon)</button>
+                    <button disabled style={{ padding: "8px 16px", background: theme.input, color: theme.textDim, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, fontSize: 12, cursor: "not-allowed" }}>Xero (Coming Soon)</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Chart of Accounts</h3>
+            {chartOfAccounts.length === 0 ? (
+              <div>
+                <p style={{ fontSize: 12, color: theme.textDim, margin: "0 0 12px" }}>No chart of accounts set up yet.</p>
+                {hasPermission("accounting:write") && (
+                  <button onClick={handleSeedChartOfAccounts} style={{ padding: "8px 16px", background: theme.accent, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Seed Default Accounts (Property Flipping)</button>
+                )}
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, color: theme.text }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: `1px solid ${theme.cardBorder}`, color: theme.textDim }}>Code</th>
+                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: `1px solid ${theme.cardBorder}`, color: theme.textDim }}>Name</th>
+                      <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: `1px solid ${theme.cardBorder}`, color: theme.textDim }}>Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chartOfAccounts.map((acct) => (
+                      <tr key={acct.id}>
+                        <td style={{ padding: "5px 8px", borderBottom: `1px solid ${theme.cardBorder}10`, fontFamily: "'JetBrains Mono', monospace" }}>{acct.code}</td>
+                        <td style={{ padding: "5px 8px", borderBottom: `1px solid ${theme.cardBorder}10` }}>{acct.name}</td>
+                        <td style={{ padding: "5px 8px", borderBottom: `1px solid ${theme.cardBorder}10`, textTransform: "capitalize" }}>{acct.type}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {activeSection === "data" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Data Summary</h3>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Data Summary</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", marginBottom: 2 }}>Total Deals</div>
@@ -327,50 +580,26 @@ export default function SettingsPage() {
                 <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", marginBottom: 2 }}>Storage</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: theme.green, fontFamily: "'JetBrains Mono', monospace" }}>Cloud</div>
               </div>
-              <div>
-                <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", marginBottom: 2 }}>Total Expenses</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: theme.orange, fontFamily: "'JetBrains Mono', monospace" }}>{deals.reduce((s, d) => s + (d.expenses || []).length, 0)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", marginBottom: 2 }}>Total Contacts</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: theme.accent, fontFamily: "'JetBrains Mono', monospace" }}>{deals.reduce((s, d) => s + (d.contacts || []).length, 0)}</div>
-              </div>
             </div>
           </div>
-
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Import / Export</h3>
-            <p style={{ fontSize: 11, color: theme.textDim, margin: "0 0 12px" }}>Export your data for backup or import from a previous export.</p>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Import / Export</h3>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <CTAButton label={exporting ? "Exporting..." : "Export All Data"} onClick={handleExport} primary={false} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 6, minHeight: 36 }} isMobile={isMobile} />
               <CTAButton label={importing ? "Importing..." : "Import Data"} onClick={handleImport} primary={false} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 6, minHeight: 36 }} isMobile={isMobile} />
             </div>
           </div>
-
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Storage</h3>
-            <div style={{ fontSize: 12, color: theme.textDim, lineHeight: 1.7 }}>
-              <p style={{ margin: 0 }}>Your deal data is stored securely in the cloud database. It is synced automatically and accessible from any device you sign in to.</p>
-              <p style={{ margin: "6px 0 0" }}>Local preferences (calculator defaults, theme) are stored in your browser. Clearing browser data will only reset these preferences.</p>
-              <p style={{ margin: "6px 0 0" }}>Export your data periodically for an offline backup.</p>
-            </div>
-          </div>
-
           <div style={{ background: theme.card, border: `1px solid ${theme.red}20`, borderRadius: 8, padding: 16 }}>
             <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.red, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Danger Zone</h3>
-            <p style={{ fontSize: 12, color: theme.textDim, marginBottom: 8 }}>This will clear your local settings and preferences only. Your deal data is stored in the cloud and will not be affected.</p>
-            <p style={{ fontSize: 11, color: theme.textDim, marginBottom: 12, fontStyle: "italic" }}>Note: To delete your cloud data, please contact support.</p>
-            <button onClick={handleClearAll} style={{
-              background: "transparent", border: `1px solid ${theme.red}30`, borderRadius: 6,
-              padding: "8px 16px", color: theme.red, fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36,
-            }}>Clear Local Settings</button>
+            <p style={{ fontSize: 12, color: theme.textDim, marginBottom: 12 }}>This will clear your local settings and preferences only. Cloud data is not affected.</p>
+            <button onClick={handleClearAll} style={{ background: "transparent", border: `1px solid ${theme.red}30`, borderRadius: 6, padding: "8px 16px", color: theme.red, fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36 }}>Clear Local Settings</button>
           </div>
         </div>
       )}
 
       {activeSection === "about" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
+          <div style={styles.card}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <div style={{ width: 40, height: 40, background: theme.accent, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "#fff" }}>JH</div>
               <div>
@@ -379,25 +608,9 @@ export default function SettingsPage() {
               </div>
             </div>
             <div style={{ fontSize: 12, color: theme.textDim, lineHeight: 1.8 }}>
-              <p style={{ margin: "0 0 8px" }}>Version 1.0 &middot; Built for South African property investors</p>
-              <p style={{ margin: "0 0 8px" }}>Features: Deal pipeline management, financial analysis, expense tracking, project management, renovation timeline, contact management, portfolio analytics.</p>
+              <p style={{ margin: "0 0 8px" }}>Version 1.1 &middot; Built for South African property investors</p>
+              <p style={{ margin: "0 0 8px" }}>Features: Deal pipeline management, financial analysis, expense tracking, project management, renovation timeline, contact management, portfolio analytics, team management, RBAC, accounting integration.</p>
               <p style={{ margin: 0 }}>All calculations use South African tax law (transfer duty), current prime rates, and ZAR currency.</p>
-            </div>
-          </div>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Keyboard Shortcuts</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {[
-                { key: "N", desc: "New Deal (from sidebar)" },
-                { key: "1-7", desc: "Navigate to section (Dashboard, Pipeline, etc.)" },
-                { key: "Q/A", desc: "Toggle Quick/Advanced mode in calculator" },
-                { key: "←/→", desc: "Navigate calculator steps" },
-              ].map((shortcut) => (
-                <div key={shortcut.key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <kbd style={{ background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 4, padding: "2px 6px", fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: theme.text, minWidth: 30, textAlign: "center" }}>{shortcut.key}</kbd>
-                  <span style={{ fontSize: 11, color: theme.textDim }}>{shortcut.desc}</span>
-                </div>
-              ))}
             </div>
           </div>
         </div>

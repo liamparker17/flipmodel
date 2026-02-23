@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const publicPaths = ["/login", "/signup", "/onboarding", "/api/auth"];
+const publicPaths = ["/login", "/signup", "/onboarding", "/api/auth", "/api/accounting/webhooks"];
 
 export default function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -32,6 +32,10 @@ export default function middleware(req: NextRequest) {
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
+
+  // If user is at root or ERP pages, let them through — the org check happens at API level.
+  // The onboarding redirect for users without org membership is handled client-side
+  // via the useOrgContext hook since middleware can't decode JWT without crypto libs.
 
   return NextResponse.next();
 }

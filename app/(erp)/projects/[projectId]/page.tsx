@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { theme, fmt, pct } from "../../../components/theme";
+import { theme, fmt, pct, styles } from "../../../components/theme";
 import useDeals from "../../../hooks/api/useApiDeals";
 import { getStageColor, getStageLabel, computeDealMetrics, getDealProgress, getExpensesByCategory, PRIORITY_CONFIG, EXPENSE_CATEGORIES } from "../../../utils/dealHelpers";
 import type { Deal, Expense, ExpenseCategory, PaymentMethod, Milestone, MilestoneStatus, InspectionStatus, ExpenseSignOff } from "../../../types/deal";
@@ -99,8 +99,8 @@ export default function ProjectDetailPage() {
         />
 
         {/* Budget Tracking */}
-        <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-          <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Budget Tracking</h3>
+        <div style={styles.card}>
+          <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Budget Tracking</h3>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: theme.textDim, marginBottom: 6 }}>
             <span>Spent: {fmt(actualExpenses)}</span>
             <span>Budget: {fmt(budget)}</span>
@@ -128,9 +128,9 @@ export default function ProjectDetailPage() {
 
       {/* Team */}
       {contractors.length > 0 && (
-        <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>Contractors</h3>
+        <div style={styles.cardMb}>
+          <div style={{ ...styles.flexBetween, marginBottom: 12 }}>
+            <h3 style={styles.sectionHeading}>Contractors</h3>
             {totalLabourCost > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: theme.text, fontFamily: "'JetBrains Mono', monospace" }}>Total: {fmt(totalLabourCost)}</span>}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 6 }}>
@@ -169,8 +169,8 @@ export default function ProjectDetailPage() {
 
       {/* Notes */}
       {deal.notes && (
-        <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
-          <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 8px" }}>Notes</h3>
+        <div style={styles.cardMb}>
+          <h3 style={{ ...styles.sectionHeading, margin: "0 0 8px" }}>Notes</h3>
           <p style={{ fontSize: 12, color: theme.text, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>{deal.notes}</p>
         </div>
       )}
@@ -179,6 +179,12 @@ export default function ProjectDetailPage() {
 }
 
 // ─── Milestones Section (editable) ───
+interface OrgMemberInfo {
+  id: string;
+  user: { id: string; name: string | null; email: string };
+  role: string;
+}
+
 function MilestonesSection({ deal, milestones, progress, contractors, onAddMilestone, onUpdateMilestone, onToggleTask }: {
   deal: Deal; milestones: Milestone[]; progress: ReturnType<typeof getDealProgress>;
   contractors: Deal["contacts"];
@@ -190,7 +196,23 @@ function MilestonesSection({ deal, milestones, progress, contractors, onAddMiles
   const [title, setTitle] = useState("");
   const [due, setDue] = useState(new Date().toISOString().split("T")[0]);
   const [newTaskInputs, setNewTaskInputs] = useState<Record<string, string>>({});
+  const [members, setMembers] = useState<OrgMemberInfo[]>([]);
   const statusColors: Record<string, string> = { pending: theme.textDim, in_progress: theme.accent, completed: theme.green, overdue: theme.red, skipped: theme.textDim };
+
+  const rooms = deal.data?.rooms || [];
+
+  useEffect(() => {
+    fetch("/api/org/members")
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setMembers(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
+  const getMemberName = (memberId: string | undefined) => {
+    if (!memberId) return null;
+    const m = members.find((mem) => mem.id === memberId);
+    return m?.user?.name || m?.user?.email || null;
+  };
 
   const handleAdd = () => {
     if (!title) return;
@@ -198,19 +220,40 @@ function MilestonesSection({ deal, milestones, progress, contractors, onAddMiles
     setTitle(""); setShowForm(false);
   };
 
-  const handleAddTask = (msId: string) => {
+  const handleAddTask = async (msId: string) => {
     const t = newTaskInputs[msId]?.trim();
     if (!t) return;
-    const ms = milestones.find((m) => m.id === msId);
-    if (!ms) return;
-    onUpdateMilestone(msId, { tasks: [...ms.tasks, { id: `t_${Date.now()}`, title: t, completed: false }] });
+    try {
+      await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ milestoneId: msId, title: t }),
+      });
+      // Trigger a refresh by doing a no-op update
+      onUpdateMilestone(msId, {});
+    } catch { /* ignore */ }
     setNewTaskInputs({ ...newTaskInputs, [msId]: "" });
   };
 
+  const handleUpdateTask = async (taskId: string, updates: Record<string, unknown>) => {
+    try {
+      await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+    } catch { /* ignore */ }
+  };
+
+  const tinySelect: React.CSSProperties = {
+    background: "transparent", border: `1px solid ${theme.inputBorder}`, borderRadius: 3,
+    padding: "0 2px", fontSize: 8, color: theme.textDim, cursor: "pointer", maxWidth: 80,
+  };
+
   return (
-    <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>Project Progress</h3>
+    <div style={styles.card}>
+      <div style={{ ...styles.flexBetween, marginBottom: 10 }}>
+        <h3 style={styles.sectionHeading}>Project Progress</h3>
         <button onClick={() => setShowForm(!showForm)} style={{
           background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
           padding: "4px 8px", fontSize: 9, fontWeight: 600, cursor: "pointer",
@@ -225,8 +268,8 @@ function MilestonesSection({ deal, milestones, progress, contractors, onAddMiles
       </div>
 
       {showForm && (
-        <div style={{ background: theme.input, borderRadius: 6, padding: 10, marginBottom: 8, display: "flex", gap: 6 }}>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Milestone title" style={{ flex: 1, background: theme.card, border: `1px solid ${theme.inputBorder}`, borderRadius: 4, padding: "5px 8px", color: theme.text, fontSize: 11, outline: "none", minHeight: 28 }} />
+        <div style={{ background: theme.input, borderRadius: 6, padding: 10, marginBottom: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Milestone title" style={{ flex: 1, background: theme.card, border: `1px solid ${theme.inputBorder}`, borderRadius: 4, padding: "5px 8px", color: theme.text, fontSize: 11, outline: "none", minHeight: 28, minWidth: 120 }} />
           <input type="date" value={due} onChange={(e) => setDue(e.target.value)} style={{ background: theme.card, border: `1px solid ${theme.inputBorder}`, borderRadius: 4, padding: "5px 6px", color: theme.text, fontSize: 10, outline: "none", minHeight: 28 }} />
           <button onClick={handleAdd} style={{ background: theme.accent, color: "#fff", border: "none", borderRadius: 4, padding: "5px 10px", fontSize: 10, fontWeight: 600, cursor: "pointer", minHeight: 28 }}>Add</button>
         </div>
@@ -245,29 +288,39 @@ function MilestonesSection({ deal, milestones, progress, contractors, onAddMiles
             const inspectionColors: Record<string, string> = { passed: theme.green, failed: theme.red, conditional: theme.orange, not_inspected: theme.textDim };
             return (
               <div key={ms.id} style={{ background: theme.input, borderRadius: 4, borderLeft: `3px solid ${color}`, overflow: "hidden" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 8px", flexWrap: "wrap" }}>
                   <div style={{ width: 16, height: 16, borderRadius: "50%", background: ms.status === "completed" ? theme.green : `${color}20`, border: `1.5px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: ms.status === "completed" ? "#fff" : color, fontWeight: 700, flexShrink: 0 }}>
-                    {ms.status === "completed" ? "✓" : ""}
+                    {ms.status === "completed" ? "\u2713" : ""}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
                       <span style={{ fontSize: 11, color: ms.status === "completed" ? theme.textDim : theme.text, fontWeight: 600, textDecoration: ms.status === "completed" ? "line-through" : "none" }}>{ms.title}</span>
+                      {ms.roomId && (
+                        <span style={{ fontSize: 7, padding: "1px 4px", borderRadius: 3, background: `${theme.accent}10`, color: theme.accent, fontWeight: 600 }}>
+                          {rooms.find((r) => String(r.id) === ms.roomId)?.name || ms.roomId}
+                        </span>
+                      )}
                       {needsInspection && <span style={{ width: 6, height: 6, borderRadius: "50%", background: theme.orange, flexShrink: 0 }} title="Completed but not inspected" />}
                       {ms.inspectionStatus && ms.inspectionStatus !== "not_inspected" && (
                         <span style={{ fontSize: 7, padding: "1px 4px", borderRadius: 3, fontWeight: 600, background: `${inspectionColors[ms.inspectionStatus]}15`, color: inspectionColors[ms.inspectionStatus] }}>
-                          {ms.inspectionStatus === "passed" ? "✓ Inspected" : ms.inspectionStatus === "failed" ? "✗ Failed" : "⚠ Conditional"}
+                          {ms.inspectionStatus === "passed" ? "\u2713 Inspected" : ms.inspectionStatus === "failed" ? "\u2717 Failed" : "\u26A0 Conditional"}
                         </span>
                       )}
                     </div>
-                    {assignedContractor && (
-                      <span style={{ fontSize: 8, color: theme.accent, background: `${theme.accent}10`, padding: "0 4px", borderRadius: 2 }}>{assignedContractor.name}</span>
-                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", marginTop: 1 }}>
+                      {assignedContractor && (
+                        <span style={{ fontSize: 8, color: theme.accent, background: `${theme.accent}10`, padding: "0 4px", borderRadius: 2 }}>{assignedContractor.name}</span>
+                      )}
+                      {ms.assignedToMemberId && getMemberName(ms.assignedToMemberId) && (
+                        <span style={{ fontSize: 8, color: theme.green, background: `${theme.green}10`, padding: "0 4px", borderRadius: 2 }}>{getMemberName(ms.assignedToMemberId)}</span>
+                      )}
+                    </div>
                   </div>
                   {ms.tasks.length > 0 && <span style={{ fontSize: 9, color: theme.textDim }}>{tasksDone}/{ms.tasks.length}</span>}
                   {(ms.status === "completed" || ms.status === "in_progress") && (!ms.inspectionStatus || ms.inspectionStatus === "not_inspected") && (
                     <button onClick={(e) => { e.stopPropagation(); onUpdateMilestone(ms.id, { inspectionStatus: "passed" as InspectionStatus, inspectedAt: new Date().toISOString() }); }}
                       style={{ background: `${theme.green}15`, border: `1px solid ${theme.green}40`, borderRadius: 3, padding: "1px 5px", fontSize: 8, fontWeight: 600, color: theme.green, cursor: "pointer", whiteSpace: "nowrap" }}>
-                      Inspect ✓
+                      Inspect \u2713
                     </button>
                   )}
                   <select value={ms.status} onChange={(e) => onUpdateMilestone(ms.id, { status: e.target.value as MilestoneStatus, ...(e.target.value === "completed" ? { completedDate: new Date().toISOString() } : {}) })} style={{ background: `${color}10`, border: `1px solid ${color}30`, borderRadius: 3, padding: "1px 4px", color, fontSize: 8, fontWeight: 600, cursor: "pointer" }}>
@@ -280,30 +333,70 @@ function MilestonesSection({ deal, milestones, progress, contractors, onAddMiles
                     {new Date(ms.dueDate).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}
                   </span>
                 </div>
-                {ms.tasks.length > 0 && (
-                  <div style={{ padding: "0 8px 6px", paddingLeft: 30 }}>
-                    {ms.tasks.map((task) => (
-                      <div key={task.id} onClick={() => onToggleTask(ms.id, task.id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "1px 0", cursor: "pointer" }}>
-                        <div style={{ width: 12, height: 12, borderRadius: 2, border: `1.5px solid ${task.completed ? theme.green : theme.inputBorder}`, background: task.completed ? theme.green : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, color: "#fff", flexShrink: 0 }}>{task.completed ? "✓" : ""}</div>
-                        <span style={{ fontSize: 10, color: task.completed ? theme.textDim : theme.text, textDecoration: task.completed ? "line-through" : "none" }}>{task.title}</span>
-                      </div>
-                    ))}
-                    <div style={{ display: "flex", gap: 3, marginTop: 2 }}>
-                      <input value={newTaskInputs[ms.id] || ""} onChange={(e) => setNewTaskInputs({ ...newTaskInputs, [ms.id]: e.target.value })}
-                        onKeyDown={(e) => e.key === "Enter" && handleAddTask(ms.id)} placeholder="Add task..."
-                        style={{ flex: 1, background: theme.card, border: `1px solid ${theme.inputBorder}`, borderRadius: 3, padding: "2px 5px", color: theme.text, fontSize: 9, outline: "none", minHeight: 20 }} />
-                      <button onClick={() => handleAddTask(ms.id)} style={{ background: theme.accent, color: "#fff", border: "none", borderRadius: 3, padding: "2px 5px", fontSize: 8, cursor: "pointer", minHeight: 20 }}>+</button>
+                {/* Assignment controls row */}
+                <div style={{ display: "flex", gap: 4, padding: "0 8px 4px", paddingLeft: 30, flexWrap: "wrap", alignItems: "center" }}>
+                  {rooms.length > 0 && (
+                    <select
+                      value={ms.roomId || ""}
+                      onChange={(e) => onUpdateMilestone(ms.id, { roomId: e.target.value || undefined } as Partial<Milestone>)}
+                      style={tinySelect}
+                    >
+                      <option value="">Room...</option>
+                      {rooms.map((r) => <option key={r.id} value={String(r.id)}>{r.name}</option>)}
+                    </select>
+                  )}
+                  {contractors.length > 0 && (
+                    <select
+                      value={ms.assignedContractorId || ""}
+                      onChange={(e) => onUpdateMilestone(ms.id, { assignedContractorId: e.target.value || undefined })}
+                      style={tinySelect}
+                    >
+                      <option value="">Contractor...</option>
+                      {contractors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  )}
+                  {members.length > 0 && (
+                    <select
+                      value={ms.assignedToMemberId || ""}
+                      onChange={(e) => onUpdateMilestone(ms.id, { assignedToMemberId: e.target.value || undefined } as Partial<Milestone>)}
+                      style={tinySelect}
+                    >
+                      <option value="">Assign member...</option>
+                      {members.map((m) => <option key={m.id} value={m.id}>{m.user.name || m.user.email}</option>)}
+                    </select>
+                  )}
+                </div>
+                {/* Tasks */}
+                <div style={{ padding: "0 8px 6px", paddingLeft: 30 }}>
+                  {ms.tasks.map((task) => (
+                    <div key={task.id} style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 0" }}>
+                      <div onClick={() => onToggleTask(ms.id, task.id)} style={{ width: 12, height: 12, borderRadius: 2, border: `1.5px solid ${task.completed ? theme.green : theme.inputBorder}`, background: task.completed ? theme.green : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, color: "#fff", flexShrink: 0, cursor: "pointer" }}>{task.completed ? "\u2713" : ""}</div>
+                      <span style={{ fontSize: 10, color: task.completed ? theme.textDim : theme.text, textDecoration: task.completed ? "line-through" : "none", flex: 1 }}>{task.title}</span>
+                      {members.length > 0 && (
+                        <select
+                          value={task.assignedTo || ""}
+                          onChange={(e) => { handleUpdateTask(task.id, { assignedTo: e.target.value || null }); onUpdateMilestone(ms.id, {}); }}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ ...tinySelect, maxWidth: 70 }}
+                        >
+                          <option value="">--</option>
+                          {members.map((m) => <option key={m.id} value={m.id}>{m.user.name || m.user.email}</option>)}
+                        </select>
+                      )}
+                      {task.dueDate && (
+                        <span style={{ fontSize: 8, fontFamily: "'JetBrains Mono', monospace", color: !task.completed && new Date(task.dueDate) < new Date() ? theme.red : theme.textDim }}>
+                          {new Date(task.dueDate).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                )}
-                {ms.tasks.length === 0 && (
-                  <div style={{ padding: "0 8px 6px", paddingLeft: 30, display: "flex", gap: 3 }}>
+                  ))}
+                  <div style={{ display: "flex", gap: 3, marginTop: 2 }}>
                     <input value={newTaskInputs[ms.id] || ""} onChange={(e) => setNewTaskInputs({ ...newTaskInputs, [ms.id]: e.target.value })}
-                      onKeyDown={(e) => e.key === "Enter" && handleAddTask(ms.id)} placeholder="Add first task..."
+                      onKeyDown={(e) => e.key === "Enter" && handleAddTask(ms.id)} placeholder={ms.tasks.length === 0 ? "Add first task..." : "Add task..."}
                       style={{ flex: 1, background: theme.card, border: `1px solid ${theme.inputBorder}`, borderRadius: 3, padding: "2px 5px", color: theme.text, fontSize: 9, outline: "none", minHeight: 20 }} />
                     <button onClick={() => handleAddTask(ms.id)} style={{ background: theme.accent, color: "#fff", border: "none", borderRadius: 3, padding: "2px 5px", fontSize: 8, cursor: "pointer", minHeight: 20 }}>+</button>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
@@ -435,8 +528,8 @@ function PaymentSignOffSection({ deal, milestones, contractors, onUpdateExpense,
   }
 
   return (
-    <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
-      <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 10px" }}>Payment Sign-off</h3>
+    <div style={styles.cardMb}>
+      <h3 style={{ ...styles.sectionHeading, margin: "0 0 10px" }}>Payment Sign-off</h3>
       {Object.entries(byMilestone).map(([msId, exps]) => {
         const ms = getMilestone(msId);
         return (

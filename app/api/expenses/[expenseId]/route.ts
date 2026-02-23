@@ -1,18 +1,18 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { updateExpenseSchema } from "@/lib/validations/expense";
 
 type Params = { params: Promise<{ expenseId: string }> };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("expenses:write");
     const { expenseId } = await params;
     const body = await req.json();
     const data = updateExpenseSchema.parse(body);
 
-    const existing = await prisma.expense.findFirst({ where: { id: expenseId, userId } });
+    const existing = await prisma.expense.findFirst({ where: { id: expenseId, orgId: ctx.orgId } });
     if (!existing) return apiError("Expense not found", 404);
 
     const updateData: Record<string, unknown> = {};
@@ -46,10 +46,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("expenses:write");
     const { expenseId } = await params;
 
-    const existing = await prisma.expense.findFirst({ where: { id: expenseId, userId } });
+    const existing = await prisma.expense.findFirst({ where: { id: expenseId, orgId: ctx.orgId } });
     if (!existing) return apiError("Expense not found", 404);
 
     await prisma.expense.delete({ where: { id: expenseId } });

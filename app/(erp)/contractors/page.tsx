@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { theme, fmt } from "../../components/theme";
+import { theme, fmt, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
 import useTools from "../../hooks/api/useApiTools";
 import { TOOL_CATEGORY_DEFAULTS } from "../../types/tool";
@@ -250,8 +250,8 @@ function ContractorsPageInner() {
         {/* Contact & Banking Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
           {/* Contact Details */}
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Contact Details</h3>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Contact Details</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
               {selected.phone && <Row label="Phone" value={selected.phone} />}
               {selected.email && <Row label="Email" value={selected.email} />}
@@ -261,8 +261,8 @@ function ContractorsPageInner() {
           </div>
 
           {/* Banking Details */}
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 12px" }}>Banking Details</h3>
+          <div style={styles.card}>
+            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Banking Details</h3>
             {selected.bankName ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
                 <Row label="Bank" value={selected.bankName} />
@@ -285,9 +285,9 @@ function ContractorsPageInner() {
         </div>
 
         {/* Project History — enhanced with milestones, rooms, dates, detailed job info */}
-        <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, overflow: "hidden", marginBottom: 24 }}>
+        <div style={{ ...styles.card, overflow: "hidden", padding: 0, marginBottom: 24 }}>
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${theme.cardBorder}` }}>
-            <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>Project History</h3>
+            <h3 style={styles.sectionHeading}>Project History</h3>
           </div>
           {selected.projects.map((p) => {
             const stageColor = p.dealStage === "renovating" ? theme.orange : p.dealStage === "sold" ? theme.green : theme.accent;
@@ -364,9 +364,9 @@ function ContractorsPageInner() {
 
         {/* Payments & Sign-off Timeline */}
         {selected.projects.some((p) => p.expenses.length > 0) && (
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ ...styles.card, overflow: "hidden", padding: 0 }}>
             <div style={{ padding: "12px 16px", borderBottom: `1px solid ${theme.cardBorder}` }}>
-              <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>Payments &amp; Sign-off Timeline</h3>
+              <h3 style={styles.sectionHeading}>Payments &amp; Sign-off Timeline</h3>
             </div>
             {selected.projects.filter((p) => p.expenses.length > 0).map((p) => {
               const projectedTotal = (() => {
@@ -428,9 +428,9 @@ function ContractorsPageInner() {
           const contractorIncidents = incidents.filter((i) => i.contractorName.toLowerCase() === contractorKey);
           if (currentTools.length === 0 && contractorIncidents.length === 0) return null;
           return (
-            <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, overflow: "hidden", marginTop: 24 }}>
+            <div style={{ ...styles.card, overflow: "hidden", padding: 0, marginTop: 24 }}>
               <div style={{ padding: "12px 16px", borderBottom: `1px solid ${theme.cardBorder}` }}>
-                <h3 style={{ fontSize: 11, fontWeight: 600, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.8, margin: 0 }}>Tools</h3>
+                <h3 style={styles.sectionHeading}>Tools</h3>
               </div>
               {currentTools.length > 0 && (
                 <div style={{ padding: "10px 16px", borderBottom: `1px solid ${theme.cardBorder}` }}>

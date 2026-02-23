@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { z } from "zod";
 
 type Params = { params: Promise<{ taskId: string }> };
@@ -14,7 +14,7 @@ const updateTaskSchema = z.object({
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    await requireAuth();
+    await requirePermission("tasks:write");
     const { taskId } = await params;
     const body = await req.json();
     const data = updateTaskSchema.parse(body);

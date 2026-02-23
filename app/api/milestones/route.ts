@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 import { z } from "zod";
 
 const createMilestoneSchema = z.object({
@@ -11,6 +11,8 @@ const createMilestoneSchema = z.object({
   status: z.string().optional(),
   order: z.number().int().optional(),
   assignedContractorId: z.string().optional(),
+  assignedToMemberId: z.string().optional(),
+  roomId: z.string().optional(),
   tasks: z.array(z.object({
     title: z.string().min(1),
     assignedTo: z.string().optional(),
@@ -20,10 +22,10 @@ const createMilestoneSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const dealId = req.nextUrl.searchParams.get("dealId");
 
-    const where: Record<string, unknown> = { userId };
+    const where: Record<string, unknown> = { orgId: ctx.orgId };
     if (dealId) where.dealId = dealId;
 
     const milestones = await prisma.milestone.findMany({
@@ -39,13 +41,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("milestones:write");
     const body = await req.json();
     const data = createMilestoneSchema.parse(body);
 
     const milestone = await prisma.milestone.create({
       data: {
-        userId,
+        orgId: ctx.orgId,
+        userId: ctx.userId,
         dealId: data.dealId,
         title: data.title,
         description: data.description || "",
@@ -53,6 +56,8 @@ export async function POST(req: NextRequest) {
         status: data.status || "pending",
         order: data.order || 0,
         assignedContractorId: data.assignedContractorId,
+        assignedToMemberId: data.assignedToMemberId,
+        roomId: data.roomId,
         tasks: data.tasks
           ? {
               create: data.tasks.map((t) => ({

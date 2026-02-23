@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { z } from "zod";
 
 const createItemSchema = z.object({
@@ -27,10 +27,10 @@ const updateItemSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requireOrgMember();
     const dealId = req.nextUrl.searchParams.get("dealId");
 
-    const where: Record<string, unknown> = { userId };
+    const where: Record<string, unknown> = { orgId: ctx.orgId };
     if (dealId) where.dealId = dealId;
 
     const items = await prisma.shoppingListItem.findMany({
@@ -45,13 +45,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("shopping:write");
     const body = await req.json();
     const data = createItemSchema.parse(body);
 
     const item = await prisma.shoppingListItem.create({
       data: {
-        userId,
+        orgId: ctx.orgId,
+        userId: ctx.userId,
         dealId: data.dealId,
         materialKey: data.materialKey,
         category: data.category,
@@ -71,11 +72,11 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("shopping:write");
     const body = await req.json();
     const data = updateItemSchema.parse(body);
 
-    const existing = await prisma.shoppingListItem.findFirst({ where: { id: data.id, userId } });
+    const existing = await prisma.shoppingListItem.findFirst({ where: { id: data.id, orgId: ctx.orgId } });
     if (!existing) return apiError("Item not found", 404);
 
     const updateData: Record<string, unknown> = {};

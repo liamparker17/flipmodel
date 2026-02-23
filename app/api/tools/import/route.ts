@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
-import { requireAuth, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth();
+    const ctx = await requirePermission("tools:write");
     const body = await req.json();
     const { tools, checkouts, maintenance, incidents } = body as {
       tools: Record<string, unknown>[];
@@ -13,11 +13,11 @@ export async function POST(req: NextRequest) {
       incidents: Record<string, unknown>[];
     };
 
-    // Create tools
     for (const t of tools || []) {
       await prisma.tool.create({
         data: {
-          userId,
+          orgId: ctx.orgId,
+          userId: ctx.userId,
           name: t.name as string,
           category: t.category as string,
           brand: t.brand as string | undefined,
@@ -39,11 +39,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Create checkouts (needs tool IDs mapped)
     for (const c of checkouts || []) {
       await prisma.toolCheckout.create({
         data: {
-          userId,
+          orgId: ctx.orgId,
+          userId: ctx.userId,
           toolId: c.toolId as string,
           contractorName: c.contractorName as string,
           contractorId: c.contractorId as string | undefined,
@@ -60,11 +60,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Create maintenance entries
     for (const m of maintenance || []) {
       await prisma.toolMaintenance.create({
         data: {
-          userId,
+          orgId: ctx.orgId,
+          userId: ctx.userId,
           toolId: m.toolId as string,
           date: new Date((m.date as string) || new Date().toISOString()),
           type: (m.type as string) || "service",
@@ -76,11 +76,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Create incidents
     for (const i of incidents || []) {
       await prisma.toolIncident.create({
         data: {
-          userId,
+          orgId: ctx.orgId,
+          userId: ctx.userId,
           toolId: i.toolId as string,
           date: new Date((i.date as string) || new Date().toISOString()),
           type: (i.type as string) || "lost",

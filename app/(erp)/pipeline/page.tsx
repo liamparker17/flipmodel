@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { theme, fmt, pct } from "../../components/theme";
+import { theme, fmt, pct, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
 import { DEAL_STAGES, groupDealsByStage, computeDealMetrics, PRIORITY_CONFIG, getDealProgress } from "../../utils/dealHelpers";
 import { generateSuggestions } from "../../lib/automation";
