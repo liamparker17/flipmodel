@@ -25,7 +25,13 @@ export async function GET() {
       },
     });
 
-    return apiSuccess({ connection });
+    // Check if provider env vars are configured (for UI to show connect buttons)
+    const providers = {
+      xero: !!(process.env.XERO_CLIENT_ID && process.env.XERO_CLIENT_SECRET),
+      quickbooks: !!(process.env.QUICKBOOKS_CLIENT_ID && process.env.QUICKBOOKS_CLIENT_SECRET),
+    };
+
+    return apiSuccess({ connection, providers });
   } catch (error) {
     return handleApiError(error);
   }
@@ -69,6 +75,8 @@ export async function DELETE() {
     });
     if (!existing) return apiError("No connection found", 404);
 
+    // Clean up sync records
+    await prisma.accountingSync.deleteMany({ where: { orgId: ctx.orgId } });
     await prisma.accountingConnection.delete({ where: { id: existing.id } });
     return apiSuccess({ disconnected: true });
   } catch (error) {
