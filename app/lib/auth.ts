@@ -26,11 +26,15 @@ declare module "@auth/core/jwt" {
   }
 }
 
+const adapter = PrismaAdapter(prisma);
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter,
   session: { strategy: "jwt" },
+  debug: true,
   pages: {
     signIn: "/login",
+    error: "/login",
   },
   providers: [
     Credentials({
