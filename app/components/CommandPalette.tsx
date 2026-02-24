@@ -190,6 +190,9 @@ export default function CommandPalette() {
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",

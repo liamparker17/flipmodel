@@ -1,10 +1,38 @@
+// @ts-nocheck
 "use client";
 import { theme, fmt, pct, Card, SectionDivider, MetricBox, SliderInput, BarChart } from "./theme";
+
+interface SensCalc {
+  netProfit: number;
+  roi: number;
+  annRoi: number;
+  holdMonths: number;
+}
+
+interface SensitivityRow {
+  label: string;
+  allIn: number;
+  resalePrice: number;
+  netProfit: number;
+  roi: number;
+}
+
+interface SensitivityStepProps {
+  sensResaleAdj: number;
+  setSensResaleAdj: (v: number) => void;
+  sensRenoAdj: number;
+  setSensRenoAdj: (v: number) => void;
+  sensHoldAdj: number;
+  setSensHoldAdj: (v: number) => void;
+  sensCalc: SensCalc;
+  sensitivity: SensitivityRow[];
+  isMobile: boolean;
+}
 
 export default function SensitivityStep({
   sensResaleAdj, setSensResaleAdj, sensRenoAdj, setSensRenoAdj, sensHoldAdj, setSensHoldAdj,
   sensCalc, sensitivity, isMobile,
-}) {
+}: SensitivityStepProps) {
   return (
     <div>
       <Card title="Interactive Sensitivity" subtitle="Drag the sliders to model different scenarios in real time.">

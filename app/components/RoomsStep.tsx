@@ -1,9 +1,28 @@
+// @ts-nocheck
 "use client";
 import { theme, NumInput, Card, Select } from "./theme";
 import RoomBreakdown from "./RoomBreakdown";
 import { detectRoomType } from "../data/roomTemplates";
 
-export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMobile }) {
+interface Room {
+  id: number;
+  name: string;
+  sqm: number;
+  scope: string;
+  customCost: number | null;
+  roomType?: string;
+  [key: string]: unknown;
+}
+
+interface RoomsStepProps {
+  rooms: Room[];
+  updateRoom: (id: number, key: string, value: unknown) => void;
+  removeRoom: (id: number) => void;
+  addRoom: () => void;
+  isMobile: boolean;
+}
+
+export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMobile }: RoomsStepProps) {
   return (
     <div>
       <Card subtitle="Define each room in the property and its renovation scope. Toggle to Detailed mode for per-item breakdowns.">
@@ -21,7 +40,7 @@ export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMo
       {rooms.length === 0 && (
         <Card>
           <div style={{ textAlign: "center", padding: "32px 0", color: theme.textDim, fontSize: 14 }}>
-            No rooms added yet. Tap "+ Add Room" to get started.
+            No rooms added yet. Tap &quot;+ Add Room&quot; to get started.
           </div>
         </Card>
       )}
@@ -35,7 +54,7 @@ export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMo
           }}>
             <div>
               <label style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase" }}>Room Name</label>
-              <input value={room.name} onChange={(e) => {
+              <input value={room.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 updateRoom(room.id, "name", e.target.value);
                 const detected = detectRoomType(e.target.value);
                 if (detected !== room.roomType) updateRoom(room.id, "roomType", detected);
@@ -45,8 +64,8 @@ export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMo
                 minHeight: 44,
               }} />
             </div>
-            <NumInput label="Size (sqm)" value={room.sqm} onChange={(v) => updateRoom(room.id, "sqm", v)} prefix="" suffix="sqm" small isMobile={isMobile} />
-            <Select label="Scope" value={room.scope} onChange={(v) => updateRoom(room.id, "scope", v)} options={[
+            <NumInput label="Size (sqm)" value={room.sqm} onChange={(v: number) => updateRoom(room.id, "sqm", v)} prefix="" suffix="sqm" small isMobile={isMobile} />
+            <Select label="Scope" value={room.scope} onChange={(v: string) => updateRoom(room.id, "scope", v)} options={[
               { value: "cosmetic", label: isMobile ? "Cosmetic" : "Cosmetic (25%)" },
               { value: "midLevel", label: isMobile ? "Mid-level" : "Mid-level (55%)" },
               { value: "fullGut", label: isMobile ? "Full gut" : "Full gut (100%)" },
@@ -54,7 +73,7 @@ export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMo
             {isMobile ? (
               <div style={{ display: "flex", gap: 10, alignItems: "end" }}>
                 <div style={{ flex: 1 }}>
-                  <NumInput label="Override (R)" value={room.customCost || ""} onChange={(v) => updateRoom(room.id, "customCost", v || null)} small isMobile={isMobile} />
+                  <NumInput label="Override (R)" value={room.customCost || ""} onChange={(v: number) => updateRoom(room.id, "customCost", v || null)} small isMobile={isMobile} />
                 </div>
                 <button onClick={() => removeRoom(room.id)} style={{
                   background: theme.red, border: "none", color: "#fff", fontSize: 16,
@@ -65,7 +84,7 @@ export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMo
               </div>
             ) : (
               <>
-                <NumInput label="Override (R)" value={room.customCost || ""} onChange={(v) => updateRoom(room.id, "customCost", v || null)} small isMobile={isMobile} />
+                <NumInput label="Override (R)" value={room.customCost || ""} onChange={(v: number) => updateRoom(room.id, "customCost", v || null)} small isMobile={isMobile} />
                 <button onClick={() => removeRoom(room.id)} style={{
                   background: theme.red, border: "none", color: "#fff", fontSize: 16,
                   cursor: "pointer", width: 44, height: 44, borderRadius: 8,

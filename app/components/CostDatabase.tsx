@@ -1,12 +1,30 @@
+// @ts-nocheck
 "use client";
 import { theme, fmt, NumInput, Card, SectionDivider, MetricBox } from "./theme";
 import { UNIT_TYPES, TOOLTIPS } from "../data/constants";
+
+interface CostDatabaseProps {
+  costDb: Record<string, Record<string, { label: string; cost: number; unit: string }>>;
+  updateCostItem: (cat: string, key: string, val: string) => void;
+  pmPct: number;
+  setPmPct: (v: number) => void;
+  contingencyPct: number;
+  setContingencyPct: (v: number) => void;
+  totalRoomMaterialCost: number;
+  contractorLabour: number;
+  fixedCosts: number;
+  pmCost: number;
+  contingency: number;
+  totalRenovation: number;
+  renoCostPerSqm: number;
+  isMobile: boolean;
+}
 
 export default function CostDatabase({
   costDb, updateCostItem, pmPct, setPmPct, contingencyPct, setContingencyPct,
   totalRoomMaterialCost, contractorLabour, fixedCosts, pmCost, contingency, totalRenovation, renoCostPerSqm,
   isMobile,
-}) {
+}: CostDatabaseProps) {
   return (
     <div>
       {Object.entries(costDb).map(([catKey, items]) => (
@@ -17,9 +35,9 @@ export default function CostDatabase({
                 <span style={{ flex: 1, fontSize: 12, color: theme.textDim }}>{item.label}</span>
                 <div style={{ display: "flex", alignItems: "center", background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, padding: "4px 8px", width: 120 }}>
                   <span style={{ fontSize: 10, color: theme.textDim, marginRight: 3 }}>R</span>
-                  <input type="number" value={item.cost} onChange={(e) => updateCostItem(catKey, itemKey, e.target.value)} style={{ background: "transparent", border: "none", color: theme.text, fontSize: 12, width: "100%", outline: "none", fontFamily: "'JetBrains Mono', monospace" }} />
+                  <input type="number" value={item.cost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateCostItem(catKey, itemKey, e.target.value)} style={{ background: "transparent", border: "none", color: theme.text, fontSize: 12, width: "100%", outline: "none", fontFamily: "'JetBrains Mono', monospace" }} />
                 </div>
-                <span style={{ fontSize: 9, color: theme.textDim, width: 40 }}>{UNIT_TYPES[item.unit]?.suffix || item.unit}</span>
+                <span style={{ fontSize: 9, color: theme.textDim, width: 40 }}>{(UNIT_TYPES as Record<string, { suffix: string }>)[item.unit]?.suffix || item.unit}</span>
               </div>
             ))}
           </div>

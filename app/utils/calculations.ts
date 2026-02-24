@@ -3,8 +3,79 @@
 
 import { SCOPE_MULT } from "../data/constants";
 import { calcTransferDuty } from "../components/theme";
+import type { CostDatabase } from "../data/costDefaults";
 
-function calcRoomCost(room, costDb) {
+interface DetailedItem {
+  included: boolean;
+  qty: number;
+  unitCost: number;
+}
+
+interface Room {
+  customCost: number | string | null;
+  breakdownMode: string;
+  detailedItems: DetailedItem[] | null;
+  scope: string;
+  sqm: number;
+  name: string;
+  id: number;
+}
+
+interface RoomWithCost extends Room {
+  totalCost: number;
+}
+
+interface DealScore {
+  level: string;
+  label: string;
+  color: string;
+  bg: string;
+  desc: string;
+}
+
+interface Contractor {
+  dailyRate: number;
+  daysWorked: number;
+}
+
+interface ProfileData {
+  acq: {
+    purchasePrice: number;
+    deposit: number;
+    bondRate: number;
+    bondTerm: number;
+    cashPurchase: boolean;
+    transferAttorneyFees: number;
+    bondRegistration: number;
+    initialRepairs: number;
+  };
+  prop: {
+    totalSqm: number;
+    erfSize: number;
+  };
+  rooms: Room[];
+  contractors: Contractor[];
+  costDb: CostDatabase;
+  contingencyPct: number;
+  pmPct: number;
+  holding: {
+    renovationMonths: number;
+    ratesAndTaxes: number;
+    utilities: number;
+    insurance: number;
+    security: number;
+    levies: number;
+  };
+  resale: {
+    expectedPrice: number;
+    agentCommission: number;
+    areaBenchmarkPsqm: number;
+  };
+  quickRenoEstimate: number;
+  mode: string;
+}
+
+function calcRoomCost(room: Room, costDb: CostDatabase): number {
   if (room.customCost !== null && room.customCost !== "") {
     return Number(room.customCost);
   }
@@ -30,7 +101,7 @@ function calcRoomCost(room, costDb) {
   return Math.round(total);
 }
 
-function calcDealScore(roi, annualizedRoi, renovationMonths, netProfit, expectedPrice) {
+function calcDealScore(roi: number, annualizedRoi: number, renovationMonths: number, netProfit: number, expectedPrice: number): DealScore {
   let score = 0;
   if (roi >= 0.20) score += 3; else if (roi >= 0.12) score += 2; else if (roi >= 0.05) score += 1;
   if (annualizedRoi >= 0.30) score += 2; else if (annualizedRoi >= 0.15) score += 1;
@@ -41,13 +112,13 @@ function calcDealScore(roi, annualizedRoi, renovationMonths, netProfit, expected
   return { level: "risky", label: "High Risk", color: "#F87171", bg: "#F8717118", desc: "Negative or near-zero returns — consider passing" };
 }
 
-export function computeMetrics(profile) {
+export function computeMetrics(profile: ProfileData) {
   const { acq, prop, rooms, contractors, costDb, contingencyPct, pmPct, holding, resale, quickRenoEstimate, mode } = profile;
 
   const transferDuty = calcTransferDuty(acq.purchasePrice);
   const totalAcquisition = acq.purchasePrice + transferDuty + acq.transferAttorneyFees + acq.bondRegistration + acq.initialRepairs;
 
-  const roomCosts = rooms.map((room) => ({ ...room, totalCost: calcRoomCost(room, costDb) }));
+  const roomCosts: RoomWithCost[] = rooms.map((room) => ({ ...room, totalCost: calcRoomCost(room, costDb) }));
   const totalRoomMaterialCost = roomCosts.reduce((s, r) => s + r.totalCost, 0);
 
   const contractorLabour = (contractors || []).reduce((s, c) => s + c.dailyRate * c.daysWorked, 0);
@@ -92,8 +163,24 @@ export function computeMetrics(profile) {
   };
 }
 
+interface ScenarioInput {
+  resaleAdjPct?: number;
+  renoAdjPct?: number;
+  constructionDelayMonths?: number;
+  transferDelayMonths?: number;
+}
+
+interface BaseInputs {
+  renovationMonths: number;
+  totalRenovation: number;
+  monthlyHoldingTotal: number;
+  totalAcquisition: number;
+  expectedPrice: number;
+  agentCommission: number;
+}
+
 // Scenario calculation for the Scenario Lab
-export function calcScenario(baseInputs, scenario) {
+export function calcScenario(baseInputs: BaseInputs, scenario: ScenarioInput) {
   const totalHoldMonths = baseInputs.renovationMonths
     + (scenario.constructionDelayMonths || 0)
     + (scenario.transferDelayMonths || 0);
@@ -106,7 +193,7 @@ export function calcScenario(baseInputs, scenario) {
   const adjRoi = adjAllIn > 0 ? adjNet / adjAllIn : 0;
   const adjAnnRoi = totalHoldMonths > 0 && adjAllIn > 0 ? (adjNet / adjAllIn) * (12 / totalHoldMonths) : 0;
 
-  let dealScore;
+  let dealScore: { level: string; color: string };
   let score = 0;
   if (adjRoi >= 0.20) score += 3; else if (adjRoi >= 0.12) score += 2; else if (adjRoi >= 0.05) score += 1;
   if (adjAnnRoi >= 0.30) score += 2; else if (adjAnnRoi >= 0.15) score += 1;

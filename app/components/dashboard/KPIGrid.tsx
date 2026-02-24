@@ -18,6 +18,7 @@ interface KPIGridProps {
     totalInvested: number;
     totalProjectedProfit: number;
     avgRoi: number;
+    avgAnnualizedRoi?: number;
     avgDaysInPipeline: number;
     renovatingDeals: number;
     totalActualExpenses: number;
@@ -37,7 +38,7 @@ export default function KPIGrid({ metrics, avgDaysToSell, isMobile }: KPIGridPro
         <KPICard label="Total Properties" value={String(metrics.totalDeals)} sub={`${metrics.activeDeals} active`} color={theme.accent} />
         <KPICard label="Capital Deployed" value={fmt(metrics.totalInvested)} sub="Total purchase value" color={theme.text} />
         <KPICard label="Expected Profit" value={fmt(metrics.totalProjectedProfit)} sub="Across portfolio" color={metrics.totalProjectedProfit >= 0 ? theme.green : theme.red} />
-        <KPICard label="Avg ROI" value={pct(metrics.avgRoi)} sub="Per property average" color={metrics.avgRoi >= 0.15 ? theme.green : theme.orange} />
+        <KPICard label="Avg ROI" value={pct(metrics.avgRoi)} sub={metrics.avgAnnualizedRoi ? `${pct(metrics.avgAnnualizedRoi)} annualized` : "Per property average"} color={metrics.avgRoi >= 0.15 ? theme.green : theme.orange} />
         <KPICard label="Avg Days in Pipeline" value={metrics.avgDaysInPipeline > 0 ? `${metrics.avgDaysInPipeline}d` : "—"} sub={avgDaysToSell > 0 ? `${avgDaysToSell}d avg to sell` : "No sold deals"} color={theme.accent} />
       </div>
 

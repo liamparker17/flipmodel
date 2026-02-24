@@ -15,6 +15,43 @@ export declare const theme: {
   inputBorder: string;
 };
 
+export declare const typography: {
+  readonly xs: 10;
+  readonly sm: 12;
+  readonly base: 13;
+  readonly md: 14;
+  readonly lg: 16;
+  readonly xl: 18;
+  readonly "2xl": 20;
+  readonly "3xl": 24;
+};
+
+export declare const spacing: {
+  readonly xs: 4;
+  readonly sm: 6;
+  readonly md: 8;
+  readonly lg: 12;
+  readonly xl: 16;
+  readonly "2xl": 20;
+  readonly "3xl": 24;
+  readonly "4xl": 28;
+  readonly "5xl": 32;
+};
+
+export declare const radii: {
+  readonly sm: 4;
+  readonly md: 6;
+  readonly lg: 8;
+  readonly xl: 12;
+  readonly full: 9999;
+};
+
+export declare const shadows: {
+  readonly sm: "0 1px 2px rgba(0,0,0,0.3)";
+  readonly md: "0 2px 8px rgba(0,0,0,0.3)";
+  readonly lg: "0 4px 16px rgba(0,0,0,0.4)";
+};
+
 export declare const styles: {
   card: CSSProperties;
   cardMb: CSSProperties;

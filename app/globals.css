@@ -96,6 +96,11 @@ input[type="number"] {
 }
 
 /* Focus states */
+:focus-visible {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+
 input:focus, select:focus, textarea:focus {
   border-color: #3B82F6 !important;
 }
@@ -103,4 +108,10 @@ input:focus, select:focus, textarea:focus {
 /* Table row hover */
 tr:hover td {
   background: #161A2480;
+}
+
+/* Skeleton loading pulse */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }

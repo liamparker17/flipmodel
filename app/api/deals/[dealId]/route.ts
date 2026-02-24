@@ -2,8 +2,75 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { updateDealSchema } from "@/lib/validations/deal";
+import { validateStageTransition } from "@/utils/stageValidation";
 
 type Params = { params: Promise<{ dealId: string }> };
+
+interface DealLike {
+  purchasePrice: number;
+  purchaseDate: Date | null;
+  expectedSalePrice: number;
+  actualSalePrice: number | null;
+  soldDate: Date | null;
+  actualSaleDate: Date | null;
+}
+
+interface DealUpdate {
+  purchasePrice?: number;
+  purchaseDate?: Date | null;
+  expectedSalePrice?: number;
+  actualSalePrice?: number | null;
+  soldDate?: Date | null;
+  actualSaleDate?: Date | null;
+}
+
+function validateStagePrerequisites(
+  newStage: string,
+  existing: DealLike,
+  update: DealUpdate
+): string | null {
+  // Merge existing values with the incoming update to check "being set in the same update"
+  const purchasePrice = update.purchasePrice !== undefined ? update.purchasePrice : existing.purchasePrice;
+  const purchaseDate = update.purchaseDate !== undefined ? update.purchaseDate : existing.purchaseDate;
+  const expectedSalePrice = update.expectedSalePrice !== undefined ? update.expectedSalePrice : existing.expectedSalePrice;
+  const actualSalePrice = update.actualSalePrice !== undefined ? update.actualSalePrice : existing.actualSalePrice;
+  const soldDate = update.soldDate !== undefined ? update.soldDate : existing.soldDate;
+  const actualSaleDate = update.actualSaleDate !== undefined ? update.actualSaleDate : existing.actualSaleDate;
+
+  if (newStage === "purchased") {
+    const errors: string[] = [];
+    if (!purchasePrice || purchasePrice <= 0) {
+      errors.push("purchase price is required");
+    }
+    if (!purchaseDate) {
+      errors.push("purchase date is required");
+    }
+    if (errors.length > 0) {
+      return `Cannot move to 'purchased': ${errors.join(", ")}`;
+    }
+  }
+
+  if (newStage === "listed") {
+    if (!expectedSalePrice || expectedSalePrice <= 0) {
+      return "Cannot move to 'listed': expected sale price is required";
+    }
+  }
+
+  if (newStage === "sold") {
+    const errors: string[] = [];
+    if (!actualSalePrice || actualSalePrice <= 0) {
+      errors.push("actual sale price is required");
+    }
+    if (!soldDate && !actualSaleDate) {
+      errors.push("sold date or actual sale date is required");
+    }
+    if (errors.length > 0) {
+      return `Cannot move to 'sold': ${errors.join(", ")}`;
+    }
+  }
+
+  return null;
+}
 
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
@@ -38,6 +105,24 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     const existing = await prisma.deal.findFirst({ where: { id: dealId, orgId: ctx.orgId } });
     if (!existing) return apiError("Deal not found", 404);
+
+    // Validate stage transition if stage is being changed
+    if (data.stage !== undefined && data.stage !== existing.stage) {
+      const transitionError = validateStageTransition(existing.stage, data.stage);
+      if (transitionError) return apiError(transitionError, 400);
+
+      // Build the pending update values to check prerequisites against
+      const pendingUpdate: DealUpdate = {};
+      if (data.purchasePrice !== undefined) pendingUpdate.purchasePrice = data.purchasePrice;
+      if (data.purchaseDate !== undefined) pendingUpdate.purchaseDate = data.purchaseDate ? new Date(data.purchaseDate) : null;
+      if (data.expectedSalePrice !== undefined) pendingUpdate.expectedSalePrice = data.expectedSalePrice;
+      if (data.actualSalePrice !== undefined) pendingUpdate.actualSalePrice = data.actualSalePrice;
+      if (data.soldDate !== undefined) pendingUpdate.soldDate = data.soldDate ? new Date(data.soldDate) : null;
+      if (data.actualSaleDate !== undefined) pendingUpdate.actualSaleDate = data.actualSaleDate ? new Date(data.actualSaleDate) : null;
+
+      const prerequisiteError = validateStagePrerequisites(data.stage, existing, pendingUpdate);
+      if (prerequisiteError) return apiError(prerequisiteError, 400);
+    }
 
     const updateData: Record<string, unknown> = {};
     if (data.name !== undefined) updateData.name = data.name;

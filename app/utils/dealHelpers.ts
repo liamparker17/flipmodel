@@ -1,5 +1,6 @@
 // ─── Deal Pipeline Helpers ───
 import type { Deal, DealStage, DealData, DealMetrics, StageDefinition, Expense } from "../types/deal";
+import { calcTransferDuty } from "../components/theme";
 
 export const DEAL_STAGES: StageDefinition[] = [
   { key: "lead", label: "Lead", color: "#94A3B8" },
@@ -70,20 +71,81 @@ export function groupDealsByStage(deals: Deal[]): Record<DealStage, Deal[]> {
 
 export function computeDealMetrics(deal: Deal): DealMetrics {
   const dealData = deal.data;
-  if (!dealData) return { purchasePrice: 0, expectedPrice: 0, renovationMonths: 4, estimatedProfit: 0, estimatedRoi: 0 };
+  if (!dealData) return {
+    purchasePrice: 0, expectedPrice: 0, renovationMonths: 4,
+    estimatedProfit: 0, estimatedRoi: 0, annualizedRoi: 0,
+    totalAcquisitionCosts: 0, totalHoldingCosts: 0, totalRenovationCosts: 0, totalResaleCosts: 0,
+    totalInvested: 0,
+  };
 
-  const { acq, holding, resale, mode, quickRenoEstimate } = dealData;
+  const { acq, holding, resale, rooms, mode, quickRenoEstimate } = dealData;
   const purchasePrice = acq?.purchasePrice || 0;
   const expectedPrice = resale?.expectedPrice || 0;
   const renovationMonths = holding?.renovationMonths || 4;
-  const renoEstimate = mode === "quick" ? (quickRenoEstimate || 0) : (quickRenoEstimate || 0);
-  const commission = expectedPrice * ((resale?.agentCommission || 5) / 100);
 
+  // ─── Acquisition costs ───
+  const transferDuty = calcTransferDuty(purchasePrice);
+  const bondRegistration = acq?.bondRegistration || 0;
+  const attorneyFees = acq?.transferAttorneyFees || 0;
+  const totalAcquisitionCosts = transferDuty + bondRegistration + attorneyFees;
+
+  // ─── Holding costs ───
+  const ratesAndTaxes = holding?.ratesAndTaxes || 0;
+  const utilities = holding?.utilities || 0;
+  const insurance = holding?.insurance || 0;
+  const levies = holding?.levies || 0;
+  const security = holding?.security || 0;
+  // Bond interest: monthly = (purchasePrice - deposit) * (bondRate / 100) / 12
+  let monthlyBondInterest = 0;
+  if (acq && !acq.cashPurchase) {
+    const bondAmount = purchasePrice - (acq.deposit || 0);
+    const bondRate = acq.bondRate || 0;
+    monthlyBondInterest = (bondAmount * (bondRate / 100)) / 12;
+  }
+  const monthlyHolding = ratesAndTaxes + utilities + insurance + levies + security + monthlyBondInterest;
+  const totalHoldingCosts = monthlyHolding * renovationMonths;
+
+  // ─── Renovation costs ───
+  let totalRenovationCosts = 0;
+  if (mode === "quick") {
+    totalRenovationCosts = quickRenoEstimate || 0;
+  } else {
+    // Advanced mode: sum detailed room costs if available, otherwise fall back to quickRenoEstimate
+    const roomSum = (rooms || []).reduce((sum, room) => {
+      if (room.customCost !== null && room.customCost !== undefined) return sum + Number(room.customCost);
+      if (room.breakdownMode === "detailed" && room.detailedItems) {
+        return sum + room.detailedItems
+          .filter((i) => i.included)
+          .reduce((s, i) => s + i.qty * i.unitCost, 0);
+      }
+      // Fallback: simple mode uses sqm * scope multiplier (approximation without costDb)
+      // Use a reasonable per-sqm default since we don't have costDb here
+      const scopeMult = room.scope === "fullGut" ? 1.5 : room.scope === "midLevel" ? 1 : 0.6;
+      return sum + (room.sqm || 0) * 3500 * scopeMult;
+    }, 0);
+    totalRenovationCosts = roomSum > 0 ? roomSum : (quickRenoEstimate || 0);
+  }
+
+  // ─── Resale costs ───
+  const commissionPct = resale?.agentCommission || 5;
+  const agentCommission = expectedPrice * (commissionPct / 100);
+  const totalResaleCosts = agentCommission;
+
+  // ─── Profit ───
+  const estimatedProfit = expectedPrice - purchasePrice - totalAcquisitionCosts - totalHoldingCosts - totalRenovationCosts - totalResaleCosts;
+
+  // ─── ROI ───
+  const totalInvested = purchasePrice + totalAcquisitionCosts + totalHoldingCosts + totalRenovationCosts;
+  const estimatedRoi = totalInvested > 0 ? estimatedProfit / totalInvested : 0;
+
+  // ─── Annualized ROI ───
+  const annualizedRoi = (renovationMonths > 0 && totalInvested > 0)
+    ? estimatedRoi / (renovationMonths / 12)
+    : 0;
+
+  // ─── Expenses ───
   const totalExpenses = (deal.expenses || []).filter((e) => !e.isProjected).reduce((s, e) => s + e.amount, 0);
   const projectedExpenses = (deal.expenses || []).filter((e) => e.isProjected).reduce((s, e) => s + e.amount, 0);
-
-  const estimatedProfit = expectedPrice - purchasePrice - renoEstimate - commission;
-  const estimatedRoi = purchasePrice > 0 ? estimatedProfit / purchasePrice : 0;
 
   const daysInPipeline = Math.floor((Date.now() - new Date(deal.createdAt).getTime()) / (1000 * 60 * 60 * 24));
 
@@ -93,8 +155,14 @@ export function computeDealMetrics(deal: Deal): DealMetrics {
     renovationMonths,
     estimatedProfit,
     estimatedRoi,
+    annualizedRoi,
+    totalAcquisitionCosts,
+    totalHoldingCosts,
+    totalRenovationCosts,
+    totalResaleCosts,
+    totalInvested,
     totalExpenses,
-    budgetVariance: totalExpenses + projectedExpenses - renoEstimate,
+    budgetVariance: totalExpenses + projectedExpenses - totalRenovationCosts,
     daysInPipeline,
   };
 }
@@ -152,26 +220,57 @@ export function getPortfolioMetrics(deals: Deal[]) {
   let totalProjectedProfit = 0;
   let totalActualProfit = 0;
   let totalRoi = 0;
+  let totalAnnualizedRoi = 0;
   let roiCount = 0;
   let totalDays = 0;
   let daysCount = 0;
 
   for (const deal of deals) {
     const m = computeDealMetrics(deal);
-    totalInvested += m.purchasePrice;
+    totalInvested += m.totalInvested;
     totalExpectedReturn += m.expectedPrice;
     totalProjectedProfit += m.estimatedProfit;
-    if (m.estimatedRoi !== 0) { totalRoi += m.estimatedRoi; roiCount++; }
+    if (m.estimatedRoi !== 0) {
+      totalRoi += m.estimatedRoi;
+      totalAnnualizedRoi += m.annualizedRoi;
+      roiCount++;
+    }
     if (m.daysInPipeline) { totalDays += m.daysInPipeline; daysCount++; }
   }
 
+  // Sold deals: compute actual profit using the same comprehensive formula
   for (const deal of soldDeals) {
     const sp = deal.actualSalePrice || deal.expectedSalePrice;
     const pp = deal.purchasePrice;
-    const reno = deal.data?.quickRenoEstimate || 0;
-    const comm = sp * ((deal.data?.resale?.agentCommission || 5) / 100);
+    const dealData = deal.data;
+
+    // Acquisition costs
+    const td = calcTransferDuty(pp);
+    const bondReg = dealData?.acq?.bondRegistration || 0;
+    const attFees = dealData?.acq?.transferAttorneyFees || 0;
+    const acqCosts = td + bondReg + attFees;
+
+    // Holding costs
+    const holding = dealData?.holding;
+    const acq = dealData?.acq;
+    let monthlyBond = 0;
+    if (acq && !acq.cashPurchase) {
+      monthlyBond = ((pp - (acq.deposit || 0)) * ((acq.bondRate || 0) / 100)) / 12;
+    }
+    const monthlyHolding = (holding?.ratesAndTaxes || 0) + (holding?.utilities || 0) +
+      (holding?.insurance || 0) + (holding?.levies || 0) + (holding?.security || 0) + monthlyBond;
+    const holdMonths = holding?.renovationMonths || 4;
+    const holdCosts = monthlyHolding * holdMonths;
+
+    // Renovation costs
+    const renoCosts = dealData?.quickRenoEstimate || 0;
+
+    // Resale costs
+    const commPct = dealData?.resale?.agentCommission || 5;
+    const resaleCosts = sp * (commPct / 100);
+
     totalActualReturn += sp;
-    totalActualProfit += sp - pp - reno - comm;
+    totalActualProfit += sp - pp - acqCosts - holdCosts - renoCosts - resaleCosts;
   }
 
   const allExpenses = deals.flatMap((d) => d.expenses || []);
@@ -189,6 +288,7 @@ export function getPortfolioMetrics(deals: Deal[]) {
     totalProjectedProfit,
     totalActualProfit,
     avgRoi: roiCount > 0 ? totalRoi / roiCount : 0,
+    avgAnnualizedRoi: roiCount > 0 ? totalAnnualizedRoi / roiCount : 0,
     avgDaysInPipeline: daysCount > 0 ? Math.round(totalDays / daysCount) : 0,
     totalActualExpenses,
     totalProjectedExpenses,

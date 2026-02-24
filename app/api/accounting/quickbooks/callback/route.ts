@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/api-helpers";
 import { quickbooksProvider } from "@/lib/accounting/quickbooks";
+import { validateOAuthState } from "@/lib/accounting/providers";
 import prisma from "@/lib/db";
 
 export async function GET(req: NextRequest) {
@@ -25,6 +26,11 @@ export async function GET(req: NextRequest) {
         { error: "Missing code, state, or realmId" },
         { status: 400 }
       );
+    }
+
+    // Validate OAuth state to prevent CSRF attacks
+    if (!validateOAuthState(state)) {
+      return NextResponse.json({ error: "Invalid or expired OAuth state" }, { status: 400 });
     }
 
     // Validate state contains this org's ID

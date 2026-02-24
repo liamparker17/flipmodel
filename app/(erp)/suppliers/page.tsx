@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { theme, fmt, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
+import useIsMobile from "../../hooks/useIsMobile";
 import { estimateMaterials } from "../../utils/materialEstimator";
 import { getSupplierUrl, trackOutboundClick } from "../../utils/trackOutbound";
 import { fetchSupplierOffers, getBestPerItem, getBestSingleSupplier } from "../../lib/suppliers/aggregateOffers";
@@ -44,7 +45,7 @@ export default function SuppliersPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [showPurchased, setShowPurchased] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [showAddForm, setShowAddForm] = useState(false);
   const [activeTab, setActiveTab] = useState<ViewTab>("shopping");
   const [showPrintPreview, setShowPrintPreview] = useState(false);
@@ -58,13 +59,6 @@ export default function SuppliersPage() {
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareSort, setCompareSort] = useState<SortOption>("price_asc");
   const [compareMode, setCompareMode] = useState<"perItem" | "singleSupplier">("perItem");
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
 
   const resetView = useCallback((dealId?: string) => {
     if (dealId !== undefined) setSelectedDealId(dealId);
@@ -88,7 +82,7 @@ export default function SuppliersPage() {
     const map: Record<string, EstimatedCategory[]> = {};
     const target = selectedDealId === "all" ? shoppableDeals : shoppableDeals.filter((d) => d.id === selectedDealId);
     for (const deal of target) {
-      map[deal.id] = estimateMaterials(deal.data.rooms, deal.data.prop, deal.data.mode);
+      map[deal.id] = estimateMaterials(deal.data.rooms as unknown as Record<string, unknown>[], deal.data.prop as unknown as Record<string, unknown>, deal.data.mode);
     }
     return map;
   }, [selectedDealId, shoppableDeals]);

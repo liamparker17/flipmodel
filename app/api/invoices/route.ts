@@ -14,7 +14,12 @@ const createInvoiceSchema = z.object({
   tax: z.number().optional(),
   total: z.number().optional(),
   notes: z.string().optional(),
-  lineItems: z.any().optional(),
+  lineItems: z.array(z.object({
+    description: z.string().min(1).max(500),
+    quantity: z.number().positive(),
+    unitPrice: z.number().min(0),
+    amount: z.number().min(0),
+  })).optional(),
 });
 
 export async function GET(req: NextRequest) {

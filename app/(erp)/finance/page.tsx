@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { theme, fmt } from "../../components/theme";
 import { styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
+import useIsMobile from "../../hooks/useIsMobile";
 import { computeDealMetrics, getPortfolioMetrics, getCashFlowProjection, getExpensesByCategory, getMonthlyExpenses } from "../../utils/dealHelpers";
 import FinanceOverview from "../../components/finance/FinanceOverview";
 import ExpenseTable from "../../components/finance/ExpenseTable";
@@ -12,15 +13,8 @@ import BudgetTab from "../../components/finance/BudgetTab";
 
 export default function FinancePage() {
   const { deals, loaded } = useDeals();
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [view, setView] = useState<"overview" | "expenses" | "cashflow" | "pnl" | "budget">("overview");
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
 
   if (!loaded) return <div style={{ padding: 40, color: theme.textDim }}>Loading...</div>;
 

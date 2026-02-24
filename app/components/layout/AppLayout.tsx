@@ -83,8 +83,44 @@ export default function AppLayout({ children }: AppLayoutProps) {
       background: theme.bg, color: theme.text,
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     }}>
-      <Sidebar onNewDeal={handleNewDeal} />
-      <main style={{ flex: 1, minWidth: 0, overflow: "auto" }}>
+      <a
+        href="#main-content"
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: "auto",
+          width: "1px",
+          height: "1px",
+          overflow: "hidden",
+          zIndex: 9999,
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.left = "16px";
+          e.currentTarget.style.top = "16px";
+          e.currentTarget.style.width = "auto";
+          e.currentTarget.style.height = "auto";
+          e.currentTarget.style.overflow = "visible";
+          e.currentTarget.style.background = theme.accent;
+          e.currentTarget.style.color = "#fff";
+          e.currentTarget.style.padding = "8px 16px";
+          e.currentTarget.style.borderRadius = "6px";
+          e.currentTarget.style.fontSize = "14px";
+          e.currentTarget.style.fontWeight = "600";
+          e.currentTarget.style.textDecoration = "none";
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.left = "-9999px";
+          e.currentTarget.style.width = "1px";
+          e.currentTarget.style.height = "1px";
+          e.currentTarget.style.overflow = "hidden";
+        }}
+      >
+        Skip to content
+      </a>
+      <nav aria-label="Main navigation">
+        <Sidebar onNewDeal={handleNewDeal} />
+      </nav>
+      <main id="main-content" style={{ flex: 1, minWidth: 0, overflow: "auto" }}>
         {children}
       </main>
       {showTour && tourSteps.length > 0 && (

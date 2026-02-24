@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission, handleApiError } from "@/lib/api-helpers";
 import { quickbooksProvider } from "@/lib/accounting/quickbooks";
-import { generateOAuthState } from "@/lib/accounting/providers";
+import { generateOAuthState, storeOAuthState } from "@/lib/accounting/providers";
 import prisma from "@/lib/db";
 
 export async function GET(req: NextRequest) {
@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
 
     // Generate state with org context and optional returnTo embedded
     const state = `${ctx.orgId}:${generateOAuthState()}:${returnTo}`;
+    storeOAuthState(state);
     const authUrl = quickbooksProvider.getAuthUrl(state);
 
     return NextResponse.redirect(authUrl);

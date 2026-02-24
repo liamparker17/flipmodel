@@ -63,3 +63,22 @@ export function generateOAuthState(): string {
   crypto.getRandomValues(array);
   return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
 }
+
+// ─── OAuth state validation store ───
+
+const pendingStates = new Map<string, number>(); // state -> expiry timestamp
+
+export function storeOAuthState(state: string): void {
+  pendingStates.set(state, Date.now() + 10 * 60 * 1000); // 10 min expiry
+  // Cleanup expired entries
+  for (const [key, expiry] of pendingStates.entries()) {
+    if (Date.now() > expiry) pendingStates.delete(key);
+  }
+}
+
+export function validateOAuthState(state: string): boolean {
+  const expiry = pendingStates.get(state);
+  if (!expiry || Date.now() > expiry) return false;
+  pendingStates.delete(state);
+  return true;
+}

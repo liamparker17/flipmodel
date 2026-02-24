@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { updateExpenseSchema } from "@/lib/validations/expense";
+import { ORG_ROLE_LEVELS } from "@/types/org";
+import type { OrgRole } from "@/types/org";
 
 type Params = { params: Promise<{ expenseId: string }> };
 
@@ -10,10 +12,44 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const ctx = await requirePermission("expenses:write");
     const { expenseId } = await params;
     const body = await req.json();
-    const data = updateExpenseSchema.parse(body);
 
     const existing = await prisma.expense.findFirst({ where: { id: expenseId, orgId: ctx.orgId } });
     if (!existing) return apiError("Expense not found", 404);
+
+    // ─── Approval / Rejection Action ───
+    const { action } = body as { action?: string };
+    if (action === "approve" || action === "reject") {
+      // Require project_manager or higher role
+      const memberRole = ctx.member.role as OrgRole;
+      const memberLevel = ORG_ROLE_LEVELS[memberRole] ?? 0;
+      const requiredLevel = ORG_ROLE_LEVELS["project_manager"];
+
+      if (memberLevel < requiredLevel) {
+        return apiError(
+          "Insufficient role: project_manager or higher is required to approve/reject expenses",
+          403
+        );
+      }
+
+      const updateData: Record<string, unknown> = {
+        signOffStatus: action === "approve" ? "approved" : "rejected",
+        signOffPmNotes: (body as { notes?: string }).notes ?? null,
+      };
+
+      if (action === "approve") {
+        updateData.signOffApprovedAt = new Date();
+      }
+
+      const updated = await prisma.expense.update({
+        where: { id: expenseId },
+        data: updateData,
+      });
+
+      return apiSuccess(updated);
+    }
+
+    // ─── Standard Field Update ───
+    const data = updateExpenseSchema.parse(body);
 
     const updateData: Record<string, unknown> = {};
     if (data.category !== undefined) updateData.category = data.category;

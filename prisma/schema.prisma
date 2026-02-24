@@ -113,6 +113,12 @@ model Organisation {
   accountingConnections AccountingConnection[]
   chartOfAccounts      ChartOfAccount[]
   accountingSyncs      AccountingSync[]
+  loans                Loan[]
+  inspections          Inspection[]
+  permits              Permit[]
+  comparableSales      ComparableSale[]
+  insurancePolicies    InsurancePolicy[]
+  contractorRatings    ContractorRating[]
 
   @@index([slug])
 }
@@ -253,6 +259,12 @@ model Deal {
   documents         Document[]
   shoppingListItems ShoppingListItem[]
   invoices          Invoice[]
+  loans             Loan[]
+  inspections       Inspection[]
+  permits           Permit[]
+  comparableSales   ComparableSale[]
+  insurancePolicies InsurancePolicy[]
+  contractorRatings ContractorRating[]
 
   @@index([orgId])
   @@index([orgId, stage])
@@ -338,7 +350,7 @@ model Task {
 
 model Activity {
   id          String   @id @default(cuid())
-  orgId       String?
+  orgId       String
   userId      String
   dealId      String
   type        String   // ActivityType
@@ -346,7 +358,7 @@ model Activity {
   metadata    Json?
   timestamp   DateTime @default(now())
 
-  org         Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org         Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
@@ -380,6 +392,7 @@ model Contact {
   org          Organisation? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   dealContacts DealContact[]
+  ratings      ContractorRating[]
 
   @@index([orgId])
   @@index([orgId, role])
@@ -616,5 +629,174 @@ model Invoice {
 
   @@index([orgId])
   @@index([userId])
+  @@index([dealId])
+}
+
+// ─── Loans / Mortgages ───
+
+model Loan {
+  id              String    @id @default(cuid())
+  orgId           String
+  dealId          String
+  lender          String
+  loanType        String    @default("bond") // bond, bridging, private, cash
+  amount          Float
+  interestRate    Float
+  termMonths      Int
+  monthlyPayment  Float     @default(0)
+  approvalStatus  String    @default("pending") // pending, pre_approved, approved, declined
+  approvalDate    DateTime?
+  disbursementDate DateTime?
+  maturityDate    DateTime?
+  notes           String    @default("")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  deal            Deal       @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([dealId])
+}
+
+// ─── Inspections & Defects ───
+
+model Inspection {
+  id              String    @id @default(cuid())
+  orgId           String
+  dealId          String
+  type            String    @default("general") // general, structural, electrical, plumbing, pest, roof
+  inspector       String    @default("")
+  inspectionDate  DateTime?
+  status          String    @default("scheduled") // scheduled, completed, passed, failed, conditional
+  reportUrl       String?
+  findings        String    @default("")
+  estimatedRepairCost Float @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  deal            Deal       @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  defects         Defect[]
+
+  @@index([orgId])
+  @@index([dealId])
+}
+
+model Defect {
+  id              String    @id @default(cuid())
+  inspectionId    String
+  location        String    @default("")
+  description     String
+  severity        String    @default("minor") // minor, moderate, major, critical
+  estimatedCost   Float     @default(0)
+  status          String    @default("open") // open, remediated, accepted, deferred
+  remediatedAt    DateTime?
+  notes           String    @default("")
+  createdAt       DateTime  @default(now())
+
+  inspection      Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([inspectionId])
+}
+
+// ─── Permits ───
+
+model Permit {
+  id              String    @id @default(cuid())
+  orgId           String
+  dealId          String
+  permitType      String    // building, electrical, plumbing, demolition, zoning, occupancy
+  permitNumber    String    @default("")
+  status          String    @default("not_applied") // not_applied, applied, approved, denied, expired
+  appliedDate     DateTime?
+  approvedDate    DateTime?
+  expiryDate      DateTime?
+  issuingAuthority String   @default("")
+  cost            Float     @default(0)
+  notes           String    @default("")
+  documentUrl     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  deal            Deal       @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([dealId])
+}
+
+// ─── Comparable Sales ───
+
+model ComparableSale {
+  id              String    @id @default(cuid())
+  orgId           String
+  dealId          String
+  address         String
+  salePrice       Float
+  saleDate        DateTime?
+  sqm             Float     @default(0)
+  pricePerSqm     Float     @default(0)
+  bedrooms        Int       @default(0)
+  bathrooms       Int       @default(0)
+  condition       String    @default("average") // poor, below_average, average, good, excellent
+  source          String    @default("") // lightstone, property24, agent, manual
+  notes           String    @default("")
+  createdAt       DateTime  @default(now())
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  deal            Deal       @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([dealId])
+}
+
+// ─── Insurance Policies ───
+
+model InsurancePolicy {
+  id              String    @id @default(cuid())
+  orgId           String
+  dealId          String?
+  policyType      String    // builders_risk, liability, property, contents, construction
+  provider        String    @default("")
+  policyNumber    String    @default("")
+  coverAmount     Float     @default(0)
+  monthlyPremium  Float     @default(0)
+  startDate       DateTime?
+  endDate         DateTime?
+  status          String    @default("active") // active, expired, cancelled, claimed
+  notes           String    @default("")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  deal            Deal?      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([dealId])
+}
+
+// ─── Contractor Ratings ───
+
+model ContractorRating {
+  id              String    @id @default(cuid())
+  orgId           String
+  contactId       String
+  dealId          String?
+  qualityScore    Int       @default(3) // 1-5
+  timelinessScore Int       @default(3) // 1-5
+  communicationScore Int    @default(3) // 1-5
+  valueScore      Int       @default(3) // 1-5
+  overallScore    Float     @default(3)
+  review          String    @default("")
+  wouldRehire     Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contact         Contact    @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  deal            Deal?      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([contactId])
   @@index([dealId])
 }

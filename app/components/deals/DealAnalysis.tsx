@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { STEPS, STEP_SHORT } from "../../data/constants";

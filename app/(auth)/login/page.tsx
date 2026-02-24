@@ -106,6 +106,7 @@ function LoginForm() {
 
       {error && (
         <div
+          role="alert"
           style={{
             background: `${theme.red}15`,
             border: `1px solid ${theme.red}30`,
@@ -123,32 +124,40 @@ function LoginForm() {
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 14 }}>
           <label
+            htmlFor="login-email"
             style={{ display: "block", color: theme.textDim, fontSize: 12, marginBottom: 6, fontWeight: 500 }}
           >
             Email
           </label>
           <input
+            id="login-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             required
+            aria-required="true"
+            aria-invalid={error ? "true" : undefined}
             style={inputStyle}
           />
         </div>
 
         <div style={{ marginBottom: 20 }}>
           <label
+            htmlFor="login-password"
             style={{ display: "block", color: theme.textDim, fontSize: 12, marginBottom: 6, fontWeight: 500 }}
           >
             Password
           </label>
           <input
+            id="login-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
             required
+            aria-required="true"
+            aria-invalid={error ? "true" : undefined}
             style={inputStyle}
           />
         </div>

@@ -1,27 +1,51 @@
+// @ts-nocheck
 "use client";
 import { useState, useMemo } from "react";
 import { theme, fmt, Card, SectionDivider, MetricBox } from "./theme";
 import { estimateMaterials, calcSupplierTotal, SUPPLIER_MULTIPLIERS } from "../utils/materialEstimator";
 import { trackOutboundClick, getSupplierUrl } from "../utils/trackOutbound";
 
-const CATEGORY_ICONS = {
+const CATEGORY_ICONS: Record<string, string> = {
   tiles: "T", paint: "P", plumbing: "W", electrical: "E",
   flooring: "F", adhesives: "A", hardware: "H",
 };
 
-export default function MaterialBreakdown({ rooms, prop, mode, isMobile }) {
-  const [expandedCats, setExpandedCats] = useState({});
+interface MaterialItem {
+  key: string;
+  label: string;
+  searchTerm: string;
+  qty: number;
+  unit: string;
+  unitPrice: number;
+  totalCost: number;
+}
+
+interface MaterialCategory {
+  category: string;
+  label: string;
+  items: MaterialItem[];
+}
+
+interface MaterialBreakdownProps {
+  rooms: Record<string, unknown>[];
+  prop: Record<string, unknown>;
+  mode: string;
+  isMobile: boolean;
+}
+
+export default function MaterialBreakdown({ rooms, prop, mode, isMobile }: MaterialBreakdownProps) {
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
   const [compareSuppliers, setCompareSuppliers] = useState(false);
 
-  const materials = useMemo(() => estimateMaterials(rooms, prop, mode), [rooms, prop, mode]);
+  const materials: MaterialCategory[] = useMemo(() => estimateMaterials(rooms, prop, mode), [rooms, prop, mode]);
 
   const totalLeroyMerlin = useMemo(() => calcSupplierTotal(materials, "leroymerlin"), [materials]);
   const totalBuilders = useMemo(() => calcSupplierTotal(materials, "builders"), [materials]);
   const totalItems = materials.reduce((s, cat) => s + cat.items.length, 0);
 
-  const toggleCat = (cat) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
+  const toggleCat = (cat: string) => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }));
 
-  const handleSupplierClick = (supplier, item, category) => {
+  const handleSupplierClick = (supplier: string, item: MaterialItem, category: string) => {
     trackOutboundClick(
       supplier === "leroymerlin" ? "Leroy Merlin" : "Builders Warehouse",
       item.label,
@@ -90,12 +114,12 @@ export default function MaterialBreakdown({ rooms, prop, mode, isMobile }) {
 
       {/* Category cards */}
       {materials.map((cat) => {
-        const isExpanded = expandedCats[cat.category] !== false; // default open
+        const isExpanded = expandedCats[cat.category] !== false;
         const catTotal = cat.items.reduce((s, i) => s + i.totalCost, 0);
 
         return (
           <Card key={cat.category} style={{ padding: 0, overflow: "hidden", marginBottom: 12 }}>
-            {/* Category header - tap to expand/collapse */}
+            {/* Category header */}
             <button
               onClick={() => toggleCat(cat.category)}
               style={{

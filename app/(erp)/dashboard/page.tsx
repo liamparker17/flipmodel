@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { theme, fmt, pct, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
+import useIsMobile from "../../hooks/useIsMobile";
 import { DEAL_STAGES, computeDealMetrics, getPortfolioMetrics, getCashFlowProjection } from "../../utils/dealHelpers";
 import { generateSuggestions } from "../../lib/automation";
 import KPIGrid from "../../components/dashboard/KPIGrid";
@@ -16,14 +16,7 @@ import ActivityTimeline from "../../components/dashboard/ActivityTimeline";
 export default function DashboardPage() {
   const router = useRouter();
   const { deals, loaded, createDeal } = useDeals();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+  const isMobile = useIsMobile();
 
   if (!loaded) return <div style={{ padding: 40, color: theme.textDim }}>Loading...</div>;
 

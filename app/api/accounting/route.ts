@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const connectSchema = z.object({
   provider: z.enum(["quickbooks", "xero", "sage", "manual"]),
-  settings: z.any().optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function GET() {
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         orgId: ctx.orgId,
         provider: data.provider,
         status: data.provider === "manual" ? "connected" : "disconnected",
-        settings: data.settings || {},
+        settings: (data.settings || {}) as Record<string, string>,
       },
     });
 

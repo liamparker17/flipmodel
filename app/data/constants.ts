@@ -2,9 +2,14 @@
 
 export const SA_PRIME = 11.75;
 
-export const SCOPE_MULT = { cosmetic: 0.25, midLevel: 0.55, fullGut: 1.0 };
+export const SCOPE_MULT: Record<string, number> = { cosmetic: 0.25, midLevel: 0.55, fullGut: 1.0 };
 
-export const UNIT_TYPES = {
+interface UnitTypeInfo {
+  label: string;
+  suffix: string;
+}
+
+export const UNIT_TYPES: Record<string, UnitTypeInfo> = {
   sqm: { label: "per sqm", suffix: "/sqm" },
   lm: { label: "per linear metre", suffix: "/lm" },
   unit: { label: "per unit", suffix: "/unit" },
@@ -13,7 +18,7 @@ export const UNIT_TYPES = {
   fixed: { label: "fixed", suffix: "fixed" },
 };
 
-export const SA_PROFESSIONS = [
+export const SA_PROFESSIONS: string[] = [
   "Builder / General Contractor",
   "Electrician",
   "Plumber",
@@ -39,7 +44,12 @@ export const SA_PROFESSIONS = [
   "Other",
 ];
 
-export const SA_BANKS = [
+interface BankInfo {
+  name: string;
+  branchCode: string;
+}
+
+export const SA_BANKS: BankInfo[] = [
   { name: "FNB", branchCode: "250655" },
   { name: "ABSA", branchCode: "632005" },
   { name: "Standard Bank", branchCode: "051001" },
@@ -51,12 +61,17 @@ export const SA_BANKS = [
   { name: "Discovery Bank", branchCode: "679000" },
 ];
 
-export const ACCOUNT_TYPES = [
+interface AccountType {
+  value: string;
+  label: string;
+}
+
+export const ACCOUNT_TYPES: AccountType[] = [
   { value: "cheque", label: "Cheque / Current" },
   { value: "savings", label: "Savings" },
 ];
 
-export const QUICK_DEFAULTS = {
+export const QUICK_DEFAULTS: Record<string, number> = {
   deposit: 0,
   bondRate: SA_PRIME + 1,
   bondTerm: 240,
@@ -75,7 +90,7 @@ export const QUICK_DEFAULTS = {
   pmPct: 8,
 };
 
-export const TOOLTIPS = {
+export const TOOLTIPS: Record<string, string> = {
   purchasePrice: "The agreed purchase price of the property before any additional costs.",
   deposit: "Upfront cash payment towards the purchase. Reduces your bond amount.",
   bondRate: "The annual interest rate on your bond. SA prime rate is currently " + SA_PRIME + "%. Leave as-is if unsure.",
@@ -102,7 +117,7 @@ export const TOOLTIPS = {
   annualizedRoi: "ROI scaled to a 12-month period. Allows you to compare deals with different holding periods.",
 };
 
-export const STEPS = [
+export const STEPS: string[] = [
   "Acquisition",
   "Property",
   "Rooms",
@@ -116,12 +131,12 @@ export const STEPS = [
   "Summary",
 ];
 
-export const STEP_SHORT = [
+export const STEP_SHORT: string[] = [
   "Acquire", "Property", "Rooms", "Team", "Reno $",
   "Holding", "Resale", "Shop", "Scenarios", "Expenses", "Summary",
 ];
 
-export const EXPENSE_CATEGORIES = [
+export const EXPENSE_CATEGORIES: string[] = [
   "Materials", "Labour", "Transport", "Permits & Compliance",
   "Professional Fees", "Insurance", "Utilities", "Equipment Hire",
   "Furnishing & Staging", "Marketing", "Miscellaneous",

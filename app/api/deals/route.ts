@@ -8,13 +8,38 @@ export async function GET() {
     const ctx = await requireOrgMember();
     const deals = await prisma.deal.findMany({
       where: { orgId: ctx.orgId },
-      include: {
-        expenses: true,
-        milestones: { include: { tasks: true } },
-        activities: { orderBy: { timestamp: "desc" }, take: 20 },
-        dealContacts: { include: { contact: true } },
-        documents: true,
-        shoppingListItems: true,
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        stage: true,
+        priority: true,
+        tags: true,
+        purchasePrice: true,
+        expectedSalePrice: true,
+        data: true,
+        updatedAt: true,
+        createdAt: true,
+        orgId: true,
+        userId: true,
+        _count: {
+          select: {
+            expenses: true,
+            milestones: true,
+            documents: true,
+          },
+        },
+        dealContacts: {
+          select: {
+            id: true,
+            contact: {
+              select: {
+                name: true,
+                role: true,
+              },
+            },
+          },
+        },
       },
       orderBy: { updatedAt: "desc" },
     });

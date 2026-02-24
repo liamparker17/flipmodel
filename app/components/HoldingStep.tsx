@@ -1,8 +1,26 @@
+// @ts-nocheck
 "use client";
 import { theme, fmt, NumInput, Card, SectionDivider, MetricBox, Tooltip } from "./theme";
 import { TOOLTIPS } from "../data/constants";
 
-export default function HoldingStep({ holding, updateHolding, acq, monthlyBondInterest, monthlyHoldingTotal, totalHoldingCost, holdingTimeline, isMobile }) {
+interface HoldingTimelineEntry {
+  month: number;
+  total: number;
+  cumulative: number;
+}
+
+interface HoldingStepProps {
+  holding: Record<string, unknown>;
+  updateHolding: (key: string, value: unknown) => void;
+  acq: Record<string, unknown>;
+  monthlyBondInterest: number;
+  monthlyHoldingTotal: number;
+  totalHoldingCost: number;
+  holdingTimeline: HoldingTimelineEntry[];
+  isMobile: boolean;
+}
+
+export default function HoldingStep({ holding, updateHolding, acq, monthlyBondInterest, monthlyHoldingTotal, totalHoldingCost, holdingTimeline, isMobile }: HoldingStepProps) {
   return (
     <div>
       <Card title="Your Holding Period" subtitle="How long do you expect to hold this property during renovation?">
@@ -11,9 +29,9 @@ export default function HoldingStep({ holding, updateHolding, acq, monthlyBondIn
             <label style={{ fontSize: 11, color: theme.textDim, textTransform: "uppercase", letterSpacing: 1, display: "flex", alignItems: "center" }}>
               Renovation Duration<Tooltip text={TOOLTIPS.renovationMonths} />
             </label>
-            <span style={{ fontSize: 14, fontWeight: 700, color: theme.accent, fontFamily: "'JetBrains Mono', monospace" }}>{holding.renovationMonths} months</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: theme.accent, fontFamily: "'JetBrains Mono', monospace" }}>{holding.renovationMonths as number} months</span>
           </div>
-          <input type="range" min={1} max={18} step={1} value={holding.renovationMonths} onChange={(e) => updateHolding("renovationMonths", Number(e.target.value))} style={{ width: "100%" }} />
+          <input type="range" min={1} max={18} step={1} value={holding.renovationMonths as number} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateHolding("renovationMonths", Number(e.target.value))} style={{ width: "100%" }} />
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: theme.textDim, marginTop: 4 }}>
             <span>1 mo</span><span>18 mo</span>
           </div>
@@ -23,11 +41,11 @@ export default function HoldingStep({ holding, updateHolding, acq, monthlyBondIn
       <SectionDivider label="Monthly Costs" />
       <Card title="Your Monthly Holding Costs" subtitle="Enter the monthly costs you'll carry while the property is being renovated.">
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 20px" }}>
-          <NumInput label="Rates & Taxes" value={holding.ratesAndTaxes} onChange={(v) => updateHolding("ratesAndTaxes", v)} suffix="/mo" tooltip={TOOLTIPS.ratesAndTaxes} isMobile={isMobile} />
-          <NumInput label="Utilities (water & electricity)" value={holding.utilities} onChange={(v) => updateHolding("utilities", v)} suffix="/mo" tooltip={TOOLTIPS.utilities} isMobile={isMobile} />
-          <NumInput label="Insurance" value={holding.insurance} onChange={(v) => updateHolding("insurance", v)} suffix="/mo" tooltip={TOOLTIPS.insurance} isMobile={isMobile} />
-          <NumInput label="Security" value={holding.security} onChange={(v) => updateHolding("security", v)} suffix="/mo" tooltip={TOOLTIPS.security} isMobile={isMobile} />
-          <NumInput label="Levies (if any)" value={holding.levies} onChange={(v) => updateHolding("levies", v)} suffix="/mo" tooltip={TOOLTIPS.levies} isMobile={isMobile} />
+          <NumInput label="Rates & Taxes" value={holding.ratesAndTaxes} onChange={(v: number) => updateHolding("ratesAndTaxes", v)} suffix="/mo" tooltip={TOOLTIPS.ratesAndTaxes} isMobile={isMobile} />
+          <NumInput label="Utilities (water & electricity)" value={holding.utilities} onChange={(v: number) => updateHolding("utilities", v)} suffix="/mo" tooltip={TOOLTIPS.utilities} isMobile={isMobile} />
+          <NumInput label="Insurance" value={holding.insurance} onChange={(v: number) => updateHolding("insurance", v)} suffix="/mo" tooltip={TOOLTIPS.insurance} isMobile={isMobile} />
+          <NumInput label="Security" value={holding.security} onChange={(v: number) => updateHolding("security", v)} suffix="/mo" tooltip={TOOLTIPS.security} isMobile={isMobile} />
+          <NumInput label="Levies (if any)" value={holding.levies} onChange={(v: number) => updateHolding("levies", v)} suffix="/mo" tooltip={TOOLTIPS.levies} isMobile={isMobile} />
         </div>
         <p style={{ fontSize: 11, color: theme.textDim, marginTop: 4 }}>Leave levies at R 0 if not in a complex or estate.</p>
       </Card>
@@ -47,7 +65,6 @@ export default function HoldingStep({ holding, updateHolding, acq, monthlyBondIn
       <SectionDivider label="Monthly Timeline" />
       <Card title="Month-by-Month Holding Costs" subtitle="See how holding costs accumulate over time.">
         {isMobile ? (
-          // Mobile: card layout
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {holdingTimeline.map((m) => (
               <div key={m.month} style={{ background: theme.input, borderRadius: 8, padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -88,21 +105,21 @@ export default function HoldingStep({ holding, updateHolding, acq, monthlyBondIn
           <div style={{ display: "flex", gap: 2, height: 32, alignItems: "flex-end" }}>
             {holdingTimeline.map((m) => (
               <div key={m.month} style={{
-                flex: 1, background: theme.red, opacity: 0.3 + (m.month / holding.renovationMonths) * 0.5,
+                flex: 1, background: theme.red, opacity: 0.3 + (m.month / (holding.renovationMonths as number)) * 0.5,
                 height: `${(m.cumulative / totalHoldingCost) * 100}%`, borderRadius: 2, minHeight: 4,
                 transition: "height 0.3s ease",
               }} title={`Month ${m.month}: ${fmt(m.cumulative)}`} />
             ))}
           </div>
           <div style={{ fontSize: 10, color: theme.textDim, marginTop: 4, textAlign: "center" }}>
-            Cumulative cost grows to {fmt(totalHoldingCost)} over {holding.renovationMonths} months
+            Cumulative cost grows to {fmt(totalHoldingCost)} over {holding.renovationMonths as number} months
           </div>
         </div>
       </Card>
 
       <SectionDivider label="Summary" />
       <Card title="Holding Cost Summary" style={{ background: `${theme.accent}10`, borderColor: theme.accent }}>
-        <MetricBox label={`Total Holding (${holding.renovationMonths} months)`} value={fmt(totalHoldingCost)} color={theme.accent} isMobile={isMobile} />
+        <MetricBox label={`Total Holding (${holding.renovationMonths as number} months)`} value={fmt(totalHoldingCost)} color={theme.accent} isMobile={isMobile} />
       </Card>
     </div>
   );

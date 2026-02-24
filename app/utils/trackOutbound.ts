@@ -3,17 +3,21 @@
 
 const STORAGE_KEY = "justhousesErp_clicks";
 
+interface ClickEvent {
+  type: string;
+  supplier: string;
+  item: string;
+  category: string;
+  timestamp: string;
+}
+
 /**
  * Track an outbound click to a supplier.
  * Currently logs to console and persists to localStorage.
  * Replace the body with your analytics provider call when ready.
- *
- * @param {string} supplier - e.g. "Leroy Merlin", "Builders Warehouse"
- * @param {string} item - The material item name
- * @param {string} category - The material category
  */
-export function trackOutboundClick(supplier, item, category = "") {
-  const event = {
+export function trackOutboundClick(supplier: string, item: string, category: string = ""): void {
+  const event: ClickEvent = {
     type: "outbound_click",
     supplier,
     item,
@@ -27,7 +31,7 @@ export function trackOutboundClick(supplier, item, category = "") {
   // Persist to localStorage for basic analytics
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    const clicks = raw ? JSON.parse(raw) : [];
+    const clicks: ClickEvent[] = raw ? JSON.parse(raw) : [];
     clicks.push(event);
     // Keep last 500 clicks
     if (clicks.length > 500) clicks.splice(0, clicks.length - 500);
@@ -44,9 +48,8 @@ export function trackOutboundClick(supplier, item, category = "") {
 
 /**
  * Get click history (for analytics dashboard).
- * @returns {Array} Array of click events
  */
-export function getClickHistory() {
+export function getClickHistory(): ClickEvent[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -57,11 +60,8 @@ export function getClickHistory() {
 
 /**
  * Generate a supplier search URL.
- * @param {"leroymerlin"|"builders"|"cashbuild"} supplier
- * @param {string} itemName
- * @returns {string} The search URL
  */
-export function getSupplierUrl(supplier, itemName) {
+export function getSupplierUrl(supplier: "leroymerlin" | "builders" | "cashbuild" | string, itemName: string): string {
   switch (supplier) {
     case "leroymerlin":
       return `https://leroymerlin.co.za/search/?q=${itemName.replace(/ /g, "+")}`;

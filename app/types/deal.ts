@@ -317,6 +317,12 @@ export interface DealMetrics {
   renovationMonths: number;
   estimatedProfit: number;
   estimatedRoi: number;
+  annualizedRoi: number;
+  totalAcquisitionCosts: number;
+  totalHoldingCosts: number;
+  totalRenovationCosts: number;
+  totalResaleCosts: number;
+  totalInvested: number;
   totalExpenses?: number;
   budgetVariance?: number;
   daysInPipeline?: number;

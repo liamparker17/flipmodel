@@ -113,6 +113,7 @@ export default function SignupPage() {
 
       {error && (
         <div
+          role="alert"
           style={{
             background: `${theme.red}15`,
             border: `1px solid ${theme.red}30`,
@@ -130,61 +131,75 @@ export default function SignupPage() {
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 14 }}>
           <label
+            htmlFor="signup-name"
             style={{ display: "block", color: theme.textDim, fontSize: 12, marginBottom: 6, fontWeight: 500 }}
           >
             Full name
           </label>
           <input
+            id="signup-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="John Doe"
             required
+            aria-required="true"
+            aria-invalid={error ? "true" : undefined}
             style={inputStyle}
           />
         </div>
 
         <div style={{ marginBottom: 14 }}>
           <label
+            htmlFor="signup-email"
             style={{ display: "block", color: theme.textDim, fontSize: 12, marginBottom: 6, fontWeight: 500 }}
           >
             Email
           </label>
           <input
+            id="signup-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             required
+            aria-required="true"
+            aria-invalid={error ? "true" : undefined}
             style={inputStyle}
           />
         </div>
 
         <div style={{ marginBottom: 14 }}>
           <label
+            htmlFor="signup-password"
             style={{ display: "block", color: theme.textDim, fontSize: 12, marginBottom: 6, fontWeight: 500 }}
           >
             Password
           </label>
           <input
+            id="signup-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
+            placeholder="At least 10 characters"
             required
-            minLength={8}
+            aria-required="true"
+            aria-invalid={error ? "true" : undefined}
+            minLength={10}
             style={inputStyle}
           />
         </div>
 
         <div style={{ marginBottom: 20 }}>
           <label
+            htmlFor="signup-company"
             style={{ display: "block", color: theme.textDim, fontSize: 12, marginBottom: 6, fontWeight: 500 }}
           >
             Company name{" "}
             <span style={{ color: theme.textDim, fontWeight: 400 }}>(optional)</span>
           </label>
           <input
+            id="signup-company"
             type="text"
             value={company}
             onChange={(e) => setCompany(e.target.value)}

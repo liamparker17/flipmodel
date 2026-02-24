@@ -81,6 +81,8 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
       <>
         <button
           onClick={() => setMobileOpen(true)}
+          aria-label="Open navigation menu"
+          aria-expanded={mobileOpen}
           style={{
             position: "fixed", top: 12, left: 12, zIndex: 200,
             width: 40, height: 40, borderRadius: 6,
@@ -150,7 +152,7 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose, navIte
           {!collapsed && <span style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>JustHouses</span>}
         </div>
         {onClose && (
-          <button onClick={onClose} style={{
+          <button onClick={onClose} aria-label="Close navigation menu" style={{
             background: "transparent", border: "none", borderRadius: 4,
             width: 28, height: 28, color: theme.textDim, fontSize: 16, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -182,6 +184,8 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose, navIte
               key={item.href}
               onClick={() => onNav(item.href)}
               data-tour={`nav-${item.href.replace("/", "")}`}
+              aria-current={active ? "page" : undefined}
+              aria-label={collapsed ? item.label : undefined}
               style={{
                 width: "100%", display: "flex", alignItems: "center",
                 gap: 8, padding: collapsed ? "8px 0" : "8px 10px",

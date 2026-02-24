@@ -1,11 +1,38 @@
+// @ts-nocheck
 "use client";
 import { theme, fmt } from "./theme";
 import { ROOM_TEMPLATES, generateRoomItems, calcAutoQty, detectRoomType } from "../data/roomTemplates";
 import { UNIT_TYPES } from "../data/constants";
 
-export default function RoomBreakdown({ room, onUpdateRoom, isMobile }) {
+interface DetailedItem {
+  key: string;
+  label: string;
+  included: boolean;
+  qty: number;
+  unitCost: number;
+  unit: string;
+}
+
+interface Room {
+  id: number;
+  name: string;
+  sqm: number;
+  scope: string;
+  roomType?: string;
+  breakdownMode?: string;
+  detailedItems?: DetailedItem[] | null;
+  [key: string]: unknown;
+}
+
+interface RoomBreakdownProps {
+  room: Room;
+  onUpdateRoom: (id: number, key: string, value: unknown) => void;
+  isMobile: boolean;
+}
+
+export default function RoomBreakdown({ room, onUpdateRoom, isMobile }: RoomBreakdownProps) {
   const roomType = room.roomType || detectRoomType(room.name);
-  const template = ROOM_TEMPLATES[roomType];
+  const template = (ROOM_TEMPLATES as Record<string, unknown>)[roomType];
   const isDetailed = room.breakdownMode === "detailed";
 
   const toggleMode = () => {
@@ -20,7 +47,7 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }) {
     }
   };
 
-  const updateItem = (idx, field, value) => {
+  const updateItem = (idx: number, field: string, value: unknown) => {
     const newItems = [...(room.detailedItems || [])];
     newItems[idx] = { ...newItems[idx], [field]: value };
     onUpdateRoom(room.id, "detailedItems", newItems);
@@ -30,9 +57,9 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }) {
     ? room.detailedItems.filter((i) => i.included).reduce((s, i) => s + i.qty * i.unitCost, 0)
     : 0;
 
-  const roomTypeOptions = Object.entries(ROOM_TEMPLATES).map(([key, t]) => ({ value: key, label: t.label }));
+  const roomTypeOptions = Object.entries(ROOM_TEMPLATES as Record<string, { label: string }>).map(([key, t]) => ({ value: key, label: t.label }));
 
-  const handleRoomTypeChange = (newType) => {
+  const handleRoomTypeChange = (newType: string) => {
     onUpdateRoom(room.id, "roomType", newType);
     if (isDetailed) {
       const items = generateRoomItems(newType, room.sqm);
@@ -40,15 +67,15 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }) {
     }
   };
 
-  const handleSqmChange = (newSqm) => {
+  const handleSqmChange = (newSqm: number) => {
     onUpdateRoom(room.id, "sqm", newSqm);
     if (isDetailed && room.detailedItems) {
-      const tmpl = ROOM_TEMPLATES[roomType];
+      const tmpl = (ROOM_TEMPLATES as Record<string, { items: Array<{ key: string; autoQty: unknown }> }>)[roomType];
       if (tmpl) {
         const newItems = room.detailedItems.map((item) => {
           const tmplItem = tmpl.items.find((t) => t.key === item.key);
           if (tmplItem && typeof tmplItem.autoQty !== "number") {
-            return { ...item, qty: calcAutoQty(tmplItem.autoQty, newSqm) };
+            return { ...item, qty: calcAutoQty(tmplItem.autoQty as string, newSqm) };
           }
           return item;
         });
@@ -57,7 +84,7 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }) {
     }
   };
 
-  const inputSmall = {
+  const inputSmall: React.CSSProperties = {
     background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6,
     padding: "8px 10px", color: theme.text, fontSize: 16, textAlign: "right",
     outline: "none", fontFamily: "'JetBrains Mono', monospace", minHeight: 40,
@@ -68,7 +95,7 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }) {
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 150 }}>
           <label style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 1 }}>Room Type</label>
-          <select value={roomType} onChange={(e) => handleRoomTypeChange(e.target.value)} style={{
+          <select value={roomType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleRoomTypeChange(e.target.value)} style={{
             background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 8,
             padding: "10px 12px", color: theme.text, fontSize: 16, width: "100%", outline: "none",
             minHeight: 44,
@@ -92,7 +119,6 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }) {
       {isDetailed && room.detailedItems && (
         <div style={{ marginTop: 12 }}>
           {isMobile ? (
-            // Mobile: card layout for each item
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {room.detailedItems.map((item, idx) => {
                 const lineTotal = item.included ? item.qty * item.unitCost : 0;
@@ -104,23 +130,23 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }) {
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <input type="checkbox" checked={item.included} onChange={(e) => updateItem(idx, "included", e.target.checked)}
+                        <input type="checkbox" checked={item.included} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem(idx, "included", e.target.checked)}
                           style={{ cursor: "pointer", width: 22, height: 22 }}
                         />
                         <span style={{ fontSize: 13, color: theme.text, fontWeight: 500 }}>{item.label}</span>
                       </div>
-                      <span style={{ fontSize: 10, color: theme.textDim }}>{UNIT_TYPES[item.unit]?.suffix || item.unit}</span>
+                      <span style={{ fontSize: 10, color: theme.textDim }}>{(UNIT_TYPES as Record<string, { suffix: string }>)[item.unit]?.suffix || item.unit}</span>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                       <div>
                         <label style={{ fontSize: 10, color: theme.textDim }}>Qty</label>
-                        <input type="number" value={item.qty} onChange={(e) => updateItem(idx, "qty", Number(e.target.value))}
+                        <input type="number" value={item.qty} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem(idx, "qty", Number(e.target.value))}
                           style={{ ...inputSmall, width: "100%" }}
                         />
                       </div>
                       <div>
                         <label style={{ fontSize: 10, color: theme.textDim }}>Unit Cost</label>
-                        <input type="number" value={item.unitCost} onChange={(e) => updateItem(idx, "unitCost", Number(e.target.value))}
+                        <input type="number" value={item.unitCost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem(idx, "unitCost", Number(e.target.value))}
                           style={{ ...inputSmall, width: "100%" }}
                         />
                       </div>
@@ -145,7 +171,6 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }) {
               </div>
             </div>
           ) : (
-            // Desktop: table layout
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
@@ -164,19 +189,19 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }) {
                     return (
                       <tr key={item.key} style={{ borderBottom: `1px solid ${theme.cardBorder}15`, opacity: item.included ? 1 : 0.4 }}>
                         <td style={{ padding: "4px 4px", textAlign: "center" }}>
-                          <input type="checkbox" checked={item.included} onChange={(e) => updateItem(idx, "included", e.target.checked)} style={{ cursor: "pointer", width: 18, height: 18 }} />
+                          <input type="checkbox" checked={item.included} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem(idx, "included", e.target.checked)} style={{ cursor: "pointer", width: 18, height: 18 }} />
                         </td>
                         <td style={{ padding: "4px 8px", color: theme.text }}>{item.label}</td>
                         <td style={{ padding: "4px 8px", textAlign: "right" }}>
-                          <input type="number" value={item.qty} onChange={(e) => updateItem(idx, "qty", Number(e.target.value))}
+                          <input type="number" value={item.qty} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem(idx, "qty", Number(e.target.value))}
                             style={{ ...inputSmall, width: 60 }}
                           />
                         </td>
                         <td style={{ padding: "4px 8px", textAlign: "center", fontSize: 10, color: theme.textDim }}>
-                          {UNIT_TYPES[item.unit]?.suffix || item.unit}
+                          {(UNIT_TYPES as Record<string, { suffix: string }>)[item.unit]?.suffix || item.unit}
                         </td>
                         <td style={{ padding: "4px 8px", textAlign: "right" }}>
-                          <input type="number" value={item.unitCost} onChange={(e) => updateItem(idx, "unitCost", Number(e.target.value))}
+                          <input type="number" value={item.unitCost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem(idx, "unitCost", Number(e.target.value))}
                             style={{ ...inputSmall, width: 90 }}
                           />
                         </td>

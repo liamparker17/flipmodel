@@ -2,7 +2,20 @@
 // Each item: { key, label, unit, defaultCost, autoQty }
 // autoQty: "sqm" = room area, "lm" = perimeter estimate, "wallArea" = perimeter x 2.4m, number = fixed qty
 
-export const ROOM_TEMPLATES = {
+export interface RoomTemplateItem {
+  key: string;
+  label: string;
+  unit: string;
+  defaultCost: number;
+  autoQty: number | "sqm" | "lm" | "wallArea";
+}
+
+export interface RoomTemplate {
+  label: string;
+  items: RoomTemplateItem[];
+}
+
+export const ROOM_TEMPLATES: Record<string, RoomTemplate> = {
   bathroom: {
     label: "Bathroom",
     items: [
@@ -104,7 +117,7 @@ export const ROOM_TEMPLATES = {
 };
 
 // Maps room names to template keys for auto-detection
-export const ROOM_TYPE_MAP = {
+export const ROOM_TYPE_MAP: Record<string, string> = {
   bathroom: "bathroom",
   "en-suite": "bathroom",
   ensuite: "bathroom",
@@ -127,7 +140,7 @@ export const ROOM_TYPE_MAP = {
 };
 
 // Detect room type from name
-export function detectRoomType(name) {
+export function detectRoomType(name: string): string {
   const lower = name.toLowerCase();
   for (const [keyword, type] of Object.entries(ROOM_TYPE_MAP)) {
     if (lower.includes(keyword)) return type;
@@ -136,7 +149,7 @@ export function detectRoomType(name) {
 }
 
 // Calculate auto-quantity for a room item
-export function calcAutoQty(autoQty, roomSqm) {
+export function calcAutoQty(autoQty: number | "sqm" | "lm" | "wallArea", roomSqm: number): number {
   if (typeof autoQty === "number") return autoQty;
   const perimeter = 4 * Math.sqrt(roomSqm);
   switch (autoQty) {
@@ -147,8 +160,17 @@ export function calcAutoQty(autoQty, roomSqm) {
   }
 }
 
+export interface GeneratedRoomItem {
+  key: string;
+  label: string;
+  unit: string;
+  included: boolean;
+  qty: number;
+  unitCost: number;
+}
+
 // Generate detailed items for a room from its template
-export function generateRoomItems(roomType, roomSqm) {
+export function generateRoomItems(roomType: string, roomSqm: number): GeneratedRoomItem[] {
   const template = ROOM_TEMPLATES[roomType];
   if (!template) return [];
   return template.items.map((item) => ({
@@ -161,7 +183,14 @@ export function generateRoomItems(roomType, roomSqm) {
   }));
 }
 
-export const PRESET_ROOMS = [
+export interface PresetRoom {
+  name: string;
+  sqm: number;
+  scope: string;
+  roomType: string;
+}
+
+export const PRESET_ROOMS: PresetRoom[] = [
   { name: "Master Bedroom", sqm: 16, scope: "midLevel", roomType: "bedroom" },
   { name: "Bedroom 2", sqm: 12, scope: "midLevel", roomType: "bedroom" },
   { name: "Bedroom 3", sqm: 10, scope: "cosmetic", roomType: "bedroom" },

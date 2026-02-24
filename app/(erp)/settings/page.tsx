@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { theme, CTAButton, Toast, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
+import useIsMobile from "../../hooks/useIsMobile";
 import useOrgContext from "@/hooks/useOrgContext";
 import { ORG_ROLE_LABELS, DEFAULT_ORG_SETTINGS } from "@/types/org";
 import type { OrgRole, ModuleKey } from "@/types/org";
@@ -51,7 +52,7 @@ function saveSettings(settings: AppSettings) {
 export default function SettingsPage() {
   const { deals, loaded } = useDeals();
   const { org, hasPermission, canAccessModule, refetch: refetchOrg } = useOrgContext();
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [toastMsg, setToastMsg] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
   const [settings, setSettings] = useState(SETTING_DEFAULTS);
@@ -73,15 +74,12 @@ export default function SettingsPage() {
   const [orgSaving, setOrgSaving] = useState(false);
 
   // Accounting state
-  const [accountingConnection, setAccountingConnection] = useState<{ provider: string; status: string } | null>(null);
+  const [accountingConnection, setAccountingConnection] = useState<{ provider: string; status: string; lastSyncAt?: string; settings?: Record<string, unknown> } | null>(null);
   const [chartOfAccounts, setChartOfAccounts] = useState<ChartOfAccountEntry[]>([]);
   const [accountingLoading, setAccountingLoading] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check(); window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+  const [accountingProviders, setAccountingProviders] = useState<{ xero: boolean; quickbooks: boolean }>({ xero: false, quickbooks: false });
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ accounts?: { total: number; imported: number }; contacts?: { total: number; imported: number }; invoices?: { total: number } } | null>(null);
 
   useEffect(() => {
     setSettings(loadSettings());
@@ -123,6 +121,7 @@ export default function SettingsPage() {
       if (connRes.ok) {
         const data = await connRes.json();
         setAccountingConnection(data.connection);
+        if (data.providers) setAccountingProviders(data.providers);
       }
       if (coaRes.ok) {
         setChartOfAccounts(await coaRes.json());
@@ -134,6 +133,49 @@ export default function SettingsPage() {
   useEffect(() => {
     if (activeSection === "accounting") fetchAccounting();
   }, [activeSection, fetchAccounting]);
+
+  // Handle OAuth callback query params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("accounting_connected");
+    const accountingError = params.get("accounting_error");
+    if (connected) {
+      setActiveSection("accounting");
+      showToast(`${connected.charAt(0).toUpperCase() + connected.slice(1)} connected successfully`);
+      window.history.replaceState({}, "", window.location.pathname);
+      fetchAccounting();
+    }
+    if (accountingError) {
+      setActiveSection("accounting");
+      showToast(`Connection error: ${accountingError}`);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSync = async (syncType: string = "all") => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch("/api/accounting/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: syncType }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSyncResult(data.results);
+        showToast("Sync completed successfully");
+        fetchAccounting();
+      } else {
+        const data = await res.json();
+        showToast(data.error || "Sync failed");
+      }
+    } catch {
+      showToast("Sync failed");
+    }
+    setSyncing(false);
+  };
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -510,12 +552,39 @@ export default function SettingsPage() {
               <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>Loading...</p>
             ) : accountingConnection ? (
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: accountingConnection.status === "connected" ? theme.green : theme.red }} />
-                  <span style={{ fontSize: 13, color: theme.text, textTransform: "capitalize" }}>{accountingConnection.provider} — {accountingConnection.status}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: accountingConnection.status === "connected" ? theme.green : accountingConnection.status === "expired" ? "#f59e0b" : theme.red }} />
+                  <span style={{ fontSize: 13, color: theme.text, textTransform: "capitalize", fontWeight: 600 }}>{accountingConnection.provider}</span>
+                  <span style={{ fontSize: 12, color: theme.textDim }}>— {accountingConnection.status}</span>
                 </div>
-                {hasPermission("accounting:write") && (
-                  <button onClick={handleDisconnectAccounting} style={{ background: "transparent", border: `1px solid ${theme.red}30`, borderRadius: 6, padding: "6px 12px", color: theme.red, fontSize: 12, cursor: "pointer" }}>Disconnect</button>
+                {accountingConnection.settings && (accountingConnection.settings as Record<string, string>).organisationName && (
+                  <p style={{ fontSize: 11, color: theme.textDim, margin: "0 0 4px" }}>Organisation: {(accountingConnection.settings as Record<string, string>).organisationName || (accountingConnection.settings as Record<string, string>).companyName}</p>
+                )}
+                {accountingConnection.lastSyncAt && (
+                  <p style={{ fontSize: 11, color: theme.textDim, margin: "0 0 12px" }}>Last synced: {new Date(accountingConnection.lastSyncAt).toLocaleString()}</p>
+                )}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {accountingConnection.provider !== "manual" && accountingConnection.status === "connected" && hasPermission("accounting:write") && (
+                    <button onClick={() => handleSync("all")} disabled={syncing} style={{ padding: "6px 14px", background: theme.accent, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: syncing ? "wait" : "pointer", opacity: syncing ? 0.6 : 1 }}>
+                      {syncing ? "Syncing..." : "Sync Now"}
+                    </button>
+                  )}
+                  {accountingConnection.status === "expired" && hasPermission("accounting:write") && (
+                    <button onClick={() => { window.location.href = `/api/accounting/${accountingConnection.provider}/connect`; }} style={{ padding: "6px 14px", background: "#f59e0b", color: "#000", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                      Reconnect
+                    </button>
+                  )}
+                  {hasPermission("accounting:write") && (
+                    <button onClick={handleDisconnectAccounting} style={{ background: "transparent", border: `1px solid ${theme.red}30`, borderRadius: 6, padding: "6px 12px", color: theme.red, fontSize: 12, cursor: "pointer" }}>Disconnect</button>
+                  )}
+                </div>
+                {syncResult && (
+                  <div style={{ marginTop: 12, padding: 10, background: theme.input, borderRadius: 6, fontSize: 11, color: theme.textDim }}>
+                    <strong style={{ color: theme.text }}>Sync Results:</strong>
+                    {syncResult.accounts && <div>Accounts: {syncResult.accounts.total} found, {syncResult.accounts.imported} imported</div>}
+                    {syncResult.contacts && <div>Contacts: {syncResult.contacts.total} found, {syncResult.contacts.imported} imported</div>}
+                    {syncResult.invoices && <div>Invoices: {syncResult.invoices.total} found</div>}
+                  </div>
                 )}
               </div>
             ) : (
@@ -524,13 +593,63 @@ export default function SettingsPage() {
                 {hasPermission("accounting:write") && (
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button onClick={handleConnectManual} style={{ padding: "8px 16px", background: theme.accent, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Use Manual Accounting</button>
-                    <button disabled style={{ padding: "8px 16px", background: theme.input, color: theme.textDim, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, fontSize: 12, cursor: "not-allowed" }}>QuickBooks (Coming Soon)</button>
-                    <button disabled style={{ padding: "8px 16px", background: theme.input, color: theme.textDim, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, fontSize: 12, cursor: "not-allowed" }}>Xero (Coming Soon)</button>
+                    <button
+                      disabled={!accountingProviders.quickbooks}
+                      onClick={() => { window.location.href = "/api/accounting/quickbooks/connect"; }}
+                      style={{
+                        padding: "8px 16px",
+                        background: accountingProviders.quickbooks ? "#2CA01C" : theme.input,
+                        color: accountingProviders.quickbooks ? "#fff" : theme.textDim,
+                        border: accountingProviders.quickbooks ? "none" : `1px solid ${theme.inputBorder}`,
+                        borderRadius: 6, fontSize: 12, fontWeight: 600,
+                        cursor: accountingProviders.quickbooks ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      {accountingProviders.quickbooks ? "Connect QuickBooks" : "QuickBooks (Not Configured)"}
+                    </button>
+                    <button
+                      disabled={!accountingProviders.xero}
+                      onClick={() => { window.location.href = "/api/accounting/xero/connect"; }}
+                      style={{
+                        padding: "8px 16px",
+                        background: accountingProviders.xero ? "#13B5EA" : theme.input,
+                        color: accountingProviders.xero ? "#fff" : theme.textDim,
+                        border: accountingProviders.xero ? "none" : `1px solid ${theme.inputBorder}`,
+                        borderRadius: 6, fontSize: 12, fontWeight: 600,
+                        cursor: accountingProviders.xero ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      {accountingProviders.xero ? "Connect Xero" : "Xero (Not Configured)"}
+                    </button>
                   </div>
+                )}
+                {(!accountingProviders.xero || !accountingProviders.quickbooks) && (
+                  <p style={{ fontSize: 10, color: theme.textDim, margin: "8px 0 0", lineHeight: 1.6 }}>
+                    To enable Xero or QuickBooks, add the API credentials to your environment variables (XERO_CLIENT_ID, XERO_CLIENT_SECRET, QUICKBOOKS_CLIENT_ID, QUICKBOOKS_CLIENT_SECRET).
+                  </p>
                 )}
               </div>
             )}
           </div>
+
+          {/* Sync options for connected OAuth providers */}
+          {accountingConnection && accountingConnection.provider !== "manual" && accountingConnection.status === "connected" && (
+            <div style={styles.card}>
+              <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Sync Options</h3>
+              <p style={{ fontSize: 12, color: theme.textDim, margin: "0 0 12px" }}>Import data from {accountingConnection.provider} into your workspace.</p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {(["accounts", "contacts", "invoices"] as const).map((type) => (
+                  <button key={type} onClick={() => handleSync(type)} disabled={syncing} style={{
+                    padding: "6px 14px", background: "transparent", border: `1px solid ${theme.cardBorder}`,
+                    borderRadius: 6, fontSize: 12, color: theme.text, cursor: syncing ? "wait" : "pointer",
+                    opacity: syncing ? 0.6 : 1, textTransform: "capitalize",
+                  }}>
+                    Sync {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div style={styles.card}>
             <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Chart of Accounts</h3>
@@ -538,7 +657,14 @@ export default function SettingsPage() {
               <div>
                 <p style={{ fontSize: 12, color: theme.textDim, margin: "0 0 12px" }}>No chart of accounts set up yet.</p>
                 {hasPermission("accounting:write") && (
-                  <button onClick={handleSeedChartOfAccounts} style={{ padding: "8px 16px", background: theme.accent, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Seed Default Accounts (Property Flipping)</button>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button onClick={handleSeedChartOfAccounts} style={{ padding: "8px 16px", background: theme.accent, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Seed Default Accounts (Property Flipping)</button>
+                    {accountingConnection && accountingConnection.provider !== "manual" && accountingConnection.status === "connected" && (
+                      <button onClick={() => handleSync("accounts")} disabled={syncing} style={{ padding: "8px 16px", background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: syncing ? "wait" : "pointer", color: theme.text }}>
+                        {syncing ? "Importing..." : `Import from ${accountingConnection.provider}`}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ) : (

@@ -1,8 +1,9 @@
 "use client";
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { theme, fmt, styles } from "../../components/theme";
 import useTools from "../../hooks/api/useApiTools";
 import useDeals from "../../hooks/api/useApiDeals";
+import useIsMobile from "../../hooks/useIsMobile";
 import type { Tool, ToolCheckout, ToolMaintenanceEntry, ToolIncident, ToolCategoryKey, ToolStatus, ToolCondition } from "../../types/tool";
 import { TOOL_CATEGORY_DEFAULTS } from "../../types/tool";
 
@@ -45,7 +46,7 @@ function ToolsPageInner() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<ToolStatus | "all">("all");
   const [categoryFilter, setCategoryFilter] = useState<ToolCategoryKey | "all">("all");
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [toastMsg, setToastMsg] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
 
@@ -56,13 +57,6 @@ function ToolsPageInner() {
   const [showMaintenance, setShowMaintenance] = useState(false);
   const [showIncident, setShowIncident] = useState(false);
   const [showResolve, setShowResolve] = useState<string | null>(null);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);

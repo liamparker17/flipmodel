@@ -3,9 +3,18 @@ import bcrypt from "bcryptjs";
 import prisma from "@/lib/db";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { signupSchema } from "@/lib/validations/auth";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting
+    const forwarded = req.headers.get("x-forwarded-for");
+    const ip = forwarded?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+    const { success } = rateLimit(`signup:${ip}`, 5, 15 * 60 * 1000);
+    if (!success) {
+      return apiError("Too many requests. Please try again later.", 429);
+    }
+
     const body = await req.json();
     const data = signupSchema.parse(body);
 

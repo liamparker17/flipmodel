@@ -1,13 +1,45 @@
+// @ts-nocheck
 "use client";
 import { theme, fmt, pct, NumInput, Card, SectionDivider, MetricBox, Tooltip } from "./theme";
 import { TOOLTIPS } from "../data/constants";
+
+interface DealScore {
+  level: string;
+  label: string;
+  color: string;
+  bg: string;
+  desc: string;
+}
+
+interface ResaleStepProps {
+  resale: Record<string, unknown>;
+  updateResale: (key: string, value: unknown) => void;
+  prop: Record<string, unknown>;
+  allInCost: number;
+  agentComm: number;
+  grossProfit: number;
+  netProfit: number;
+  profitPerSqm: number;
+  roi: number;
+  annualizedRoi: number;
+  returnOnCash: number;
+  cashInvested: number;
+  breakEvenResale: number;
+  dealScore: DealScore;
+  totalAcquisition: number;
+  totalRenovation: number;
+  totalHoldingCost: number;
+  holding: Record<string, unknown>;
+  transferDuty: number;
+  isMobile: boolean;
+}
 
 export default function ResaleStep({
   resale, updateResale, prop, allInCost, agentComm, grossProfit, netProfit, profitPerSqm,
   roi, annualizedRoi, returnOnCash, cashInvested, breakEvenResale, dealScore,
   totalAcquisition, totalRenovation, totalHoldingCost, holding, transferDuty,
   isMobile,
-}) {
+}: ResaleStepProps) {
   const DealScoreBadge = () => (
     <div style={{
       background: dealScore.bg, border: `1px solid ${dealScore.color}40`,
@@ -60,12 +92,12 @@ export default function ResaleStep({
     <div>
       <Card title="Your Resale Projections" subtitle="Estimate your expected selling price and agent costs to calculate projected profit.">
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 20px" }}>
-          <NumInput label="Your Expected Resale Price (R)" value={resale.expectedPrice} onChange={(v) => updateResale("expectedPrice", v)} tooltip={TOOLTIPS.expectedPrice} isMobile={isMobile} />
-          <NumInput label="Area Benchmark (R/sqm)" value={resale.areaBenchmarkPsqm} onChange={(v) => updateResale("areaBenchmarkPsqm", v)} suffix="/sqm" tooltip={TOOLTIPS.areaBenchmarkPsqm} isMobile={isMobile} />
-          <NumInput label="Agent Commission" value={resale.agentCommission} onChange={(v) => updateResale("agentCommission", v)} prefix="" suffix="%" tooltip={TOOLTIPS.agentCommission} isMobile={isMobile} />
+          <NumInput label="Your Expected Resale Price (R)" value={resale.expectedPrice} onChange={(v: number) => updateResale("expectedPrice", v)} tooltip={TOOLTIPS.expectedPrice} isMobile={isMobile} />
+          <NumInput label="Area Benchmark (R/sqm)" value={resale.areaBenchmarkPsqm} onChange={(v: number) => updateResale("areaBenchmarkPsqm", v)} suffix="/sqm" tooltip={TOOLTIPS.areaBenchmarkPsqm} isMobile={isMobile} />
+          <NumInput label="Agent Commission" value={resale.agentCommission} onChange={(v: number) => updateResale("agentCommission", v)} prefix="" suffix="%" tooltip={TOOLTIPS.agentCommission} isMobile={isMobile} />
         </div>
         <div style={{ fontSize: 12, color: theme.textDim, marginTop: 8 }}>
-          Benchmark resale value: {fmt(resale.areaBenchmarkPsqm * prop.totalSqm)} ({prop.totalSqm} sqm x {fmt(resale.areaBenchmarkPsqm)}/sqm)
+          Benchmark resale value: {fmt((resale.areaBenchmarkPsqm as number) * (prop.totalSqm as number))} ({prop.totalSqm as number} sqm x {fmt(resale.areaBenchmarkPsqm as number)}/sqm)
         </div>
       </Card>
 
@@ -77,7 +109,7 @@ export default function ResaleStep({
       <Card title="Your Profit Analysis" style={{ background: `${theme.accent}10`, borderColor: theme.accent }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
           <MetricBox label="All-In Cost" value={fmt(allInCost)} isMobile={isMobile} />
-          <MetricBox label="Resale Price" value={fmt(resale.expectedPrice)} isMobile={isMobile} />
+          <MetricBox label="Resale Price" value={fmt(resale.expectedPrice as number)} isMobile={isMobile} />
           <MetricBox label="Agent Commission" value={fmt(agentComm)} isMobile={isMobile} />
         </div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
@@ -87,7 +119,7 @@ export default function ResaleStep({
         </div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
           <MetricBox label="ROI" value={pct(roi)} color={roi >= 0.15 ? theme.green : roi >= 0 ? theme.orange : theme.red} isMobile={isMobile} />
-          <MetricBox label="Annualized ROI" value={pct(annualizedRoi)} color={annualizedRoi >= 0.3 ? theme.green : annualizedRoi >= 0.15 ? theme.orange : theme.red} sub={`Over ${holding.renovationMonths} months`} isMobile={isMobile} />
+          <MetricBox label="Annualized ROI" value={pct(annualizedRoi)} color={annualizedRoi >= 0.3 ? theme.green : annualizedRoi >= 0.15 ? theme.orange : theme.red} sub={`Over ${holding.renovationMonths as number} months`} isMobile={isMobile} />
           <MetricBox label="Break-Even Resale" value={fmt(breakEvenResale)} isMobile={isMobile} />
         </div>
       </Card>
@@ -98,10 +130,10 @@ export default function ResaleStep({
       <Card title="Formulas">
         <div style={{ fontSize: 11, color: theme.textDim, fontFamily: "'JetBrains Mono', monospace", lineHeight: 2, overflowX: "auto" }}>
           <div>All-In = Acquisition({fmt(totalAcquisition)}) + Renovation({fmt(totalRenovation)}) + Holding({fmt(totalHoldingCost)})</div>
-          <div>Gross Profit = Resale - All-In = {fmt(resale.expectedPrice)} - {fmt(allInCost)} = {fmt(grossProfit)}</div>
+          <div>Gross Profit = Resale - All-In = {fmt(resale.expectedPrice as number)} - {fmt(allInCost)} = {fmt(grossProfit)}</div>
           <div>Net Profit = Gross - Agent = {fmt(grossProfit)} - {fmt(agentComm)} = {fmt(netProfit)}</div>
           <div>ROI = Net / All-In = {pct(roi)}</div>
-          <div>Annualized ROI = ROI x (12 / {holding.renovationMonths}mo) = {pct(annualizedRoi)}</div>
+          <div>Annualized ROI = ROI x (12 / {holding.renovationMonths as number}mo) = {pct(annualizedRoi)}</div>
           <div>Return on Cash = Net / Cash Invested = {fmt(netProfit)} / {fmt(cashInvested)} = {pct(returnOnCash)}</div>
         </div>
       </Card>

@@ -1,7 +1,16 @@
 // ─── Default Cost Database (ZAR) ───
 // unit: "sqm" | "lm" | "unit" | "point" | "room" | "fixed"
 
-export const DEFAULT_COSTS = {
+export interface CostItem {
+  label: string;
+  unit: string;
+  cost: number;
+}
+
+export type CostCategory = Record<string, CostItem>;
+export type CostDatabase = Record<string, CostCategory>;
+
+export const DEFAULT_COSTS: CostDatabase = {
   structural: {
     demolition: { label: "Demolition", unit: "sqm", cost: 350 },
     brickwork: { label: "Brickwork alterations", unit: "sqm", cost: 1800 },

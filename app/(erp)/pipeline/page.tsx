@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { theme, fmt, pct, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
+import useIsMobile from "../../hooks/useIsMobile";
 import { DEAL_STAGES, groupDealsByStage, computeDealMetrics, PRIORITY_CONFIG, getDealProgress } from "../../utils/dealHelpers";
 import { generateSuggestions } from "../../lib/automation";
 import type { AutoSuggestion } from "../../lib/automation";
@@ -93,20 +94,13 @@ function DealPipelineCard({ deal, onMove }: { deal: Deal; onMove: (id: string, s
 export default function PipelinePage() {
   const router = useRouter();
   const { deals, loaded, createDeal, moveDeal } = useDeals();
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"updated" | "price" | "profit" | "name">("updated");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [hideSold, setHideSold] = useState(false);
   const [suggestionsOpen, setSuggestionsOpen] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
 
   const filteredDeals = useMemo(() => {
     let result = [...deals];

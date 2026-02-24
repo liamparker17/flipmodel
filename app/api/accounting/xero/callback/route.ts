@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission, handleApiError } from "@/lib/api-helpers";
 import { xeroProvider } from "@/lib/accounting/xero";
+import { validateOAuthState } from "@/lib/accounting/providers";
 import prisma from "@/lib/db";
 
 export async function GET(req: NextRequest) {
@@ -21,6 +22,11 @@ export async function GET(req: NextRequest) {
 
     if (!code || !state) {
       return NextResponse.json({ error: "Missing code or state" }, { status: 400 });
+    }
+
+    // Validate OAuth state to prevent CSRF attacks
+    if (!validateOAuthState(state)) {
+      return NextResponse.json({ error: "Invalid or expired OAuth state" }, { status: 400 });
     }
 
     // Validate state contains this org's ID

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "./auth";
 import { type ZodSchema } from "zod";
 import { ZodError } from "zod";
@@ -103,6 +103,40 @@ export class ForbiddenError extends Error {
     this.name = "ForbiddenError";
     this.message = message;
   }
+}
+
+// ─── Route Handler Wrappers ───
+
+type ApiHandler = (req: NextRequest, ctx: OrgContext) => Promise<NextResponse>;
+
+/**
+ * Wraps an API route handler with permission checking and error handling.
+ * Ensures the user is authenticated, is an org member, and has the specified permission.
+ */
+export function withApi(permission: Permission, handler: ApiHandler) {
+  return async (req: NextRequest) => {
+    try {
+      const ctx = await requirePermission(permission);
+      return await handler(req, ctx);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  };
+}
+
+/**
+ * Wraps an API route handler with org membership checking and error handling.
+ * Ensures the user is authenticated and is an org member (no specific permission required).
+ */
+export function withOrgApi(handler: ApiHandler) {
+  return async (req: NextRequest) => {
+    try {
+      const ctx = await requireOrgMember();
+      return await handler(req, ctx);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  };
 }
 
 // ─── Validation & Response Helpers ───
