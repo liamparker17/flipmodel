@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission, handleApiError } from "@/lib/api-helpers";
-import { xeroProvider } from "@/lib/accounting/xero";
+import { xeroProvider, setXeroCredentials } from "@/lib/accounting/xero";
 import { generateOAuthState, storeOAuthState } from "@/lib/accounting/providers";
+import { getCredentials } from "@/lib/accounting/credentials";
 import prisma from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
     const ctx = await requirePermission("accounting:write");
+
+    // Inject DB credentials if available
+    const creds = await getCredentials("xero", ctx.orgId);
+    if (creds) setXeroCredentials(creds.clientId, creds.clientSecret);
 
     // Check no existing connection
     const existing = await prisma.accountingConnection.findFirst({

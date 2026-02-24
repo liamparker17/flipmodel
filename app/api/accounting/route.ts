@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { hasCredentials } from "@/lib/accounting/credentials";
 import { z } from "zod";
 
 const connectSchema = z.object({
@@ -25,10 +26,15 @@ export async function GET() {
       },
     });
 
-    // Check if provider env vars are configured (for UI to show connect buttons)
+    // Check if provider credentials are available (from DB or env vars)
+    const [xeroAvailable, quickbooksAvailable] = await Promise.all([
+      hasCredentials("xero", ctx.orgId),
+      hasCredentials("quickbooks", ctx.orgId),
+    ]);
+
     const providers = {
-      xero: !!(process.env.XERO_CLIENT_ID && process.env.XERO_CLIENT_SECRET),
-      quickbooks: !!(process.env.QUICKBOOKS_CLIENT_ID && process.env.QUICKBOOKS_CLIENT_SECRET),
+      xero: xeroAvailable,
+      quickbooks: quickbooksAvailable,
     };
 
     return apiSuccess({ connection, providers });

@@ -81,6 +81,16 @@ export default function SettingsPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ accounts?: { total: number; imported: number }; contacts?: { total: number; imported: number }; invoices?: { total: number } } | null>(null);
 
+  // API Credentials state
+  const [credentialsLoading, setCredentialsLoading] = useState(false);
+  const [credentialsSaving, setCredentialsSaving] = useState(false);
+  const [savedCredentials, setSavedCredentials] = useState<{ xero: { configured: boolean; clientId: string | null }; quickbooks: { configured: boolean; clientId: string | null; sandbox: boolean } } | null>(null);
+  const [xeroClientId, setXeroClientId] = useState("");
+  const [xeroClientSecret, setXeroClientSecret] = useState("");
+  const [qbClientId, setQbClientId] = useState("");
+  const [qbClientSecret, setQbClientSecret] = useState("");
+  const [qbSandbox, setQbSandbox] = useState(false);
+
   useEffect(() => {
     setSettings(loadSettings());
   }, []);
@@ -113,10 +123,12 @@ export default function SettingsPage() {
 
   const fetchAccounting = useCallback(async () => {
     setAccountingLoading(true);
+    setCredentialsLoading(true);
     try {
-      const [connRes, coaRes] = await Promise.all([
+      const [connRes, coaRes, credsRes] = await Promise.all([
         fetch("/api/accounting"),
         fetch("/api/accounting/chart-of-accounts"),
+        fetch("/api/accounting/credentials"),
       ]);
       if (connRes.ok) {
         const data = await connRes.json();
@@ -126,8 +138,13 @@ export default function SettingsPage() {
       if (coaRes.ok) {
         setChartOfAccounts(await coaRes.json());
       }
+      if (credsRes.ok) {
+        const credsData = await credsRes.json();
+        setSavedCredentials(credsData);
+      }
     } catch { /* ignore */ }
     setAccountingLoading(false);
+    setCredentialsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -274,6 +291,49 @@ export default function SettingsPage() {
       setAccountingConnection(null);
       fetchAccounting();
     }
+  };
+
+  const handleSaveCredentials = async (provider: "xero" | "quickbooks") => {
+    setCredentialsSaving(true);
+    try {
+      const body: Record<string, unknown> = {};
+      if (provider === "xero") {
+        if (!xeroClientId || !xeroClientSecret) { showToast("Enter both Client ID and Client Secret"); setCredentialsSaving(false); return; }
+        body.xeroClientId = xeroClientId;
+        body.xeroClientSecret = xeroClientSecret;
+      } else {
+        if (!qbClientId || !qbClientSecret) { showToast("Enter both Client ID and Client Secret"); setCredentialsSaving(false); return; }
+        body.quickbooksClientId = qbClientId;
+        body.quickbooksClientSecret = qbClientSecret;
+        body.quickbooksSandbox = qbSandbox;
+      }
+      const res = await fetch("/api/accounting/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        showToast(`${provider === "xero" ? "Xero" : "QuickBooks"} credentials saved`);
+        setXeroClientId(""); setXeroClientSecret("");
+        setQbClientId(""); setQbClientSecret("");
+        fetchAccounting();
+      } else {
+        const data = await res.json();
+        showToast(data.error || "Failed to save credentials");
+      }
+    } catch { showToast("Failed to save credentials"); }
+    setCredentialsSaving(false);
+  };
+
+  const handleRemoveCredentials = async (provider: "xero" | "quickbooks") => {
+    if (!window.confirm(`Remove ${provider === "xero" ? "Xero" : "QuickBooks"} API credentials?`)) return;
+    try {
+      const res = await fetch(`/api/accounting/credentials?provider=${provider}`, { method: "DELETE" });
+      if (res.ok) {
+        showToast(`${provider === "xero" ? "Xero" : "QuickBooks"} credentials removed`);
+        fetchAccounting();
+      }
+    } catch { showToast("Failed to remove credentials"); }
   };
 
   const handleExport = async () => {
@@ -625,12 +685,98 @@ export default function SettingsPage() {
                 )}
                 {(!accountingProviders.xero || !accountingProviders.quickbooks) && (
                   <p style={{ fontSize: 10, color: theme.textDim, margin: "8px 0 0", lineHeight: 1.6 }}>
-                    To enable Xero or QuickBooks, add the API credentials to your environment variables (XERO_CLIENT_ID, XERO_CLIENT_SECRET, QUICKBOOKS_CLIENT_ID, QUICKBOOKS_CLIENT_SECRET).
+                    To enable Xero or QuickBooks, add your API credentials below.
                   </p>
                 )}
               </div>
             )}
           </div>
+
+          {/* API Credentials */}
+          {hasPermission("accounting:write") && (
+            <div style={styles.card}>
+              <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>API Credentials</h3>
+              <p style={{ fontSize: 11, color: theme.textDim, margin: "0 0 16px" }}>
+                Enter your Xero or QuickBooks API credentials to enable the integration. You can get these from the Xero Developer Portal or Intuit Developer Portal.
+              </p>
+
+              {credentialsLoading ? (
+                <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>Loading...</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  {/* Xero Credentials */}
+                  <div style={{ padding: 14, background: theme.input, borderRadius: 8, border: `1px solid ${theme.inputBorder}` }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#13B5EA" }}>Xero</span>
+                      {savedCredentials?.xero?.configured && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 11, color: theme.green }}>Configured ({savedCredentials.xero.clientId})</span>
+                          <button onClick={() => handleRemoveCredentials("xero")} style={{ background: "transparent", border: "none", color: theme.red, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>Remove</button>
+                        </div>
+                      )}
+                    </div>
+                    {!savedCredentials?.xero?.configured && (
+                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>Client ID</label>
+                          <input type="text" value={xeroClientId} onChange={(e) => setXeroClientId(e.target.value)} placeholder="Enter Xero Client ID"
+                            style={{ width: "100%", background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 6, padding: "7px 10px", color: theme.text, fontSize: 12, outline: "none", boxSizing: "border-box" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>Client Secret</label>
+                          <input type="password" value={xeroClientSecret} onChange={(e) => setXeroClientSecret(e.target.value)} placeholder="Enter Xero Client Secret"
+                            style={{ width: "100%", background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 6, padding: "7px 10px", color: theme.text, fontSize: 12, outline: "none", boxSizing: "border-box" }} />
+                        </div>
+                        <div style={{ gridColumn: isMobile ? "1" : "1 / -1" }}>
+                          <button onClick={() => handleSaveCredentials("xero")} disabled={credentialsSaving || !xeroClientId || !xeroClientSecret}
+                            style={{ padding: "7px 16px", background: "#13B5EA", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: (credentialsSaving || !xeroClientId || !xeroClientSecret) ? "not-allowed" : "pointer", opacity: (credentialsSaving || !xeroClientId || !xeroClientSecret) ? 0.5 : 1 }}>
+                            {credentialsSaving ? "Saving..." : "Save Xero Credentials"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* QuickBooks Credentials */}
+                  <div style={{ padding: 14, background: theme.input, borderRadius: 8, border: `1px solid ${theme.inputBorder}` }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#2CA01C" }}>QuickBooks</span>
+                      {savedCredentials?.quickbooks?.configured && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 11, color: theme.green }}>Configured ({savedCredentials.quickbooks.clientId})</span>
+                          <button onClick={() => handleRemoveCredentials("quickbooks")} style={{ background: "transparent", border: "none", color: theme.red, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>Remove</button>
+                        </div>
+                      )}
+                    </div>
+                    {!savedCredentials?.quickbooks?.configured && (
+                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>Client ID</label>
+                          <input type="text" value={qbClientId} onChange={(e) => setQbClientId(e.target.value)} placeholder="Enter QuickBooks Client ID"
+                            style={{ width: "100%", background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 6, padding: "7px 10px", color: theme.text, fontSize: 12, outline: "none", boxSizing: "border-box" }} />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>Client Secret</label>
+                          <input type="password" value={qbClientSecret} onChange={(e) => setQbClientSecret(e.target.value)} placeholder="Enter QuickBooks Client Secret"
+                            style={{ width: "100%", background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 6, padding: "7px 10px", color: theme.text, fontSize: 12, outline: "none", boxSizing: "border-box" }} />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, gridColumn: isMobile ? "1" : "1 / -1" }}>
+                          <input type="checkbox" id="qb-sandbox" checked={qbSandbox} onChange={(e) => setQbSandbox(e.target.checked)} style={{ accentColor: theme.accent }} />
+                          <label htmlFor="qb-sandbox" style={{ fontSize: 11, color: theme.textDim, cursor: "pointer" }}>Sandbox mode (for testing)</label>
+                        </div>
+                        <div style={{ gridColumn: isMobile ? "1" : "1 / -1" }}>
+                          <button onClick={() => handleSaveCredentials("quickbooks")} disabled={credentialsSaving || !qbClientId || !qbClientSecret}
+                            style={{ padding: "7px 16px", background: "#2CA01C", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: (credentialsSaving || !qbClientId || !qbClientSecret) ? "not-allowed" : "pointer", opacity: (credentialsSaving || !qbClientId || !qbClientSecret) ? 0.5 : 1 }}>
+                            {credentialsSaving ? "Saving..." : "Save QuickBooks Credentials"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Sync options for connected OAuth providers */}
           {accountingConnection && accountingConnection.provider !== "manual" && accountingConnection.status === "connected" && (

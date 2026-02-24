@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/api-helpers";
-import { quickbooksProvider } from "@/lib/accounting/quickbooks";
+import { quickbooksProvider, setQuickBooksCredentials } from "@/lib/accounting/quickbooks";
 import { validateOAuthState } from "@/lib/accounting/providers";
+import { getCredentials } from "@/lib/accounting/credentials";
 import prisma from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
     const ctx = await requirePermission("accounting:write");
+
+    // Inject DB credentials if available
+    const creds = await getCredentials("quickbooks", ctx.orgId);
+    if (creds) setQuickBooksCredentials(creds.clientId, creds.clientSecret, creds.sandbox);
+
     const { searchParams } = new URL(req.url);
 
     const code = searchParams.get("code");

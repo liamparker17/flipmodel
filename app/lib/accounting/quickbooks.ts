@@ -8,7 +8,7 @@ const TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
 
 // QuickBooks uses different base URLs for sandbox vs production
 function getApiBase(realmId: string): string {
-  const sandbox = process.env.QUICKBOOKS_SANDBOX === "true";
+  const sandbox = _injectedSandbox ?? (process.env.QUICKBOOKS_SANDBOX === "true");
   const host = sandbox
     ? "https://sandbox-quickbooks.api.intuit.com"
     : "https://quickbooks.api.intuit.com";
@@ -17,15 +17,28 @@ function getApiBase(realmId: string): string {
 
 const SCOPES = "com.intuit.quickbooks.accounting";
 
+// Credentials can be injected from DB or fall back to env vars
+let _injectedClientId: string | null = null;
+let _injectedClientSecret: string | null = null;
+let _injectedSandbox: boolean | null = null;
+
+export function setQuickBooksCredentials(clientId: string, clientSecret: string, sandbox?: boolean) {
+  _injectedClientId = clientId;
+  _injectedClientSecret = clientSecret;
+  _injectedSandbox = sandbox ?? null;
+}
+
 function getClientId(): string {
+  if (_injectedClientId) return _injectedClientId;
   const id = process.env.QUICKBOOKS_CLIENT_ID;
-  if (!id) throw new Error("QUICKBOOKS_CLIENT_ID is not configured");
+  if (!id) throw new Error("QUICKBOOKS_CLIENT_ID is not configured. Add credentials in Settings > Accounting.");
   return id;
 }
 
 function getClientSecret(): string {
+  if (_injectedClientSecret) return _injectedClientSecret;
   const secret = process.env.QUICKBOOKS_CLIENT_SECRET;
-  if (!secret) throw new Error("QUICKBOOKS_CLIENT_SECRET is not configured");
+  if (!secret) throw new Error("QUICKBOOKS_CLIENT_SECRET is not configured. Add credentials in Settings > Accounting.");
   return secret;
 }
 

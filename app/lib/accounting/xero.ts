@@ -19,15 +19,26 @@ const SCOPES = [
   "accounting.reports.read",
 ].join(" ");
 
+// Credentials can be injected from DB or fall back to env vars
+let _injectedClientId: string | null = null;
+let _injectedClientSecret: string | null = null;
+
+export function setXeroCredentials(clientId: string, clientSecret: string) {
+  _injectedClientId = clientId;
+  _injectedClientSecret = clientSecret;
+}
+
 function getClientId(): string {
+  if (_injectedClientId) return _injectedClientId;
   const id = process.env.XERO_CLIENT_ID;
-  if (!id) throw new Error("XERO_CLIENT_ID is not configured");
+  if (!id) throw new Error("XERO_CLIENT_ID is not configured. Add credentials in Settings > Accounting.");
   return id;
 }
 
 function getClientSecret(): string {
+  if (_injectedClientSecret) return _injectedClientSecret;
   const secret = process.env.XERO_CLIENT_SECRET;
-  if (!secret) throw new Error("XERO_CLIENT_SECRET is not configured");
+  if (!secret) throw new Error("XERO_CLIENT_SECRET is not configured. Add credentials in Settings > Accounting.");
   return secret;
 }
 
