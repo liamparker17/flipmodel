@@ -184,6 +184,18 @@ model AccountingConnection {
   @@index([orgId])
 }
 
+model OAuthState {
+  id        String   @id @default(cuid())
+  state     String   @unique
+  orgId     String
+  returnTo  String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([state])
+  @@index([expiresAt])
+}
+
 model ChartOfAccount {
   id              String   @id @default(cuid())
   orgId           String

@@ -17,13 +17,25 @@ const inviteMemberSchema = z.object({
 });
 
 function generatePassword(): string {
-  // Generate a readable temporary password: 3 words + 2 digits
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
+  // Generate a strong 16-character password with mixed character types
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghjkmnpqrstuvwxyz";
   const digits = "23456789";
+  const special = "!@#$%&*";
+  const all = upper + lower + digits + special;
+
+  // Ensure at least one of each type
   let pwd = "";
-  for (let i = 0; i < 8; i++) pwd += chars[crypto.randomInt(chars.length)];
-  for (let i = 0; i < 3; i++) pwd += digits[crypto.randomInt(digits.length)];
-  return pwd;
+  pwd += upper[crypto.randomInt(upper.length)];
+  pwd += lower[crypto.randomInt(lower.length)];
+  pwd += digits[crypto.randomInt(digits.length)];
+  pwd += special[crypto.randomInt(special.length)];
+
+  // Fill remaining 12 characters from full set
+  for (let i = 0; i < 12; i++) pwd += all[crypto.randomInt(all.length)];
+
+  // Shuffle to avoid predictable pattern
+  return pwd.split("").sort(() => crypto.randomInt(3) - 1).join("");
 }
 
 const updateMemberSchema = z.object({

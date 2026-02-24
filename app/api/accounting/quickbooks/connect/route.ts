@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission, handleApiError } from "@/lib/api-helpers";
-import { quickbooksProvider, setQuickBooksCredentials } from "@/lib/accounting/quickbooks";
-import { generateOAuthState, storeOAuthState } from "@/lib/accounting/providers";
+import { requirePermission, apiError, handleApiError } from "@/lib/api-helpers";
+import { quickbooksProvider } from "@/lib/accounting/quickbooks";
+import { storeOAuthState } from "@/lib/accounting/providers";
 import { getCredentials } from "@/lib/accounting/credentials";
 import prisma from "@/lib/db";
 
@@ -9,9 +9,11 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await requirePermission("accounting:write");
 
-    // Inject DB credentials if available
+    // Resolve credentials (DB first, then env)
     const creds = await getCredentials("quickbooks", ctx.orgId);
-    if (creds) setQuickBooksCredentials(creds.clientId, creds.clientSecret, creds.sandbox);
+    if (!creds) {
+      return apiError("QuickBooks credentials not configured. Add them in Settings > Accounting.", 400);
+    }
 
     // Check no existing connection
     const existing = await prisma.accountingConnection.findFirst({
@@ -25,12 +27,11 @@ export async function GET(req: NextRequest) {
     }
 
     // Support returnTo for onboarding flow
-    const returnTo = new URL(req.url).searchParams.get("returnTo") || "";
+    const returnTo = new URL(req.url).searchParams.get("returnTo") || undefined;
 
-    // Generate state with org context and optional returnTo embedded
-    const state = `${ctx.orgId}:${generateOAuthState()}:${returnTo}`;
-    storeOAuthState(state);
-    const authUrl = quickbooksProvider.getAuthUrl(state);
+    // Store state in database (not in-memory)
+    const state = await storeOAuthState(ctx.orgId, returnTo);
+    const authUrl = quickbooksProvider.getAuthUrl(state, creds);
 
     return NextResponse.redirect(authUrl);
   } catch (error) {

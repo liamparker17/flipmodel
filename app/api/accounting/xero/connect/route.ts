@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePermission, handleApiError } from "@/lib/api-helpers";
-import { xeroProvider, setXeroCredentials } from "@/lib/accounting/xero";
-import { generateOAuthState, storeOAuthState } from "@/lib/accounting/providers";
+import { requirePermission, apiError, handleApiError } from "@/lib/api-helpers";
+import { xeroProvider } from "@/lib/accounting/xero";
+import { storeOAuthState } from "@/lib/accounting/providers";
 import { getCredentials } from "@/lib/accounting/credentials";
 import prisma from "@/lib/db";
 
@@ -9,9 +9,11 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await requirePermission("accounting:write");
 
-    // Inject DB credentials if available
+    // Resolve credentials (DB first, then env)
     const creds = await getCredentials("xero", ctx.orgId);
-    if (creds) setXeroCredentials(creds.clientId, creds.clientSecret);
+    if (!creds) {
+      return apiError("Xero credentials not configured. Add them in Settings > Accounting.", 400);
+    }
 
     // Check no existing connection
     const existing = await prisma.accountingConnection.findFirst({
@@ -25,12 +27,11 @@ export async function GET(req: NextRequest) {
     }
 
     // Support returnTo for onboarding flow
-    const returnTo = new URL(req.url).searchParams.get("returnTo") || "";
+    const returnTo = new URL(req.url).searchParams.get("returnTo") || undefined;
 
-    // Generate state with org context and optional returnTo embedded
-    const state = `${ctx.orgId}:${generateOAuthState()}:${returnTo}`;
-    storeOAuthState(state);
-    const authUrl = xeroProvider.getAuthUrl(state);
+    // Store state in database (not in-memory)
+    const state = await storeOAuthState(ctx.orgId, returnTo);
+    const authUrl = xeroProvider.getAuthUrl(state, creds);
 
     return NextResponse.redirect(authUrl);
   } catch (error) {

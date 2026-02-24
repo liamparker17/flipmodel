@@ -84,7 +84,7 @@ export default function SettingsPage() {
   // API Credentials state
   const [credentialsLoading, setCredentialsLoading] = useState(false);
   const [credentialsSaving, setCredentialsSaving] = useState(false);
-  const [savedCredentials, setSavedCredentials] = useState<{ xero: { configured: boolean; clientId: string | null }; quickbooks: { configured: boolean; clientId: string | null; sandbox: boolean } } | null>(null);
+  const [savedCredentials, setSavedCredentials] = useState<{ xero: { configured: boolean }; quickbooks: { configured: boolean; sandbox: boolean } } | null>(null);
   const [xeroClientId, setXeroClientId] = useState("");
   const [xeroClientSecret, setXeroClientSecret] = useState("");
   const [qbClientId, setQbClientId] = useState("");
@@ -710,7 +710,7 @@ export default function SettingsPage() {
                       <span style={{ fontSize: 13, fontWeight: 600, color: "#13B5EA" }}>Xero</span>
                       {savedCredentials?.xero?.configured && (
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: 11, color: theme.green }}>Configured ({savedCredentials.xero.clientId})</span>
+                          <span style={{ fontSize: 11, color: theme.green }}>Configured</span>
                           <button onClick={() => handleRemoveCredentials("xero")} style={{ background: "transparent", border: "none", color: theme.red, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>Remove</button>
                         </div>
                       )}
@@ -743,7 +743,7 @@ export default function SettingsPage() {
                       <span style={{ fontSize: 13, fontWeight: 600, color: "#2CA01C" }}>QuickBooks</span>
                       {savedCredentials?.quickbooks?.configured && (
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: 11, color: theme.green }}>Configured ({savedCredentials.quickbooks.clientId})</span>
+                          <span style={{ fontSize: 11, color: theme.green }}>Configured</span>
                           <button onClick={() => handleRemoveCredentials("quickbooks")} style={{ background: "transparent", border: "none", color: theme.red, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>Remove</button>
                         </div>
                       )}

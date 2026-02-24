@@ -5,6 +5,7 @@ import { getValidTokens } from "@/lib/accounting/token-manager";
 import { xeroProvider } from "@/lib/accounting/xero";
 import { quickbooksProvider } from "@/lib/accounting/quickbooks";
 import type { AccountingProvider } from "@/lib/accounting/providers";
+import { rateLimit } from "@/lib/rate-limit";
 
 function getProvider(name: string): AccountingProvider {
   if (name === "xero") return xeroProvider;
@@ -16,6 +17,10 @@ function getProvider(name: string): AccountingProvider {
 export async function POST(req: NextRequest) {
   try {
     const ctx = await requirePermission("accounting:write");
+
+    // Rate limit: max 1 sync per 2 minutes per org
+    const { success: rlOk } = rateLimit(`sync:${ctx.orgId}`, 1, 2 * 60 * 1000);
+    if (!rlOk) return apiError("Please wait before syncing again", 429);
 
     const body = await req.json();
     const syncType = body.type || "accounts"; // accounts | contacts | invoices | all

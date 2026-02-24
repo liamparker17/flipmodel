@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { encryptCredentials } from "@/lib/accounting/credentials";
 import { z } from "zod";
 
 const credentialsSchema = z.object({
@@ -24,14 +25,13 @@ export async function GET() {
     const settings = (org?.settings as Record<string, unknown>) || {};
     const creds = (settings.accountingCredentials as Record<string, string>) || {};
 
+    // Only return booleans — never expose any part of the credentials
     return apiSuccess({
       xero: {
         configured: !!(creds.xeroClientId && creds.xeroClientSecret),
-        clientId: creds.xeroClientId ? `${creds.xeroClientId.slice(0, 8)}...` : null,
       },
       quickbooks: {
         configured: !!(creds.quickbooksClientId && creds.quickbooksClientSecret),
-        clientId: creds.quickbooksClientId ? `${creds.quickbooksClientId.slice(0, 8)}...` : null,
         sandbox: creds.quickbooksSandbox === "true",
       },
     });
@@ -40,7 +40,7 @@ export async function GET() {
   }
 }
 
-// POST — save accounting API credentials
+// POST — save accounting API credentials (encrypted at rest)
 export async function POST(req: NextRequest) {
   try {
     const ctx = await requirePermission("accounting:write");
@@ -61,11 +61,12 @@ export async function POST(req: NextRequest) {
     const existingCreds = (existingSettings.accountingCredentials as Record<string, string>) || {};
 
     // Merge — only update fields that are provided (don't wipe others)
+    // Encrypt secrets before storage
     const updatedCreds: Record<string, string> = { ...existingCreds };
-    if (data.xeroClientId !== undefined) updatedCreds.xeroClientId = data.xeroClientId;
-    if (data.xeroClientSecret !== undefined) updatedCreds.xeroClientSecret = data.xeroClientSecret;
-    if (data.quickbooksClientId !== undefined) updatedCreds.quickbooksClientId = data.quickbooksClientId;
-    if (data.quickbooksClientSecret !== undefined) updatedCreds.quickbooksClientSecret = data.quickbooksClientSecret;
+    if (data.xeroClientId !== undefined) updatedCreds.xeroClientId = encryptCredentials(data.xeroClientId);
+    if (data.xeroClientSecret !== undefined) updatedCreds.xeroClientSecret = encryptCredentials(data.xeroClientSecret);
+    if (data.quickbooksClientId !== undefined) updatedCreds.quickbooksClientId = encryptCredentials(data.quickbooksClientId);
+    if (data.quickbooksClientSecret !== undefined) updatedCreds.quickbooksClientSecret = encryptCredentials(data.quickbooksClientSecret);
     if (data.quickbooksSandbox !== undefined) updatedCreds.quickbooksSandbox = String(data.quickbooksSandbox);
 
     await prisma.organisation.update({
@@ -77,6 +78,8 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+
+    console.log(`[AUDIT] Credentials saved for org=${ctx.orgId} by user=${ctx.userId} provider=${data.xeroClientId ? "xero" : "quickbooks"}`);
 
     return apiSuccess({ saved: true });
   } catch (error) {
@@ -122,6 +125,8 @@ export async function DELETE(req: NextRequest) {
         },
       },
     });
+
+    console.log(`[AUDIT] Credentials removed for org=${ctx.orgId} by user=${ctx.userId} provider=${provider}`);
 
     return apiSuccess({ removed: provider });
   } catch (error) {

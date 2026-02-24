@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/api-helpers";
-import { quickbooksProvider, setQuickBooksCredentials } from "@/lib/accounting/quickbooks";
+import { quickbooksProvider } from "@/lib/accounting/quickbooks";
 import { validateOAuthState } from "@/lib/accounting/providers";
 import { getCredentials } from "@/lib/accounting/credentials";
+import { encrypt } from "@/lib/encryption";
 import prisma from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
     const ctx = await requirePermission("accounting:write");
-
-    // Inject DB credentials if available
-    const creds = await getCredentials("quickbooks", ctx.orgId);
-    if (creds) setQuickBooksCredentials(creds.clientId, creds.clientSecret, creds.sandbox);
-
     const { searchParams } = new URL(req.url);
 
     const code = searchParams.get("code");
@@ -34,17 +30,23 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Validate OAuth state to prevent CSRF attacks
-    if (!validateOAuthState(state)) {
+    // Validate OAuth state from database (one-time use)
+    const stateData = await validateOAuthState(state);
+    if (!stateData) {
       return NextResponse.json({ error: "Invalid or expired OAuth state" }, { status: 400 });
     }
 
-    // Validate state contains this org's ID
-    const stateParts = state.split(":");
-    const orgIdFromState = stateParts[0];
-    const returnTo = stateParts.slice(2).join(":") || ""; // Everything after orgId:random
-    if (orgIdFromState !== ctx.orgId) {
+    // Validate state belongs to this org
+    if (stateData.orgId !== ctx.orgId) {
       return NextResponse.json({ error: "Invalid state parameter" }, { status: 400 });
+    }
+
+    const returnTo = stateData.returnTo || "";
+
+    // Resolve credentials for this org
+    const creds = await getCredentials("quickbooks", ctx.orgId);
+    if (!creds) {
+      return NextResponse.json({ error: "QuickBooks credentials not found" }, { status: 400 });
     }
 
     // Check no existing connection
@@ -58,26 +60,28 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Exchange code for tokens
-    const tokens = await quickbooksProvider.exchangeCode(code);
+    // Exchange code for tokens (credentials passed as parameter, not global)
+    const tokens = await quickbooksProvider.exchangeCode(code, creds);
     tokens.tenantId = realmId;
 
     // Get the QuickBooks company info
     const qbOrg = await quickbooksProvider.getOrganisation(tokens);
 
-    // Create the connection record
+    // Store tokens encrypted at rest
     await prisma.accountingConnection.create({
       data: {
         orgId: ctx.orgId,
         provider: "quickbooks",
         status: "connected",
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
+        accessToken: encrypt(tokens.accessToken),
+        refreshToken: encrypt(tokens.refreshToken),
         tokenExpiresAt: tokens.expiresAt,
         externalOrgId: realmId,
         settings: { companyName: qbOrg.name },
       },
     });
+
+    console.log(`[AUDIT] QuickBooks connected for org=${ctx.orgId} by user=${ctx.userId}`);
 
     const base = process.env.NEXTAUTH_URL || "http://localhost:3000";
     const redirectPath = returnTo === "onboarding" ? "/onboarding" : "/settings";
@@ -85,9 +89,8 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("QuickBooks callback error:", error);
     const base = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const msg = error instanceof Error ? error.message : "Connection failed";
     return NextResponse.redirect(
-      `${base}/settings?accounting_error=${encodeURIComponent(msg)}`
+      `${base}/settings?accounting_error=${encodeURIComponent("Connection failed. Please try again.")}`
     );
   }
 }

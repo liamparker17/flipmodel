@@ -1,6 +1,6 @@
 // ─── Xero OAuth2 + API Client ───
 
-import type { OAuthTokens, AccountingProvider, AccountingAccount, AccountingContact, AccountingInvoice } from "./providers";
+import type { OAuthTokens, AccountingProvider, AccountingAccount, AccountingContact, AccountingInvoice, ProviderCredentials } from "./providers";
 import { getRedirectUri } from "./providers";
 
 const AUTH_URL = "https://login.xero.com/identity/connect/authorize";
@@ -19,29 +19,6 @@ const SCOPES = [
   "accounting.reports.read",
 ].join(" ");
 
-// Credentials can be injected from DB or fall back to env vars
-let _injectedClientId: string | null = null;
-let _injectedClientSecret: string | null = null;
-
-export function setXeroCredentials(clientId: string, clientSecret: string) {
-  _injectedClientId = clientId;
-  _injectedClientSecret = clientSecret;
-}
-
-function getClientId(): string {
-  if (_injectedClientId) return _injectedClientId;
-  const id = process.env.XERO_CLIENT_ID;
-  if (!id) throw new Error("XERO_CLIENT_ID is not configured. Add credentials in Settings > Accounting.");
-  return id;
-}
-
-function getClientSecret(): string {
-  if (_injectedClientSecret) return _injectedClientSecret;
-  const secret = process.env.XERO_CLIENT_SECRET;
-  if (!secret) throw new Error("XERO_CLIENT_SECRET is not configured. Add credentials in Settings > Accounting.");
-  return secret;
-}
-
 async function xeroFetch(url: string, tokens: OAuthTokens, options: RequestInit = {}) {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${tokens.accessToken}`,
@@ -51,21 +28,26 @@ async function xeroFetch(url: string, tokens: OAuthTokens, options: RequestInit 
     ...(options.headers as Record<string, string> || {}),
   };
 
-  const res = await fetch(url, { ...options, headers });
+  const res = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(15000) });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Xero API error ${res.status}: ${text}`);
+    console.error(`Xero API error ${res.status}:`, text);
+    throw new Error(`Xero API error (${res.status})`);
   }
   return res.json();
+}
+
+function basicAuth(creds: ProviderCredentials): string {
+  return `Basic ${Buffer.from(`${creds.clientId}:${creds.clientSecret}`).toString("base64")}`;
 }
 
 export const xeroProvider: AccountingProvider = {
   name: "xero",
 
-  getAuthUrl(state: string): string {
+  getAuthUrl(state: string, creds: ProviderCredentials): string {
     const params = new URLSearchParams({
       response_type: "code",
-      client_id: getClientId(),
+      client_id: creds.clientId,
       redirect_uri: getRedirectUri("xero"),
       scope: SCOPES,
       state,
@@ -73,23 +55,25 @@ export const xeroProvider: AccountingProvider = {
     return `${AUTH_URL}?${params.toString()}`;
   },
 
-  async exchangeCode(code: string): Promise<OAuthTokens> {
+  async exchangeCode(code: string, creds: ProviderCredentials): Promise<OAuthTokens> {
     const res = await fetch(TOKEN_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${Buffer.from(`${getClientId()}:${getClientSecret()}`).toString("base64")}`,
+        Authorization: basicAuth(creds),
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
         redirect_uri: getRedirectUri("xero"),
       }),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Xero token exchange failed: ${text}`);
+      console.error("Xero token exchange failed:", text);
+      throw new Error("Xero token exchange failed");
     }
 
     const data = await res.json();
@@ -97,7 +81,9 @@ export const xeroProvider: AccountingProvider = {
     // Get tenant ID from connections endpoint
     const connectionsRes = await fetch(CONNECTIONS_URL, {
       headers: { Authorization: `Bearer ${data.access_token}` },
+      signal: AbortSignal.timeout(15000),
     });
+    if (!connectionsRes.ok) throw new Error("Failed to fetch Xero connections");
     const connections = await connectionsRes.json();
     const tenantId = connections[0]?.tenantId;
 
@@ -109,22 +95,24 @@ export const xeroProvider: AccountingProvider = {
     };
   },
 
-  async refreshTokens(refreshToken: string): Promise<OAuthTokens> {
+  async refreshTokens(refreshToken: string, creds: ProviderCredentials): Promise<OAuthTokens> {
     const res = await fetch(TOKEN_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${Buffer.from(`${getClientId()}:${getClientSecret()}`).toString("base64")}`,
+        Authorization: basicAuth(creds),
       },
       body: new URLSearchParams({
         grant_type: "refresh_token",
         refresh_token: refreshToken,
       }),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Xero token refresh failed: ${text}`);
+      console.error("Xero token refresh failed:", text);
+      throw new Error("Xero token refresh failed");
     }
 
     const data = await res.json();
@@ -132,7 +120,9 @@ export const xeroProvider: AccountingProvider = {
     // Get tenant ID from connections
     const connectionsRes = await fetch(CONNECTIONS_URL, {
       headers: { Authorization: `Bearer ${data.access_token}` },
+      signal: AbortSignal.timeout(15000),
     });
+    if (!connectionsRes.ok) throw new Error("Failed to fetch Xero connections");
     const connections = await connectionsRes.json();
     const tenantId = connections[0]?.tenantId;
 

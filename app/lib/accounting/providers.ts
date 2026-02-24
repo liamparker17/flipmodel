@@ -1,5 +1,7 @@
 // ─── Shared accounting provider interface & utilities ───
 
+import prisma from "@/lib/db";
+
 export interface OAuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -35,13 +37,20 @@ export interface AccountingInvoice {
   dueDate?: string;
 }
 
+/** Credentials passed per-request (no module-level state) */
+export interface ProviderCredentials {
+  clientId: string;
+  clientSecret: string;
+  sandbox?: boolean;
+}
+
 export interface AccountingProvider {
   name: string;
 
-  // OAuth
-  getAuthUrl(state: string): string;
-  exchangeCode(code: string): Promise<OAuthTokens>;
-  refreshTokens(refreshToken: string): Promise<OAuthTokens>;
+  // OAuth — credentials passed per-request for thread safety
+  getAuthUrl(state: string, creds: ProviderCredentials): string;
+  exchangeCode(code: string, creds: ProviderCredentials): Promise<OAuthTokens>;
+  refreshTokens(refreshToken: string, creds: ProviderCredentials): Promise<OAuthTokens>;
 
   // API calls (all require tokens)
   getOrganisation(tokens: OAuthTokens): Promise<{ id: string; name: string }>;
@@ -64,21 +73,35 @@ export function generateOAuthState(): string {
   return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// ─── OAuth state validation store ───
+// ─── Database-backed OAuth state validation ───
 
-const pendingStates = new Map<string, number>(); // state -> expiry timestamp
+export async function storeOAuthState(orgId: string, returnTo?: string): Promise<string> {
+  const state = generateOAuthState();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
 
-export function storeOAuthState(state: string): void {
-  pendingStates.set(state, Date.now() + 10 * 60 * 1000); // 10 min expiry
-  // Cleanup expired entries
-  for (const [key, expiry] of pendingStates.entries()) {
-    if (Date.now() > expiry) pendingStates.delete(key);
-  }
+  await prisma.oAuthState.create({
+    data: { state, orgId, returnTo: returnTo || null, expiresAt },
+  });
+
+  // Cleanup expired states (non-blocking)
+  prisma.oAuthState.deleteMany({
+    where: { expiresAt: { lt: new Date() } },
+  }).catch(() => {});
+
+  return state;
 }
 
-export function validateOAuthState(state: string): boolean {
-  const expiry = pendingStates.get(state);
-  if (!expiry || Date.now() > expiry) return false;
-  pendingStates.delete(state);
-  return true;
+export async function validateOAuthState(state: string): Promise<{ orgId: string; returnTo: string | null } | null> {
+  const record = await prisma.oAuthState.findUnique({ where: { state } });
+
+  if (!record || record.expiresAt < new Date()) {
+    // Clean up if expired
+    if (record) await prisma.oAuthState.delete({ where: { id: record.id } }).catch(() => {});
+    return null;
+  }
+
+  // Consume the state (one-time use)
+  await prisma.oAuthState.delete({ where: { id: record.id } });
+
+  return { orgId: record.orgId, returnTo: record.returnTo };
 }

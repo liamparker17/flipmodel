@@ -1,21 +1,17 @@
 // ─── Resolve accounting credentials from DB (org settings) or env vars ───
 
 import prisma from "@/lib/db";
-
-export interface AccountingCredentials {
-  clientId: string;
-  clientSecret: string;
-  sandbox?: boolean;
-}
+import { encrypt, decrypt, isEncrypted } from "@/lib/encryption";
+import type { ProviderCredentials } from "./providers";
 
 /**
  * Get credentials for a provider, checking org-level DB storage first, then env vars.
- * This allows orgs to enter their own API keys via the settings UI.
+ * Credentials stored in DB are encrypted at rest.
  */
 export async function getCredentials(
   provider: "xero" | "quickbooks",
   orgId: string,
-): Promise<AccountingCredentials | null> {
+): Promise<ProviderCredentials | null> {
   // 1. Check org-level stored credentials first
   try {
     const org = await prisma.organisation.findUnique({
@@ -27,13 +23,16 @@ export async function getCredentials(
     const creds = (settings.accountingCredentials as Record<string, string>) || {};
 
     if (provider === "xero" && creds.xeroClientId && creds.xeroClientSecret) {
-      return { clientId: creds.xeroClientId, clientSecret: creds.xeroClientSecret };
+      return {
+        clientId: decryptIfEncrypted(creds.xeroClientId),
+        clientSecret: decryptIfEncrypted(creds.xeroClientSecret),
+      };
     }
 
     if (provider === "quickbooks" && creds.quickbooksClientId && creds.quickbooksClientSecret) {
       return {
-        clientId: creds.quickbooksClientId,
-        clientSecret: creds.quickbooksClientSecret,
+        clientId: decryptIfEncrypted(creds.quickbooksClientId),
+        clientSecret: decryptIfEncrypted(creds.quickbooksClientSecret),
         sandbox: creds.quickbooksSandbox === "true",
       };
     }
@@ -61,6 +60,29 @@ export async function getCredentials(
   }
 
   return null;
+}
+
+/**
+ * Encrypt credentials before storing in DB.
+ */
+export function encryptCredentials(value: string): string {
+  return encrypt(value);
+}
+
+/**
+ * Decrypt a value if it appears to be encrypted, otherwise return as-is.
+ * This provides backwards compatibility with any plaintext values stored before encryption was added.
+ */
+function decryptIfEncrypted(value: string): string {
+  if (isEncrypted(value)) {
+    try {
+      return decrypt(value);
+    } catch {
+      // If decryption fails, it might be a plaintext value that looks like base64
+      return value;
+    }
+  }
+  return value;
 }
 
 /**

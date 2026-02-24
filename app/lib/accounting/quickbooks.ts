@@ -1,14 +1,13 @@
 // ─── QuickBooks Online OAuth2 + API Client ───
 
-import type { OAuthTokens, AccountingProvider, AccountingAccount, AccountingContact, AccountingInvoice } from "./providers";
+import type { OAuthTokens, AccountingProvider, AccountingAccount, AccountingContact, AccountingInvoice, ProviderCredentials } from "./providers";
 import { getRedirectUri } from "./providers";
 
 const AUTH_URL = "https://appcenter.intuit.com/connect/oauth2";
 const TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
 
 // QuickBooks uses different base URLs for sandbox vs production
-function getApiBase(realmId: string): string {
-  const sandbox = _injectedSandbox ?? (process.env.QUICKBOOKS_SANDBOX === "true");
+function getApiBase(realmId: string, sandbox?: boolean): string {
   const host = sandbox
     ? "https://sandbox-quickbooks.api.intuit.com"
     : "https://quickbooks.api.intuit.com";
@@ -16,31 +15,6 @@ function getApiBase(realmId: string): string {
 }
 
 const SCOPES = "com.intuit.quickbooks.accounting";
-
-// Credentials can be injected from DB or fall back to env vars
-let _injectedClientId: string | null = null;
-let _injectedClientSecret: string | null = null;
-let _injectedSandbox: boolean | null = null;
-
-export function setQuickBooksCredentials(clientId: string, clientSecret: string, sandbox?: boolean) {
-  _injectedClientId = clientId;
-  _injectedClientSecret = clientSecret;
-  _injectedSandbox = sandbox ?? null;
-}
-
-function getClientId(): string {
-  if (_injectedClientId) return _injectedClientId;
-  const id = process.env.QUICKBOOKS_CLIENT_ID;
-  if (!id) throw new Error("QUICKBOOKS_CLIENT_ID is not configured. Add credentials in Settings > Accounting.");
-  return id;
-}
-
-function getClientSecret(): string {
-  if (_injectedClientSecret) return _injectedClientSecret;
-  const secret = process.env.QUICKBOOKS_CLIENT_SECRET;
-  if (!secret) throw new Error("QUICKBOOKS_CLIENT_SECRET is not configured. Add credentials in Settings > Accounting.");
-  return secret;
-}
 
 async function qbFetch(url: string, tokens: OAuthTokens, options: RequestInit = {}) {
   const headers: Record<string, string> = {
@@ -50,21 +24,26 @@ async function qbFetch(url: string, tokens: OAuthTokens, options: RequestInit = 
     ...(options.headers as Record<string, string> || {}),
   };
 
-  const res = await fetch(url, { ...options, headers });
+  const res = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(15000) });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`QuickBooks API error ${res.status}: ${text}`);
+    console.error(`QuickBooks API error ${res.status}:`, text);
+    throw new Error(`QuickBooks API error (${res.status})`);
   }
   return res.json();
+}
+
+function basicAuth(creds: ProviderCredentials): string {
+  return `Basic ${Buffer.from(`${creds.clientId}:${creds.clientSecret}`).toString("base64")}`;
 }
 
 export const quickbooksProvider: AccountingProvider = {
   name: "quickbooks",
 
-  getAuthUrl(state: string): string {
+  getAuthUrl(state: string, creds: ProviderCredentials): string {
     const params = new URLSearchParams({
       response_type: "code",
-      client_id: getClientId(),
+      client_id: creds.clientId,
       redirect_uri: getRedirectUri("quickbooks"),
       scope: SCOPES,
       state,
@@ -72,24 +51,26 @@ export const quickbooksProvider: AccountingProvider = {
     return `${AUTH_URL}?${params.toString()}`;
   },
 
-  async exchangeCode(code: string): Promise<OAuthTokens> {
+  async exchangeCode(code: string, creds: ProviderCredentials): Promise<OAuthTokens> {
     const res = await fetch(TOKEN_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
-        Authorization: `Basic ${Buffer.from(`${getClientId()}:${getClientSecret()}`).toString("base64")}`,
+        Authorization: basicAuth(creds),
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
         redirect_uri: getRedirectUri("quickbooks"),
       }),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`QuickBooks token exchange failed: ${text}`);
+      console.error("QuickBooks token exchange failed:", text);
+      throw new Error("QuickBooks token exchange failed");
     }
 
     const data = await res.json();
@@ -102,23 +83,25 @@ export const quickbooksProvider: AccountingProvider = {
     };
   },
 
-  async refreshTokens(refreshToken: string): Promise<OAuthTokens> {
+  async refreshTokens(refreshToken: string, creds: ProviderCredentials): Promise<OAuthTokens> {
     const res = await fetch(TOKEN_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
-        Authorization: `Basic ${Buffer.from(`${getClientId()}:${getClientSecret()}`).toString("base64")}`,
+        Authorization: basicAuth(creds),
       },
       body: new URLSearchParams({
         grant_type: "refresh_token",
         refresh_token: refreshToken,
       }),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`QuickBooks token refresh failed: ${text}`);
+      console.error("QuickBooks token refresh failed:", text);
+      throw new Error("QuickBooks token refresh failed");
     }
 
     const data = await res.json();
