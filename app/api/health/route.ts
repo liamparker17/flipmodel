@@ -38,13 +38,24 @@ export async function GET() {
   try {
     const { auth } = await import("@/lib/auth");
     checks.authImport = "ok";
-    // Try to get a session (will be null for unauthenticated)
     const session = await auth();
     checks.authSession = session ? "has session" : "no session (expected)";
   } catch (e: unknown) {
     checks.authImport = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
     if (e instanceof Error && e.stack) {
       checks.authStack = e.stack.split("\n").slice(0, 5).join("\n");
+    }
+  }
+
+  // 5. Try signIn("google") programmatically
+  try {
+    const { signIn } = await import("@/lib/auth");
+    const result = await signIn("google", { redirect: false });
+    checks.signInResult = result;
+  } catch (e: unknown) {
+    checks.signInError = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    if (e instanceof Error && e.stack) {
+      checks.signInStack = e.stack.split("\n").slice(0, 8).join("\n");
     }
   }
 
