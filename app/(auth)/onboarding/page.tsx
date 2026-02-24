@@ -57,11 +57,32 @@ export default function OnboardingPage() {
   const handleFinish = async () => {
     setSaving(true);
     try {
+      const name = companyName.trim();
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+      // 1. Create organisation
+      const orgRes = await fetch("/api/org", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, slug }),
+      });
+      if (!orgRes.ok) {
+        const err = await orgRes.json().catch(() => null);
+        // If user already has an org, treat as success
+        if (!(err?.error && err.error.includes("already belong"))) {
+          throw new Error(err?.error || "Failed to create organisation");
+        }
+      }
+
+      // 2. Migrate existing data to the new org
+      await fetch("/api/org/migrate", { method: "POST" }).catch(() => {});
+
+      // 3. Save user profile preferences
       await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          companyName: companyName.trim(),
+          companyName: name,
           location: location.trim(),
           inviteEmails: inviteEmails
             .split(",")
@@ -75,6 +96,7 @@ export default function OnboardingPage() {
           onboardingComplete: true,
         }),
       });
+
       router.push("/dashboard");
     } catch {
       router.push("/dashboard");

@@ -16,11 +16,18 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const { createDeal } = useDeals();
-  const { role } = useOrgContext();
+  const { role, hasOrg, loading: orgLoading } = useOrgContext();
   const [showTour, setShowTour] = useState(false);
   const [userPrefs, setUserPrefs] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
+    if (!orgLoading && !hasOrg) {
+      router.replace("/onboarding");
+    }
+  }, [orgLoading, hasOrg, router]);
+
+  useEffect(() => {
+    if (!hasOrg) return;
     fetch("/api/user/profile")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -32,7 +39,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [hasOrg]);
 
   const markComplete = async () => {
     const updated = { ...userPrefs, tutorialCompleted: true };
@@ -55,6 +62,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   const tourSteps = role ? getStepsForRole(role) : [];
+
+  if (orgLoading) {
+    return (
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        minHeight: "100vh", background: theme.bg, color: theme.textDim,
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  if (!hasOrg) return null;
 
   return (
     <div style={{
