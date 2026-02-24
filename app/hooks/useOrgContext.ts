@@ -5,6 +5,7 @@ import type { OrgRole, Permission, ModuleKey } from "@/types/org";
 
 interface OrgContextMember {
   id: string;
+  userId: string;
   role: OrgRole;
   departmentId: string | null;
   title: string | null;
@@ -74,20 +75,25 @@ export default function useOrgContext(): OrgContextData {
       // The API returns the org with members, but we need to identify ours
       // We'll use a separate session check or the member data from session
       // For now, we use the first active member (the API is scoped to the user's org)
+      // Find the current user's member record using the ID returned by the API
+      const currentMemberId = data.currentMemberId;
+      const currentUserId = data.currentUserId;
       if (data.members && data.members.length > 0) {
-        // We'll get our own member info from /api/org endpoint which scopes to our org
-        // For the member role, we need to fetch session or use a dedicated endpoint
-        // The org GET already validates membership, so we know we're a member
-        const currentMember = data.members[0]; // Will be refined when session data is available
-        setMember({
-          id: currentMember.id,
-          role: currentMember.role as OrgRole,
-          departmentId: currentMember.departmentId,
-          title: currentMember.title,
-          moduleOverrides: currentMember.moduleOverrides,
-          permissionOverrides: currentMember.permissionOverrides,
-          isActive: currentMember.isActive,
-        });
+        const myMember = currentMemberId
+          ? data.members.find((m: Record<string, unknown>) => m.id === currentMemberId)
+          : data.members[0];
+        if (myMember) {
+          setMember({
+            id: myMember.id,
+            userId: currentUserId || (myMember.user as Record<string, string>)?.id || "",
+            role: myMember.role as OrgRole,
+            departmentId: myMember.departmentId,
+            title: myMember.title,
+            moduleOverrides: myMember.moduleOverrides,
+            permissionOverrides: myMember.permissionOverrides,
+            isActive: myMember.isActive,
+          });
+        }
       }
       setError(null);
     } catch {

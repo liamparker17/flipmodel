@@ -455,7 +455,7 @@ export default function SettingsPage() {
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
                   <SettingRow label="Name" value={profileValue("name")} type="text" onChange={(v) => handleProfileChange("name", v)} />
                   <SettingRow label="Email" value={profileValue("email")} type="text" disabled help="Email cannot be changed" />
-                  <SettingRow label="Company" value={profileValue("company")} type="text" onChange={(v) => handleProfileChange("company", v)} />
+                  <SettingRow label="Organisation" value={org?.name || "No organisation"} type="text" disabled help="Managed in Organisation settings" />
                   <SettingRow label="Phone" value={profileValue("phone")} type="text" onChange={(v) => handleProfileChange("phone", v)} />
                 </div>
                 {hasProfileChanges && (

@@ -36,7 +36,8 @@ export async function GET() {
     });
 
     if (!org) return apiError("Organisation not found", 404);
-    return apiSuccess(org);
+    // Include the current user's member ID so the client can identify themselves
+    return apiSuccess({ ...org, currentMemberId: ctx.member.id, currentUserId: ctx.userId });
   } catch (error) {
     return handleApiError(error);
   }
