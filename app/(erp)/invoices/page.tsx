@@ -35,7 +35,10 @@ export default function InvoicesPage() {
 
   const fetchInvoices = useCallback(async () => {
     const res = await fetch("/api/invoices");
-    if (res.ok) setInvoices(await res.json());
+    if (res.ok) {
+      const json = await res.json();
+      setInvoices(json.data ?? []);
+    }
   }, []);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);

@@ -36,7 +36,10 @@ export default function DocumentsPage() {
 
   const fetchDocs = useCallback(async () => {
     const res = await fetch("/api/documents");
-    if (res.ok) setDocs(await res.json());
+    if (res.ok) {
+      const json = await res.json();
+      setDocs(json.data ?? []);
+    }
   }, []);
 
   useEffect(() => { fetchDocs(); }, [fetchDocs]);

@@ -182,7 +182,8 @@ export default function useApiDeals() {
   const fetchDeals = useCallback(async () => {
     try {
       const raw = await api("/api/deals");
-      setDeals(raw.map(dbToClientDeal));
+      const items = raw.data ?? raw;
+      setDeals(items.map(dbToClientDeal));
     } catch (err) {
       // Error is silently caught; loaded state will be set and deals will remain empty
     } finally {

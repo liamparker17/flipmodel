@@ -105,7 +105,7 @@ export default function useApiTools() {
   const fetchAll = useCallback(async () => {
     try {
       const data = await api("/api/tools");
-      setTools(data.tools.map(dbToTool));
+      setTools((data.data ?? data.tools ?? []).map(dbToTool));
       setCheckouts(data.checkouts.map(dbToCheckout));
       setMaintenance(data.maintenance.map(dbToMaintenance));
       setIncidents(data.incidents.map(dbToIncident));
