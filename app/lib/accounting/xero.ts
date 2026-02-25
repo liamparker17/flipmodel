@@ -2,6 +2,7 @@
 
 import type { OAuthTokens, AccountingProvider, AccountingAccount, AccountingContact, AccountingInvoice, ProviderCredentials } from "./providers";
 import { getRedirectUri } from "./providers";
+import { logger } from "../logger";
 
 const AUTH_URL = "https://login.xero.com/identity/connect/authorize";
 const TOKEN_URL = "https://identity.xero.com/connect/token";
@@ -31,7 +32,7 @@ async function xeroFetch(url: string, tokens: OAuthTokens, options: RequestInit 
   const res = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(15000) });
   if (!res.ok) {
     const text = await res.text();
-    console.error(`Xero API error ${res.status}:`, text);
+    logger.error("Xero API error", { status: res.status, response: text });
     throw new Error(`Xero API error (${res.status})`);
   }
   return res.json();
@@ -72,7 +73,7 @@ export const xeroProvider: AccountingProvider = {
 
     if (!res.ok) {
       const text = await res.text();
-      console.error("Xero token exchange failed:", text);
+      logger.error("Xero token exchange failed", { response: text });
       throw new Error("Xero token exchange failed");
     }
 
@@ -111,7 +112,7 @@ export const xeroProvider: AccountingProvider = {
 
     if (!res.ok) {
       const text = await res.text();
-      console.error("Xero token refresh failed:", text);
+      logger.error("Xero token refresh failed", { response: text });
       throw new Error("Xero token refresh failed");
     }
 

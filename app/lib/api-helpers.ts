@@ -5,6 +5,7 @@ import { ZodError } from "zod";
 import prisma from "./db";
 import { hasPermission, canAccessModule } from "./permissions";
 import type { Permission, ModuleKey } from "@/types/org";
+import { logger } from "./logger";
 
 // ─── Auth Helpers ───
 
@@ -166,6 +167,6 @@ export function handleApiError(error: unknown) {
   if (error instanceof ZodError) {
     return apiError((error as ZodError).issues.map((e) => e.message).join(", "), 400);
   }
-  console.error("API Error:", error);
+  logger.error("Unhandled API error", { error: error instanceof Error ? error.message : "Unknown", stack: error instanceof Error ? error.stack : undefined });
   return apiError("Internal server error", 500);
 }

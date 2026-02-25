@@ -419,6 +419,9 @@ export default function SettingsPage() {
     dashboard: "Dashboard", pipeline: "Pipeline", projects: "Projects", contacts: "Contacts",
     finance: "Finance", invoices: "Invoices", tools: "Tools", reports: "Reports",
     team: "Team", accounting: "Accounting", settings: "Settings", suppliers: "Suppliers", documents: "Documents",
+    gl: "General Ledger", payables: "Accounts Payable", receivables: "Accounts Receivable",
+    purchase_orders: "Purchase Orders", inventory: "Inventory", banking: "Banking",
+    hr: "Human Resources", payroll: "Payroll",
   };
 
   const allModules: ModuleKey[] = ["dashboard", "pipeline", "projects", "contacts", "finance", "invoices", "tools", "reports", "team", "accounting", "settings", "suppliers", "documents"];

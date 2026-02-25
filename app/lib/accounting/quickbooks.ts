@@ -2,6 +2,7 @@
 
 import type { OAuthTokens, AccountingProvider, AccountingAccount, AccountingContact, AccountingInvoice, ProviderCredentials } from "./providers";
 import { getRedirectUri } from "./providers";
+import { logger } from "../logger";
 
 const AUTH_URL = "https://appcenter.intuit.com/connect/oauth2";
 const TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
@@ -27,7 +28,7 @@ async function qbFetch(url: string, tokens: OAuthTokens, options: RequestInit = 
   const res = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(15000) });
   if (!res.ok) {
     const text = await res.text();
-    console.error(`QuickBooks API error ${res.status}:`, text);
+    logger.error("QuickBooks API error", { status: res.status, response: text });
     throw new Error(`QuickBooks API error (${res.status})`);
   }
   return res.json();
@@ -69,7 +70,7 @@ export const quickbooksProvider: AccountingProvider = {
 
     if (!res.ok) {
       const text = await res.text();
-      console.error("QuickBooks token exchange failed:", text);
+      logger.error("QuickBooks token exchange failed", { response: text });
       throw new Error("QuickBooks token exchange failed");
     }
 
@@ -100,7 +101,7 @@ export const quickbooksProvider: AccountingProvider = {
 
     if (!res.ok) {
       const text = await res.text();
-      console.error("QuickBooks token refresh failed:", text);
+      logger.error("QuickBooks token refresh failed", { response: text });
       throw new Error("QuickBooks token refresh failed");
     }
 

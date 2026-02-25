@@ -1,20 +1,23 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { parsePagination, paginatedResult } from "@/lib/pagination";
 import { createToolSchema } from "@/lib/validations/tool";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const ctx = await requireOrgMember();
+    const pagination = parsePagination(req);
 
-    const [tools, checkouts, maintenance, incidents] = await Promise.all([
-      prisma.tool.findMany({ where: { orgId: ctx.orgId }, orderBy: { updatedAt: "desc" } }),
+    const [tools, total, checkouts, maintenance, incidents] = await Promise.all([
+      prisma.tool.findMany({ where: { orgId: ctx.orgId }, orderBy: { updatedAt: "desc" }, take: pagination.limit, skip: pagination.skip }),
+      prisma.tool.count({ where: { orgId: ctx.orgId } }),
       prisma.toolCheckout.findMany({ where: { orgId: ctx.orgId }, orderBy: { checkedOutAt: "desc" } }),
       prisma.toolMaintenance.findMany({ where: { orgId: ctx.orgId }, orderBy: { date: "desc" } }),
       prisma.toolIncident.findMany({ where: { orgId: ctx.orgId }, orderBy: { date: "desc" } }),
     ]);
 
-    return apiSuccess({ tools, checkouts, maintenance, incidents });
+    return apiSuccess({ ...paginatedResult(tools, total, pagination), checkouts, maintenance, incidents });
   } catch (error) {
     return handleApiError(error);
   }

@@ -1,28 +1,26 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { parsePagination, paginatedResult } from "@/lib/pagination";
 
 export async function GET(req: NextRequest) {
   try {
     const ctx = await requireOrgMember();
-    const page = parseInt(req.nextUrl.searchParams.get("page") || "1");
-    const limit = parseInt(req.nextUrl.searchParams.get("limit") || "20");
+    const pagination = parsePagination(req);
     const unreadOnly = req.nextUrl.searchParams.get("unread") === "true";
 
     const where: Record<string, unknown> = { userId: ctx.userId, orgId: ctx.orgId };
     if (unreadOnly) where.read = false;
 
-    const [notifications, total] = await Promise.all([
-      prisma.notification.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.notification.count({ where }),
-    ]);
+    const total = await prisma.notification.count({ where });
+    const notifications = await prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: pagination.skip,
+      take: pagination.limit,
+    });
 
-    return apiSuccess({ notifications, total, page, limit });
+    return apiSuccess(paginatedResult(notifications, total, pagination));
   } catch (error) {
     return handleApiError(error);
   }

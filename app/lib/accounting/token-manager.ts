@@ -6,6 +6,7 @@ import type { OAuthTokens } from "./providers";
 import { xeroProvider } from "./xero";
 import { quickbooksProvider } from "./quickbooks";
 import { getCredentials } from "./credentials";
+import { logger } from "../logger";
 
 /**
  * Decrypt a token value if encrypted, otherwise return as-is
@@ -63,7 +64,7 @@ export async function getValidTokens(connectionId: string): Promise<OAuthTokens>
         },
       });
 
-      console.log(`[AUDIT] Token refreshed for connection=${connectionId} provider=${connection.provider}`);
+      logger.info("Token refreshed", { connectionId, provider: connection.provider });
 
       return { ...refreshed, tenantId: refreshed.tenantId || tokens.tenantId };
     } catch (error) {
@@ -72,7 +73,7 @@ export async function getValidTokens(connectionId: string): Promise<OAuthTokens>
         where: { id: connectionId },
         data: { status: "expired" },
       });
-      console.error(`[AUDIT] Token refresh FAILED for connection=${connectionId}:`, error);
+      logger.error("Token refresh failed", { connectionId, error });
       throw new Error("Token refresh failed. Please reconnect your accounting provider.");
     }
   }

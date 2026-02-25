@@ -110,7 +110,7 @@ export default function useApiTools() {
       setMaintenance(data.maintenance.map(dbToMaintenance));
       setIncidents(data.incidents.map(dbToIncident));
     } catch (err) {
-      console.error("Failed to fetch tools:", err);
+      // Error is silently caught; loaded state will be set and collections will remain empty
     } finally {
       setLoaded(true);
     }

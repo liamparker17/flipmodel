@@ -1,5 +1,6 @@
 import type { Deal, Milestone } from "../types/deal";
 import type { Tool, ToolCheckout } from "../types/tool";
+import { BUDGET_ALERT_THRESHOLD } from "./constants";
 
 export interface NotificationData {
   type: string;
@@ -50,7 +51,7 @@ export function generateNotifications(
       .filter((e) => !e.isProjected)
       .reduce((s, e) => s + e.amount, 0);
     const budget = deal.data.quickRenoEstimate || 0;
-    if (budget > 0 && totalExpenses > budget * 0.8) {
+    if (budget > 0 && totalExpenses > budget * BUDGET_ALERT_THRESHOLD) {
       notifications.push({
         type: "budget_alert",
         title: "Budget Warning",

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { parsePagination, paginatedResult } from "@/lib/pagination";
 import { z } from "zod";
 
 const createItemSchema = z.object({
@@ -28,16 +29,20 @@ const updateItemSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const ctx = await requireOrgMember();
+    const pagination = parsePagination(req);
     const dealId = req.nextUrl.searchParams.get("dealId");
 
     const where: Record<string, unknown> = { orgId: ctx.orgId };
     if (dealId) where.dealId = dealId;
 
+    const total = await prisma.shoppingListItem.count({ where });
     const items = await prisma.shoppingListItem.findMany({
       where,
       orderBy: { category: "asc" },
+      take: pagination.limit,
+      skip: pagination.skip,
     });
-    return apiSuccess(items);
+    return apiSuccess(paginatedResult(items, total, pagination));
   } catch (error) {
     return handleApiError(error);
   }

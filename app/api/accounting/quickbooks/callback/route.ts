@@ -5,6 +5,7 @@ import { validateOAuthState } from "@/lib/accounting/providers";
 import { getCredentials } from "@/lib/accounting/credentials";
 import { encrypt } from "@/lib/encryption";
 import prisma from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   try {
@@ -81,13 +82,13 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    console.log(`[AUDIT] QuickBooks connected for org=${ctx.orgId} by user=${ctx.userId}`);
+    logger.info("QuickBooks connected", { orgId: ctx.orgId, userId: ctx.userId });
 
     const base = process.env.NEXTAUTH_URL || "http://localhost:3000";
     const redirectPath = returnTo === "onboarding" ? "/onboarding" : "/settings";
     return NextResponse.redirect(`${base}${redirectPath}?accounting_connected=quickbooks`);
   } catch (error) {
-    console.error("QuickBooks callback error:", error);
+    logger.error("QuickBooks callback error", { error });
     const base = process.env.NEXTAUTH_URL || "http://localhost:3000";
     return NextResponse.redirect(
       `${base}/settings?accounting_error=${encodeURIComponent("Connection failed. Please try again.")}`

@@ -22,6 +22,14 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<OrgRole, Permission[]> = {
     "activities:read", "activities:write",
     "notifications:read", "notifications:write",
     "departments:read", "departments:write",
+    "gl:read", "gl:write",
+    "payables:read", "payables:write",
+    "receivables:read", "receivables:write",
+    "purchase_orders:read", "purchase_orders:write", "purchase_orders:approve",
+    "inventory:read", "inventory:write",
+    "bank:read", "bank:write", "bank:reconcile",
+    "hr:read", "hr:write", "hr:approve",
+    "payroll:read", "payroll:write",
   ],
   finance_manager: [
     "deals:read",
@@ -40,6 +48,14 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<OrgRole, Permission[]> = {
     "activities:read",
     "notifications:read", "notifications:write",
     "departments:read",
+    "gl:read", "gl:write",
+    "payables:read", "payables:write",
+    "receivables:read", "receivables:write",
+    "purchase_orders:read",
+    "inventory:read",
+    "bank:read", "bank:write", "bank:reconcile",
+    "hr:read",
+    "payroll:read", "payroll:write",
   ],
   project_manager: [
     "deals:read", "deals:write",
@@ -58,6 +74,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<OrgRole, Permission[]> = {
     "activities:read", "activities:write",
     "notifications:read", "notifications:write",
     "departments:read",
+    "purchase_orders:read", "purchase_orders:write",
+    "inventory:read", "inventory:write",
+    "hr:read",
   ],
   site_supervisor: [
     "deals:read",
@@ -74,6 +93,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<OrgRole, Permission[]> = {
     "activities:read", "activities:write",
     "notifications:read", "notifications:write",
     "departments:read",
+    "purchase_orders:read",
+    "inventory:read",
   ],
   field_worker: [
     "deals:read",
@@ -104,6 +125,13 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<OrgRole, Permission[]> = {
     "shopping:read",
     "activities:read",
     "notifications:read",
+    "gl:read",
+    "payables:read",
+    "receivables:read",
+    "purchase_orders:read",
+    "inventory:read",
+    "bank:read",
+    "hr:read",
   ],
 };
 
@@ -113,18 +141,24 @@ export const DEFAULT_ROLE_MODULES: Record<OrgRole, ModuleKey[]> = {
   executive: [
     "dashboard", "pipeline", "projects", "contacts", "finance", "invoices",
     "tools", "reports", "team", "accounting", "settings", "suppliers", "documents",
+    "gl", "payables", "receivables", "purchase_orders", "inventory", "banking",
+    "hr", "payroll",
   ],
   finance_manager: [
     "dashboard", "pipeline", "contacts", "finance", "invoices",
     "reports", "accounting", "settings", "suppliers", "documents",
+    "gl", "payables", "receivables", "purchase_orders", "inventory", "banking",
+    "hr", "payroll",
   ],
   project_manager: [
     "dashboard", "pipeline", "projects", "contacts",
     "tools", "reports", "team", "settings", "suppliers", "documents",
+    "purchase_orders", "inventory",
   ],
   site_supervisor: [
     "dashboard", "pipeline", "projects", "contacts",
     "tools", "settings", "suppliers", "documents",
+    "inventory",
   ],
   field_worker: [
     "dashboard", "projects", "tools", "settings", "suppliers", "documents",
@@ -132,6 +166,8 @@ export const DEFAULT_ROLE_MODULES: Record<OrgRole, ModuleKey[]> = {
   viewer: [
     "dashboard", "pipeline", "projects", "contacts", "finance", "invoices",
     "reports", "settings", "suppliers", "documents",
+    "gl", "payables", "receivables", "purchase_orders", "inventory", "banking",
+    "hr",
   ],
 };
 

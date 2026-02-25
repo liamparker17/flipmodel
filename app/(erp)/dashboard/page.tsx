@@ -5,6 +5,7 @@ import useDeals from "../../hooks/api/useApiDeals";
 import useIsMobile from "../../hooks/useIsMobile";
 import { DEAL_STAGES, computeDealMetrics, getPortfolioMetrics, getCashFlowProjection } from "../../utils/dealHelpers";
 import { generateSuggestions } from "../../lib/automation";
+import { BUDGET_ALERT_THRESHOLD } from "@/lib/constants";
 import KPIGrid from "../../components/dashboard/KPIGrid";
 import PipelineFunnel from "../../components/dashboard/PipelineFunnel";
 import CashFlowChart from "../../components/dashboard/CashFlowChart";
@@ -68,7 +69,7 @@ export default function DashboardPage() {
   for (const deal of deals) {
     const actualExpenses = (deal.expenses || []).filter((e: any) => !e.isProjected).reduce((s: number, e: any) => s + e.amount, 0);
     const budget = deal.data?.quickRenoEstimate || 0;
-    if (budget > 0 && actualExpenses > budget * 0.8) {
+    if (budget > 0 && actualExpenses > budget * BUDGET_ALERT_THRESHOLD) {
       budgetAlerts.push({ dealId: deal.id, dealName: deal.name, actualSpend: actualExpenses, budget, pct: Math.round((actualExpenses / budget) * 100) });
     }
   }

@@ -1,13 +1,18 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { parsePagination, paginatedResult } from "@/lib/pagination";
 import { createDealSchema } from "@/lib/validations/deal";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const ctx = await requireOrgMember();
+    const pagination = parsePagination(req);
+    const total = await prisma.deal.count({ where: { orgId: ctx.orgId } });
     const deals = await prisma.deal.findMany({
       where: { orgId: ctx.orgId },
+      take: pagination.limit,
+      skip: pagination.skip,
       select: {
         id: true,
         name: true,
@@ -43,7 +48,7 @@ export async function GET() {
       },
       orderBy: { updatedAt: "desc" },
     });
-    return apiSuccess(deals);
+    return apiSuccess(paginatedResult(deals, total, pagination));
   } catch (error) {
     return handleApiError(error);
   }

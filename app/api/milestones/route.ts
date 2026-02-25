@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { parsePagination, paginatedResult } from "@/lib/pagination";
 import { z } from "zod";
 
 const createMilestoneSchema = z.object({
@@ -23,17 +24,21 @@ const createMilestoneSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const ctx = await requireOrgMember();
+    const pagination = parsePagination(req);
     const dealId = req.nextUrl.searchParams.get("dealId");
 
     const where: Record<string, unknown> = { orgId: ctx.orgId };
     if (dealId) where.dealId = dealId;
 
+    const total = await prisma.milestone.count({ where });
     const milestones = await prisma.milestone.findMany({
       where,
       include: { tasks: true },
       orderBy: { order: "asc" },
+      take: pagination.limit,
+      skip: pagination.skip,
     });
-    return apiSuccess(milestones);
+    return apiSuccess(paginatedResult(milestones, total, pagination));
   } catch (error) {
     return handleApiError(error);
   }

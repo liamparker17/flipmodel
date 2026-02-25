@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import { parsePagination, paginatedResult } from "@/lib/pagination";
 import { z } from "zod";
 
 const createInvoiceSchema = z.object({
@@ -27,14 +28,18 @@ export async function GET(req: NextRequest) {
     const ctx = await requireOrgMember();
     const dealId = req.nextUrl.searchParams.get("dealId");
 
+    const pagination = parsePagination(req);
     const where: Record<string, unknown> = { orgId: ctx.orgId };
     if (dealId) where.dealId = dealId;
 
+    const total = await prisma.invoice.count({ where });
     const invoices = await prisma.invoice.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      take: pagination.limit,
+      skip: pagination.skip,
     });
-    return apiSuccess(invoices);
+    return apiSuccess(paginatedResult(invoices, total, pagination));
   } catch (error) {
     return handleApiError(error);
   }

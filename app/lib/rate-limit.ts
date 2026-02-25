@@ -1,6 +1,10 @@
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
-export function rateLimit(key: string, maxAttempts: number = 5, windowMs: number = 15 * 60 * 1000): { success: boolean; remaining: number } {
+export function rateLimit(
+  key: string,
+  maxAttempts: number = 5,
+  windowMs: number = 15 * 60 * 1000
+): { success: boolean; remaining: number } {
   const now = Date.now();
   const record = rateLimitMap.get(key);
 
@@ -17,10 +21,20 @@ export function rateLimit(key: string, maxAttempts: number = 5, windowMs: number
   return { success: true, remaining: maxAttempts - record.count };
 }
 
-// Cleanup old entries every 30 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, val] of rateLimitMap.entries()) {
-    if (now > val.resetTime) rateLimitMap.delete(key);
-  }
-}, 30 * 60 * 1000);
+export function rateLimitApi(
+  key: string,
+  maxRequests: number = 100,
+  windowMs: number = 60 * 1000
+): { success: boolean; remaining: number } {
+  return rateLimit(`api:${key}`, maxRequests, windowMs);
+}
+
+// Cleanup stale entries every 5 minutes
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, val] of rateLimitMap.entries()) {
+      if (now > val.resetTime) rateLimitMap.delete(key);
+    }
+  }, 5 * 60 * 1000).unref?.();
+}

@@ -54,7 +54,15 @@ export type Permission =
   | "shopping:read" | "shopping:write"
   | "activities:read" | "activities:write"
   | "notifications:read" | "notifications:write"
-  | "departments:read" | "departments:write";
+  | "departments:read" | "departments:write"
+  | "gl:read" | "gl:write"
+  | "payables:read" | "payables:write"
+  | "receivables:read" | "receivables:write"
+  | "purchase_orders:read" | "purchase_orders:write" | "purchase_orders:approve"
+  | "inventory:read" | "inventory:write"
+  | "bank:read" | "bank:write" | "bank:reconcile"
+  | "hr:read" | "hr:write" | "hr:approve"
+  | "payroll:read" | "payroll:write";
 
 // ─── Module Keys ───
 
@@ -71,7 +79,15 @@ export type ModuleKey =
   | "accounting"
   | "settings"
   | "suppliers"
-  | "documents";
+  | "documents"
+  | "gl"
+  | "payables"
+  | "receivables"
+  | "purchase_orders"
+  | "inventory"
+  | "banking"
+  | "hr"
+  | "payroll";
 
 // ─── Interfaces ───
 

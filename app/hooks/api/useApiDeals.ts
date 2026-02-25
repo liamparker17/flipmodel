@@ -184,7 +184,7 @@ export default function useApiDeals() {
       const raw = await api("/api/deals");
       setDeals(raw.map(dbToClientDeal));
     } catch (err) {
-      console.error("Failed to fetch deals:", err);
+      // Error is silently caught; loaded state will be set and deals will remain empty
     } finally {
       setLoaded(true);
     }

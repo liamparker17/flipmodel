@@ -59,6 +59,9 @@ const MODULE_LABELS: Record<ModuleKey, string> = {
   dashboard: "Dashboard", pipeline: "Pipeline", projects: "Projects", contacts: "Contacts",
   finance: "Finance", invoices: "Invoices", tools: "Tools", reports: "Reports",
   team: "Team", accounting: "Accounting", settings: "Settings", suppliers: "Suppliers", documents: "Documents",
+  gl: "General Ledger", payables: "Accounts Payable", receivables: "Accounts Receivable",
+  purchase_orders: "Purchase Orders", inventory: "Inventory", banking: "Banking",
+  hr: "Human Resources", payroll: "Payroll",
 };
 
 function formatPermission(perm: string): string {

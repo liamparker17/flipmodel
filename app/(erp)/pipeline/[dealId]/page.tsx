@@ -6,6 +6,7 @@ import DealAnalysis from "../../../components/deals/DealAnalysis";
 import useDeals from "../../../hooks/api/useApiDeals";
 import { DEAL_STAGES, getStageColor, getStageLabel, computeDealMetrics, PRIORITY_CONFIG, getExpensesByCategory, getDealProgress, EXPENSE_CATEGORIES } from "../../../utils/dealHelpers";
 import type { Deal, DealData, DealStage, DealPriority, Expense, ExpenseCategory, PaymentMethod, Milestone, MilestoneStatus, DealContact, ContactRole, Activity } from "../../../types/deal";
+import { BUDGET_ALERT_THRESHOLD } from "@/lib/constants";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -385,7 +386,7 @@ function ExecutionTab({ deal, onAddExpense, onDeleteExpense, onAddMilestone, onU
             <span>{fmt(totalActual)} / {fmt(budget)}</span>
           </div>
           <div style={{ height: 10, background: theme.input, borderRadius: 5, overflow: "hidden", position: "relative" }}>
-            <div style={{ height: "100%", width: `${Math.min(budgetPct, 100)}%`, background: totalActual > budget ? theme.red : totalActual > budget * 0.8 ? theme.orange : theme.green, borderRadius: 5, transition: "width 0.3s" }} />
+            <div style={{ height: "100%", width: `${Math.min(budgetPct, 100)}%`, background: totalActual > budget ? theme.red : totalActual > budget * BUDGET_ALERT_THRESHOLD ? theme.orange : theme.green, borderRadius: 5, transition: "width 0.3s" }} />
             {totalProjected > 0 && (
               <div style={{ position: "absolute", top: 0, left: `${Math.min(budgetPct, 100)}%`, height: "100%", width: `${Math.min((totalProjected / budget) * 100, 100 - Math.min(budgetPct, 100))}%`, background: `${theme.orange}40`, borderRadius: "0 5px 5px 0" }} />
             )}

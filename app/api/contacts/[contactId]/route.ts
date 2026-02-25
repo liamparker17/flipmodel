@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { updateContactSchema } from "@/lib/validations/contact";
+import { encryptSensitiveFields, decryptSensitiveFields } from "@/lib/field-encryption";
 
 type Params = { params: Promise<{ contactId: string }> };
 
@@ -15,9 +16,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const existing = await prisma.contact.findFirst({ where: { id: contactId, orgId: ctx.orgId } });
     if (!existing) return apiError("Contact not found", 404);
 
+    const secureData = encryptSensitiveFields(data as Record<string, unknown>);
+
     const contact = await prisma.contact.update({
       where: { id: contactId },
-      data,
+      data: secureData,
     });
 
     return apiSuccess(contact);

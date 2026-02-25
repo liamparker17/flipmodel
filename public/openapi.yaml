@@ -1,0 +1,872 @@
+openapi: "3.0.3"
+info:
+  title: FlipModel ERP API
+  version: "1.0.0"
+  description: |
+    Property flipping and construction project management ERP API.
+    All list endpoints support pagination via `page` and `limit` query parameters.
+    State-changing requests require a CSRF token in the `x-csrf-token` header.
+
+servers:
+  - url: http://localhost:3000
+    description: Development
+  - url: https://flipmodel.vercel.app
+    description: Production
+
+security:
+  - cookieAuth: []
+    csrfToken: []
+
+tags:
+  - name: Auth
+    description: Authentication and signup
+  - name: Deals
+    description: Property deal management
+  - name: Contacts
+    description: CRM - contractors, suppliers, agents
+  - name: Expenses
+    description: Deal expense tracking
+  - name: Invoices
+    description: Invoice management
+  - name: GL
+    description: General Ledger - journal entries
+  - name: Payables
+    description: Accounts Payable - vendor bills
+  - name: Receivables
+    description: Accounts Receivable
+  - name: PurchaseOrders
+    description: Procurement - purchase orders
+  - name: Inventory
+    description: Inventory management
+  - name: Banking
+    description: Bank accounts and reconciliation
+  - name: FinancialStatements
+    description: Balance sheet, income statement, trial balance
+  - name: FinancialPeriods
+    description: Accounting period management
+  - name: Tools
+    description: Equipment and tool management
+  - name: Milestones
+    description: Project milestones
+  - name: Tasks
+    description: Milestone tasks
+  - name: HR
+    description: Human resources and payroll
+  - name: Notifications
+    description: User notifications
+  - name: Documents
+    description: Document management
+  - name: Search
+    description: Cross-module search
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+    csrfToken:
+      type: apiKey
+      in: header
+      name: x-csrf-token
+
+  parameters:
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+      description: Page number
+    limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 200
+      description: Items per page
+
+  schemas:
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+        hasMore:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    Deal:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        stage:
+          type: string
+          enum: [lead, quoted, purchased, renovating, listed, sold]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        purchasePrice:
+          type: number
+        expectedSalePrice:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+
+    Contact:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        company:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+
+    JournalEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        entryNumber:
+          type: string
+        date:
+          type: string
+          format: date
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, posted, reversed]
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/JournalLine"
+
+    JournalLine:
+      type: object
+      properties:
+        accountCode:
+          type: string
+        accountName:
+          type: string
+        debit:
+          type: number
+        credit:
+          type: number
+
+    VendorBill:
+      type: object
+      properties:
+        id:
+          type: string
+        billNumber:
+          type: string
+        status:
+          type: string
+          enum: [draft, approved, partially_paid, paid, overdue, cancelled]
+        total:
+          type: number
+        amountPaid:
+          type: number
+
+    Employee:
+      type: object
+      properties:
+        id:
+          type: string
+        employeeNumber:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        position:
+          type: string
+        status:
+          type: string
+          enum: [active, on_leave, terminated, suspended]
+
+paths:
+  /api/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 10
+                company:
+                  type: string
+      responses:
+        "201":
+          description: Account created
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/deals:
+    get:
+      tags: [Deals]
+      summary: List deals
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated list of deals
+        "401":
+          description: Unauthorized
+    post:
+      tags: [Deals]
+      summary: Create a deal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+                purchasePrice:
+                  type: number
+                expectedSalePrice:
+                  type: number
+                stage:
+                  type: string
+                priority:
+                  type: string
+      responses:
+        "201":
+          description: Deal created
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /api/deals/{dealId}:
+    get:
+      tags: [Deals]
+      summary: Get deal details
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deal details with expenses, milestones, contacts
+        "404":
+          description: Not found
+    patch:
+      tags: [Deals]
+      summary: Update a deal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deal updated
+    delete:
+      tags: [Deals]
+      summary: Delete a deal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deal deleted
+
+  /api/contacts:
+    get:
+      tags: [Contacts]
+      summary: List contacts
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - name: role
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated contacts
+    post:
+      tags: [Contacts]
+      summary: Create a contact
+      responses:
+        "201":
+          description: Contact created
+
+  /api/expenses:
+    get:
+      tags: [Expenses]
+      summary: List expenses
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - name: dealId
+          in: query
+          schema:
+            type: string
+        - name: signOffStatus
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated expenses
+    post:
+      tags: [Expenses]
+      summary: Create an expense
+      responses:
+        "201":
+          description: Expense created
+
+  /api/invoices:
+    get:
+      tags: [Invoices]
+      summary: List invoices
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated invoices
+    post:
+      tags: [Invoices]
+      summary: Create an invoice
+      responses:
+        "201":
+          description: Invoice created
+
+  /api/invoices/{invoiceId}:
+    get:
+      tags: [Invoices]
+      summary: Get invoice details
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invoice details
+    patch:
+      tags: [Invoices]
+      summary: Update an invoice
+      responses:
+        "200":
+          description: Invoice updated
+    delete:
+      tags: [Invoices]
+      summary: Delete an invoice (not paid)
+      responses:
+        "200":
+          description: Invoice deleted
+        "400":
+          description: Cannot delete paid invoice
+
+  /api/gl:
+    get:
+      tags: [GL]
+      summary: List journal entries
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, posted, reversed]
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Paginated journal entries
+    post:
+      tags: [GL]
+      summary: Create a journal entry (debits must equal credits)
+      responses:
+        "201":
+          description: Journal entry created
+
+  /api/gl/{entryId}/post:
+    post:
+      tags: [GL]
+      summary: Post a draft journal entry to the ledger
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Entry posted
+        "400":
+          description: Entry is not in draft status
+
+  /api/payables:
+    get:
+      tags: [Payables]
+      summary: List vendor bills
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated vendor bills
+    post:
+      tags: [Payables]
+      summary: Create a vendor bill
+      responses:
+        "201":
+          description: Vendor bill created
+
+  /api/payables/{billId}/pay:
+    post:
+      tags: [Payables]
+      summary: Record a payment against a vendor bill
+      parameters:
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Payment recorded
+        "400":
+          description: Payment exceeds bill total
+
+  /api/receivables:
+    get:
+      tags: [Receivables]
+      summary: List customer receivables
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated receivables
+    post:
+      tags: [Receivables]
+      summary: Create a receivable
+      responses:
+        "201":
+          description: Receivable created
+
+  /api/receivables/{receivableId}/pay:
+    post:
+      tags: [Receivables]
+      summary: Record incoming payment
+      parameters:
+        - name: receivableId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Payment recorded
+
+  /api/purchase-orders:
+    get:
+      tags: [PurchaseOrders]
+      summary: List purchase orders
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated purchase orders
+    post:
+      tags: [PurchaseOrders]
+      summary: Create a purchase order
+      responses:
+        "201":
+          description: PO created with auto-generated number
+
+  /api/purchase-orders/{poId}/approve:
+    post:
+      tags: [PurchaseOrders]
+      summary: Approve a purchase order
+      parameters:
+        - name: poId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: PO approved
+
+  /api/inventory:
+    get:
+      tags: [Inventory]
+      summary: List inventory items
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: belowReorderPoint
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Paginated inventory items
+    post:
+      tags: [Inventory]
+      summary: Create an inventory item
+      responses:
+        "201":
+          description: Item created
+
+  /api/inventory/transactions:
+    get:
+      tags: [Inventory]
+      summary: List inventory transactions
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated transactions
+    post:
+      tags: [Inventory]
+      summary: Record an inventory transaction (updates stock levels)
+      responses:
+        "201":
+          description: Transaction recorded
+
+  /api/bank-accounts:
+    get:
+      tags: [Banking]
+      summary: List bank accounts
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated bank accounts
+    post:
+      tags: [Banking]
+      summary: Create a bank account
+      responses:
+        "201":
+          description: Account created
+
+  /api/bank-accounts/{accountId}/transactions:
+    get:
+      tags: [Banking]
+      summary: List bank transactions
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - name: isReconciled
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Paginated bank transactions
+    post:
+      tags: [Banking]
+      summary: Create a bank transaction
+      responses:
+        "201":
+          description: Transaction created
+
+  /api/bank-accounts/{accountId}/transactions/{transactionId}/reconcile:
+    post:
+      tags: [Banking]
+      summary: Reconcile a bank transaction
+      responses:
+        "200":
+          description: Transaction reconciled
+
+  /api/financial-statements:
+    get:
+      tags: [FinancialStatements]
+      summary: Generate financial statements
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [trial_balance, income_statement, balance_sheet]
+        - name: asOfDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Financial statement data
+
+  /api/financial-periods:
+    get:
+      tags: [FinancialPeriods]
+      summary: List financial periods
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated periods
+    post:
+      tags: [FinancialPeriods]
+      summary: Create a financial period
+      responses:
+        "201":
+          description: Period created
+
+  /api/financial-periods/{periodId}/close:
+    post:
+      tags: [FinancialPeriods]
+      summary: Close a financial period
+      responses:
+        "200":
+          description: Period closed
+
+  /api/hr/employees:
+    get:
+      tags: [HR]
+      summary: List employees
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: department
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated employees
+    post:
+      tags: [HR]
+      summary: Create an employee
+      responses:
+        "201":
+          description: Employee created
+
+  /api/hr/leave:
+    get:
+      tags: [HR]
+      summary: List leave records
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated leave records
+    post:
+      tags: [HR]
+      summary: Create a leave request
+      responses:
+        "201":
+          description: Leave request created
+
+  /api/hr/leave/{leaveId}/approve:
+    post:
+      tags: [HR]
+      summary: Approve or reject a leave request
+      parameters:
+        - name: leaveId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [approve, reject]
+      responses:
+        "200":
+          description: Leave request processed
+
+  /api/hr/payslips:
+    get:
+      tags: [HR]
+      summary: List payslips
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated payslips
+    post:
+      tags: [HR]
+      summary: Create a payslip (auto-calculates gross, deductions, net)
+      responses:
+        "201":
+          description: Payslip created
+
+  /api/tools:
+    get:
+      tags: [Tools]
+      summary: List tools
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated tools
+
+  /api/milestones:
+    get:
+      tags: [Milestones]
+      summary: List milestones
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated milestones
+
+  /api/notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated notifications
+
+  /api/notifications/send:
+    post:
+      tags: [Notifications]
+      summary: Send pending notification emails
+      responses:
+        "200":
+          description: Email send results
+
+  /api/documents:
+    get:
+      tags: [Documents]
+      summary: List documents
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated documents
+
+  /api/search:
+    get:
+      tags: [Search]
+      summary: Search across deals, contacts, and tools
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+      responses:
+        "200":
+          description: Search results
+
+  /api/health:
+    get:
+      tags: [Auth]
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: Service healthy

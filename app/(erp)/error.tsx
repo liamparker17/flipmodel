@@ -10,7 +10,7 @@ export default function ErpError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("ERP route error:", error);
+    console.error("[ERP Error]", { message: error.message, digest: error.digest });
   }, [error]);
 
   return (
@@ -63,24 +63,16 @@ export default function ErpError({
         An unexpected error occurred while loading this page. You can try again
         or navigate to a different section.
       </p>
-      {error.message && (
-        <pre
+      {error.digest && (
+        <p
           style={{
             fontSize: 11,
-            color: "#EF4444",
-            background: "#EF444410",
-            border: "1px solid #EF444425",
-            borderRadius: 6,
-            padding: "8px 14px",
-            marginBottom: 20,
-            maxWidth: 500,
-            overflow: "auto",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
+            color: "#6B7280",
+            margin: "0 0 20px",
           }}
         >
-          {error.message}
-        </pre>
+          Error ID: {error.digest}
+        </p>
       )}
       <button
         onClick={reset}

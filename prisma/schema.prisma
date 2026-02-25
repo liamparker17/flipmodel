@@ -119,6 +119,21 @@ model Organisation {
   comparableSales      ComparableSale[]
   insurancePolicies    InsurancePolicy[]
   contractorRatings    ContractorRating[]
+  financialPeriods     FinancialPeriod[]
+  journalEntries       JournalEntry[]
+  vendorBills          VendorBill[]
+  billPayments         BillPayment[]
+  customerReceivables  CustomerReceivable[]
+  receivablePayments   ReceivablePayment[]
+  purchaseOrders       PurchaseOrder[]
+  goodsReceipts        GoodsReceipt[]
+  inventoryItems       InventoryItem[]
+  inventoryTransactions InventoryTransaction[]
+  bankAccounts         BankAccount[]
+  bankTransactions     BankTransaction[]
+  employees            Employee[]
+  leaveRecords         LeaveRecord[]
+  payslips             Payslip[]
 
   @@index([slug])
 }
@@ -811,4 +826,496 @@ model ContractorRating {
   @@index([orgId])
   @@index([contactId])
   @@index([dealId])
+}
+
+// ─── Audit Log ───
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  orgId       String
+  userId      String
+  action      String   // create | update | delete | approve | reject | login | logout
+  entityType  String   // deal | expense | invoice | journal_entry | vendor_bill | etc.
+  entityId    String?
+  changes     Json?    // { field: { old, new } }
+  metadata    Json?    // Additional context
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([orgId])
+  @@index([orgId, entityType])
+  @@index([orgId, userId])
+  @@index([orgId, createdAt])
+  @@index([entityType, entityId])
+}
+
+// ─── Financial Periods ───
+
+model FinancialPeriod {
+  id          String    @id @default(cuid())
+  orgId       String
+  name        String    // "2026-01", "2026-02", etc.
+  startDate   DateTime
+  endDate     DateTime
+  status      String    @default("open") // open | closed | locked
+  closedBy    String?
+  closedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  org         Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, name])
+  @@index([orgId])
+  @@index([orgId, status])
+}
+
+// ─── General Ledger ───
+
+model JournalEntry {
+  id            String    @id @default(cuid())
+  orgId         String
+  userId        String
+  entryNumber   String    // Auto-generated: JE-000001
+  date          DateTime
+  description   String
+  reference     String?   // External reference (invoice #, bill #, etc.)
+  sourceType    String?   // expense | invoice | vendor_bill | manual | adjustment
+  sourceId      String?   // ID of the source record
+  status        String    @default("draft") // draft | posted | reversed
+  reversalOf    String?   // If this reverses another entry
+  periodName    String?   // Financial period this belongs to
+  notes         String?
+  postedAt      DateTime?
+  postedBy      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  org           Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lines         JournalLine[]
+
+  @@unique([orgId, entryNumber])
+  @@index([orgId])
+  @@index([orgId, date])
+  @@index([orgId, status])
+  @@index([sourceType, sourceId])
+}
+
+model JournalLine {
+  id              String   @id @default(cuid())
+  journalEntryId  String
+  accountCode     String   // References ChartOfAccount.code
+  accountName     String   // Denormalized for reporting speed
+  description     String?
+  debit           Float    @default(0)
+  credit          Float    @default(0)
+  dealId          String?  // Optional deal allocation
+  contactId       String?  // Optional contact reference
+  order           Int      @default(0)
+
+  journalEntry    JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+
+  @@index([journalEntryId])
+  @@index([accountCode])
+  @@index([dealId])
+}
+
+// ─── Accounts Payable ───
+
+model VendorBill {
+  id              String    @id @default(cuid())
+  orgId           String
+  userId          String
+  billNumber      String    // Vendor's invoice/bill number
+  contactId       String?   // Vendor/supplier contact
+  dealId          String?   // Optional deal allocation
+  status          String    @default("draft") // draft | approved | partially_paid | paid | overdue | cancelled
+  issueDate       DateTime  @default(now())
+  dueDate         DateTime?
+  subtotal        Float     @default(0)
+  tax             Float     @default(0)
+  total           Float     @default(0)
+  amountPaid      Float     @default(0)
+  currency        String    @default("ZAR")
+  notes           String?
+  documentUrl     String?
+  journalEntryId  String?   // Link to GL posting
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lines           VendorBillLine[]
+  payments        BillPayment[]
+
+  @@unique([orgId, billNumber])
+  @@index([orgId])
+  @@index([orgId, status])
+  @@index([orgId, dueDate])
+  @@index([contactId])
+  @@index([dealId])
+}
+
+model VendorBillLine {
+  id              String   @id @default(cuid())
+  vendorBillId    String
+  description     String
+  quantity        Float    @default(1)
+  unitPrice       Float    @default(0)
+  amount          Float    @default(0)
+  accountCode     String?  // GL account allocation
+  dealId          String?  // Line-level deal allocation
+  order           Int      @default(0)
+
+  vendorBill      VendorBill @relation(fields: [vendorBillId], references: [id], onDelete: Cascade)
+
+  @@index([vendorBillId])
+}
+
+model BillPayment {
+  id              String    @id @default(cuid())
+  orgId           String
+  vendorBillId    String
+  amount          Float
+  paymentDate     DateTime
+  paymentMethod   String    @default("eft") // eft | cash | card | cheque
+  reference       String?   // Payment reference number
+  bankAccountId   String?
+  journalEntryId  String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  vendorBill      VendorBill @relation(fields: [vendorBillId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([vendorBillId])
+  @@index([bankAccountId])
+}
+
+// ─── Accounts Receivable ───
+
+model CustomerReceivable {
+  id              String    @id @default(cuid())
+  orgId           String
+  userId          String
+  invoiceId       String?   // Link to existing Invoice
+  contactId       String?   // Customer contact
+  dealId          String?
+  status          String    @default("outstanding") // outstanding | partially_paid | paid | overdue | written_off
+  totalAmount     Float     @default(0)
+  amountPaid      Float     @default(0)
+  dueDate         DateTime?
+  currency        String    @default("ZAR")
+  journalEntryId  String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  payments        ReceivablePayment[]
+
+  @@index([orgId])
+  @@index([orgId, status])
+  @@index([orgId, dueDate])
+  @@index([contactId])
+  @@index([invoiceId])
+}
+
+model ReceivablePayment {
+  id                  String    @id @default(cuid())
+  orgId               String
+  customerReceivableId String
+  amount              Float
+  paymentDate         DateTime
+  paymentMethod       String    @default("eft")
+  reference           String?
+  bankAccountId       String?
+  journalEntryId      String?
+  notes               String?
+  createdAt           DateTime  @default(now())
+
+  org                 Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  customerReceivable  CustomerReceivable @relation(fields: [customerReceivableId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([customerReceivableId])
+  @@index([bankAccountId])
+}
+
+// ─── Purchase Orders ───
+
+model PurchaseOrder {
+  id              String    @id @default(cuid())
+  orgId           String
+  userId          String
+  poNumber        String    // Auto-generated: PO-000001
+  contactId       String?   // Supplier contact
+  dealId          String?
+  status          String    @default("draft") // draft | submitted | approved | partially_received | received | cancelled
+  orderDate       DateTime  @default(now())
+  expectedDate    DateTime?
+  subtotal        Float     @default(0)
+  tax             Float     @default(0)
+  total           Float     @default(0)
+  shippingCost    Float     @default(0)
+  currency        String    @default("ZAR")
+  deliveryAddress String?
+  notes           String?
+  approvedBy      String?
+  approvedAt      DateTime?
+  vendorBillId    String?   // Link to AP when billed
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lines           PurchaseOrderLine[]
+  receipts        GoodsReceipt[]
+
+  @@unique([orgId, poNumber])
+  @@index([orgId])
+  @@index([orgId, status])
+  @@index([contactId])
+  @@index([dealId])
+}
+
+model PurchaseOrderLine {
+  id                String   @id @default(cuid())
+  purchaseOrderId   String
+  description       String
+  quantity          Float    @default(1)
+  unitPrice         Float    @default(0)
+  amount            Float    @default(0)
+  quantityReceived  Float    @default(0)
+  inventoryItemId   String?
+  accountCode       String?
+  order             Int      @default(0)
+
+  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@index([inventoryItemId])
+}
+
+model GoodsReceipt {
+  id                String    @id @default(cuid())
+  orgId             String
+  purchaseOrderId   String
+  receivedDate      DateTime  @default(now())
+  receivedBy        String
+  notes             String?
+  items             Json      // [{ lineId, quantityReceived, condition }]
+  createdAt         DateTime  @default(now())
+
+  org               Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([purchaseOrderId])
+}
+
+// ─── Inventory ───
+
+model InventoryItem {
+  id              String    @id @default(cuid())
+  orgId           String
+  sku             String
+  name            String
+  description     String?
+  category        String    @default("materials") // materials | fixtures | fittings | consumables | equipment
+  unit            String    @default("each") // each | m | m2 | m3 | kg | litre | box | pack
+  quantityOnHand  Float     @default(0)
+  quantityReserved Float    @default(0)
+  reorderPoint    Float     @default(0)
+  reorderQuantity Float     @default(0)
+  costPrice       Float     @default(0) // Weighted average cost
+  lastPurchasePrice Float   @default(0)
+  location        String?   // Warehouse/storage location
+  isActive        Boolean   @default(true)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  transactions    InventoryTransaction[]
+
+  @@unique([orgId, sku])
+  @@index([orgId])
+  @@index([orgId, category])
+  @@index([orgId, quantityOnHand])
+}
+
+model InventoryTransaction {
+  id              String    @id @default(cuid())
+  orgId           String
+  inventoryItemId String
+  type            String    // purchase | sale | adjustment | transfer | usage | return
+  quantity        Float     // Positive = in, negative = out
+  unitCost        Float     @default(0)
+  totalCost       Float     @default(0)
+  reference       String?   // PO number, deal name, etc.
+  referenceType   String?   // purchase_order | deal | adjustment | transfer
+  referenceId     String?
+  dealId          String?   // Which deal consumed this inventory
+  notes           String?
+  performedBy     String
+  createdAt       DateTime  @default(now())
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([inventoryItemId])
+  @@index([orgId, type])
+  @@index([dealId])
+  @@index([referenceType, referenceId])
+}
+
+// ─── Bank Accounts & Reconciliation ───
+
+model BankAccount {
+  id              String    @id @default(cuid())
+  orgId           String
+  name            String    // "FNB Business Cheque", etc.
+  bankName        String
+  accountNumber   String
+  branchCode      String?
+  accountType     String    @default("cheque") // cheque | savings | credit | trust
+  currency        String    @default("ZAR")
+  currentBalance  Float     @default(0)
+  accountCode     String?   // GL account code
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  transactions    BankTransaction[]
+
+  @@index([orgId])
+  @@index([orgId, isActive])
+}
+
+model BankTransaction {
+  id              String    @id @default(cuid())
+  orgId           String
+  bankAccountId   String
+  date            DateTime
+  description     String
+  amount          Float     // Positive = deposit, negative = withdrawal
+  balance         Float?    // Running balance from bank statement
+  reference       String?
+  type            String    @default("other") // deposit | withdrawal | transfer | fee | interest | other
+  category        String?
+  isReconciled    Boolean   @default(false)
+  reconciledAt    DateTime?
+  matchedEntityType String? // expense | bill_payment | receivable_payment | journal_entry
+  matchedEntityId String?
+  importBatch     String?   // For statement imports
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  bankAccount     BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([bankAccountId])
+  @@index([bankAccountId, date])
+  @@index([bankAccountId, isReconciled])
+  @@index([matchedEntityType, matchedEntityId])
+}
+
+// ─── HR / Payroll ───
+
+model Employee {
+  id              String    @id @default(cuid())
+  orgId           String
+  userId          String?   // Optional link to a User account
+  contactId       String?   // Optional link to a Contact
+  employeeNumber  String
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  idNumber        String?   // SA ID number (encrypted)
+  taxNumber       String?   // SARS tax number
+  position        String    @default("")
+  department      String?
+  employmentType  String    @default("full_time") // full_time | part_time | contract | temporary
+  startDate       DateTime
+  endDate         DateTime?
+  status          String    @default("active") // active | on_leave | terminated | suspended
+  bankName        String?
+  accountNumber   String?   // Encrypted
+  branchCode      String?
+  baseSalary      Float     @default(0)
+  hourlyRate      Float?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leaveRecords    LeaveRecord[]
+  payslips        Payslip[]
+
+  @@unique([orgId, employeeNumber])
+  @@index([orgId])
+  @@index([orgId, status])
+}
+
+model LeaveRecord {
+  id              String    @id @default(cuid())
+  orgId           String
+  employeeId      String
+  leaveType       String    @default("annual") // annual | sick | family | unpaid | maternity | paternity | study
+  startDate       DateTime
+  endDate         DateTime
+  days            Float     @default(1)
+  status          String    @default("pending") // pending | approved | rejected | cancelled
+  reason          String?
+  approvedBy      String?
+  approvedAt      DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([employeeId])
+  @@index([orgId, status])
+}
+
+model Payslip {
+  id              String    @id @default(cuid())
+  orgId           String
+  employeeId      String
+  periodStart     DateTime
+  periodEnd       DateTime
+  basePay         Float     @default(0)
+  overtime        Float     @default(0)
+  bonus           Float     @default(0)
+  commission      Float     @default(0)
+  grossPay        Float     @default(0)
+  paye            Float     @default(0) // Pay As You Earn tax
+  uif             Float     @default(0) // Unemployment Insurance Fund
+  pensionFund     Float     @default(0)
+  medicalAid      Float     @default(0)
+  otherDeductions Float     @default(0)
+  totalDeductions Float     @default(0)
+  netPay          Float     @default(0)
+  status          String    @default("draft") // draft | approved | paid
+  paymentDate     DateTime?
+  paymentRef      String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([employeeId])
+  @@index([orgId, status])
+  @@index([orgId, periodStart])
 }

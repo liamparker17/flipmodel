@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { encryptCredentials } from "@/lib/accounting/credentials";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const credentialsSchema = z.object({
   xeroClientId: z.string().optional(),
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`[AUDIT] Credentials saved for org=${ctx.orgId} by user=${ctx.userId} provider=${data.xeroClientId ? "xero" : "quickbooks"}`);
+    logger.info("Credentials saved", { orgId: ctx.orgId, userId: ctx.userId, provider: data.xeroClientId ? "xero" : "quickbooks" });
 
     return apiSuccess({ saved: true });
   } catch (error) {
@@ -126,7 +127,7 @@ export async function DELETE(req: NextRequest) {
       },
     });
 
-    console.log(`[AUDIT] Credentials removed for org=${ctx.orgId} by user=${ctx.userId} provider=${provider}`);
+    logger.info("Credentials removed", { orgId: ctx.orgId, userId: ctx.userId, provider });
 
     return apiSuccess({ removed: provider });
   } catch (error) {
