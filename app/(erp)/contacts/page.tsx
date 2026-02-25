@@ -201,6 +201,8 @@ export default function ContactsPage() {
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
+          aria-expanded={showAddForm}
+          aria-label={showAddForm ? "Cancel adding contact" : "Add new contact"}
           style={{
             background: showAddForm ? theme.red : theme.accent,
             color: "#fff",
@@ -219,6 +221,7 @@ export default function ContactsPage() {
 
       {error && (
         <div
+          role="alert"
           style={{
             background: `${theme.red}15`,
             border: `1px solid ${theme.red}40`,
@@ -511,6 +514,7 @@ export default function ContactsPage() {
           placeholder="Search contacts..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search contacts"
           style={{
             background: theme.input,
             border: `1px solid ${theme.inputBorder}`,
@@ -527,6 +531,7 @@ export default function ContactsPage() {
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value as ContactRole | "all")}
+          aria-label="Filter by role"
           style={{
             background: theme.input,
             border: `1px solid ${theme.inputBorder}`,
@@ -626,6 +631,10 @@ export default function ContactsPage() {
             <div
               key={contact.id}
               onClick={() => router.push(`/contacts/${contact.id}`)}
+              role="button"
+              tabIndex={0}
+              aria-label={`${contact.name}, ${contact.role}${contact.company ? `, ${contact.company}` : ""}`}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/contacts/${contact.id}`); }}
               style={{
                 background: theme.card,
                 border: `1px solid ${theme.cardBorder}`,
@@ -808,9 +817,12 @@ function FormField({
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const id = `contact-field-${label.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+  const isRequired = label.includes("*");
   return (
     <div>
       <label
+        htmlFor={id}
         style={{
           display: "block",
           fontSize: 11,
@@ -824,10 +836,12 @@ function FormField({
         {label}
       </label>
       <input
+        id={id}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        aria-required={isRequired || undefined}
         style={{
           width: "100%",
           background: theme.input,

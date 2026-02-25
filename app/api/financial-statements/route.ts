@@ -40,7 +40,9 @@ export async function GET(req: NextRequest) {
 
       accounts.sort((a, b) => a.accountCode.localeCompare(b.accountCode));
 
-      return apiSuccess({ type: "trial_balance", asOfDate, accounts });
+      const response = apiSuccess({ type: "trial_balance", asOfDate, accounts });
+      response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=120");
+      return response;
     }
 
     if (type === "income_statement") {
@@ -91,7 +93,7 @@ export async function GET(req: NextRequest) {
       const totalRevenue = revenue.reduce((sum, r) => sum + r.amount, 0);
       const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-      return apiSuccess({
+      const response = apiSuccess({
         type: "income_statement",
         startDate: periodStart.toISOString().split("T")[0],
         asOfDate,
@@ -101,6 +103,8 @@ export async function GET(req: NextRequest) {
         totalExpenses,
         netIncome: totalRevenue - totalExpenses,
       });
+      response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=120");
+      return response;
     }
 
     // balance_sheet
@@ -159,7 +163,7 @@ export async function GET(req: NextRequest) {
     const totalLiabilities = liabilities.reduce((sum, l) => sum + l.balance, 0);
     const totalEquity = equity.reduce((sum, e) => sum + e.balance, 0);
 
-    return apiSuccess({
+    const response = apiSuccess({
       type: "balance_sheet",
       asOfDate,
       assets,
@@ -169,6 +173,8 @@ export async function GET(req: NextRequest) {
       totalLiabilities,
       totalEquity,
     });
+    response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=120");
+    return response;
   } catch (error) {
     return handleApiError(error);
   }

@@ -20,15 +20,15 @@ export default function FinancePage() {
 
   const metrics = getPortfolioMetrics(deals);
   const cashFlow = getCashFlowProjection(deals);
-  const allExpenses = deals.flatMap((d: any) => (d.expenses || []).map((e: any) => ({ ...e, dealName: d.name })));
+  const allExpenses = deals.flatMap((d) => (d.expenses || []).map((e) => ({ ...e, dealName: d.name })));
   const categoryBreakdown = getExpensesByCategory(allExpenses);
   const monthlyBreakdown = getMonthlyExpenses(allExpenses);
 
   // P&L by deal
-  const dealPnL = deals.map((deal: any) => {
+  const dealPnL = deals.map((deal) => {
     const m = computeDealMetrics(deal);
-    const actualExpenses = (deal.expenses || []).filter((e: any) => !e.isProjected).reduce((s: number, e: any) => s + e.amount, 0);
-    const projectedExpenses = (deal.expenses || []).filter((e: any) => e.isProjected).reduce((s: number, e: any) => s + e.amount, 0);
+    const actualExpenses = (deal.expenses || []).filter((e) => !e.isProjected).reduce((s, e) => s + e.amount, 0);
+    const projectedExpenses = (deal.expenses || []).filter((e) => e.isProjected).reduce((s, e) => s + e.amount, 0);
     const actualSale = deal.actualSalePrice || 0;
     const expectedSale = deal.expectedSalePrice;
     const commission = (actualSale || expectedSale) * ((deal.data?.resale?.agentCommission || 5) / 100);
@@ -46,12 +46,12 @@ export default function FinancePage() {
     };
   });
 
-  const totalPurchase = dealPnL.reduce((s: number, d: any) => s + d.purchasePrice, 0);
-  const totalExpectedSale = dealPnL.reduce((s: number, d: any) => s + d.expectedSale, 0);
-  const totalActualExpenses = allExpenses.filter((e: any) => !e.isProjected).reduce((s: number, e: any) => s + e.amount, 0);
-  const totalProjectedExpenses = allExpenses.filter((e: any) => e.isProjected).reduce((s: number, e: any) => s + e.amount, 0);
-  const totalEstProfit = dealPnL.reduce((s: number, d: any) => s + d.estimatedProfit, 0);
-  const cfMax = Math.max(...cashFlow.map((m: any) => Math.max(m.inflow, m.outflow, 1)));
+  const totalPurchase = dealPnL.reduce((s, d) => s + d.purchasePrice, 0);
+  const totalExpectedSale = dealPnL.reduce((s, d) => s + d.expectedSale, 0);
+  const totalActualExpenses = allExpenses.filter((e) => !e.isProjected).reduce((s, e) => s + e.amount, 0);
+  const totalProjectedExpenses = allExpenses.filter((e) => e.isProjected).reduce((s, e) => s + e.amount, 0);
+  const totalEstProfit = dealPnL.reduce((s, d) => s + d.estimatedProfit, 0);
+  const cfMax = Math.max(...cashFlow.map((m) => Math.max(m.inflow, m.outflow, 1)));
 
   return (
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1200, margin: "0 auto" }}>

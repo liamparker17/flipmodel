@@ -20,17 +20,17 @@ function DealPipelineCard({ deal, onMove }: { deal: Deal; onMove: (id: string, s
   const daysInStage = Math.floor((Date.now() - new Date(deal.updatedAt).getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <div style={{
+    <div aria-label={`${deal.name} - ${stageInfo?.label || deal.stage}, ${priorityConf.label} priority`} style={{
       background: theme.input, borderRadius: 6, padding: "8px 10px", cursor: "pointer",
       borderLeft: `3px solid ${stageInfo?.color || theme.textDim}`,
       transition: "background 0.1s, transform 0.1s",
     }}>
-      <div onClick={() => router.push(`/pipeline/${deal.id}`)}>
+      <div onClick={() => router.push(`/pipeline/${deal.id}`)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/pipeline/${deal.id}`); }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: theme.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
             {deal.name}
           </div>
-          <span style={{ fontSize: 9, color: priorityConf.color, fontWeight: 700, marginLeft: 4, flexShrink: 0 }}>{priorityConf.icon}</span>
+          <span style={{ fontSize: 9, color: priorityConf.color, fontWeight: 700, marginLeft: 4, flexShrink: 0 }} aria-label={`${priorityConf.label} priority`}>{priorityConf.icon}</span>
         </div>
         {deal.address && <div style={{ fontSize: 9, color: theme.textDim, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{deal.address}</div>}
         <div style={{ display: "flex", gap: 10, marginBottom: 4 }}>
@@ -75,13 +75,13 @@ function DealPipelineCard({ deal, onMove }: { deal: Deal; onMove: (id: string, s
       {/* Quick stage move buttons */}
       <div style={{ display: "flex", gap: 2, marginTop: 4, borderTop: `1px solid ${theme.cardBorder}`, paddingTop: 4 }}>
         {stageIdx > 0 && (
-          <button onClick={(e) => { e.stopPropagation(); onMove(deal.id, DEAL_STAGES[stageIdx - 1].key); }} style={{
+          <button onClick={(e) => { e.stopPropagation(); onMove(deal.id, DEAL_STAGES[stageIdx - 1].key); }} aria-label={`Move ${deal.name} back to ${DEAL_STAGES[stageIdx - 1].label}`} style={{
             background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 3,
             padding: "2px 6px", fontSize: 8, color: theme.textDim, cursor: "pointer", flex: 1,
           }}>← {DEAL_STAGES[stageIdx - 1].label}</button>
         )}
         {stageIdx < DEAL_STAGES.length - 1 && (
-          <button onClick={(e) => { e.stopPropagation(); onMove(deal.id, DEAL_STAGES[stageIdx + 1].key); }} style={{
+          <button onClick={(e) => { e.stopPropagation(); onMove(deal.id, DEAL_STAGES[stageIdx + 1].key); }} aria-label={`Move ${deal.name} forward to ${DEAL_STAGES[stageIdx + 1].label}`} style={{
             background: `${DEAL_STAGES[stageIdx + 1].color}12`, border: `1px solid ${DEAL_STAGES[stageIdx + 1].color}25`, borderRadius: 3,
             padding: "2px 6px", fontSize: 8, color: DEAL_STAGES[stageIdx + 1].color, cursor: "pointer", flex: 1, fontWeight: 600,
           }}>{DEAL_STAGES[stageIdx + 1].label} →</button>
@@ -163,6 +163,7 @@ export default function PipelinePage() {
           <input
             value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search properties, addresses, tags..."
+            aria-label="Search properties"
             style={{
               width: "100%", background: theme.input, border: `1px solid ${theme.inputBorder}`,
               borderRadius: 6, padding: "7px 10px", color: theme.text, fontSize: 12, outline: "none", minHeight: 34,
@@ -170,7 +171,7 @@ export default function PipelinePage() {
           />
         </div>
         {/* Priority filter */}
-        <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} style={{
+        <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} aria-label="Filter by priority" style={{
           background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6,
           padding: "7px 8px", color: theme.text, fontSize: 11, cursor: "pointer", minHeight: 34,
         }}>
@@ -181,7 +182,7 @@ export default function PipelinePage() {
           <option value="low">Low</option>
         </select>
         {/* Sort */}
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} style={{
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} aria-label="Sort deals by" style={{
           background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6,
           padding: "7px 8px", color: theme.text, fontSize: 11, cursor: "pointer", minHeight: 34,
         }}>
@@ -192,12 +193,12 @@ export default function PipelinePage() {
         </select>
         {/* View mode toggle */}
         {!isMobile && (
-          <div style={{ display: "flex", background: theme.input, borderRadius: 6, overflow: "hidden", border: `1px solid ${theme.inputBorder}` }}>
-            <button onClick={() => setViewMode("kanban")} style={{
+          <div role="group" aria-label="View mode" style={{ display: "flex", background: theme.input, borderRadius: 6, overflow: "hidden", border: `1px solid ${theme.inputBorder}` }}>
+            <button onClick={() => setViewMode("kanban")} aria-pressed={viewMode === "kanban"} style={{
               background: viewMode === "kanban" ? theme.accent : "transparent", color: viewMode === "kanban" ? "#000" : theme.textDim,
               border: "none", padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: viewMode === "kanban" ? 600 : 400, minHeight: 32,
             }}>Board</button>
-            <button onClick={() => setViewMode("list")} style={{
+            <button onClick={() => setViewMode("list")} aria-pressed={viewMode === "list"} style={{
               background: viewMode === "list" ? theme.accent : "transparent", color: viewMode === "list" ? "#000" : theme.textDim,
               border: "none", padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: viewMode === "list" ? 600 : 400, minHeight: 32,
             }}>List</button>
@@ -218,6 +219,8 @@ export default function PipelinePage() {
         }}>
           <button
             onClick={() => setSuggestionsOpen(!isSuggestionsExpanded)}
+            aria-expanded={isSuggestionsExpanded}
+            aria-label={`Suggestions, ${suggestions.length} items`}
             style={{
               width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
               padding: "10px 14px", background: "transparent", border: "none", cursor: "pointer",
@@ -287,7 +290,7 @@ export default function PipelinePage() {
             const stageDeals = grouped[stage.key] || [];
             const totalValue = stageDeals.reduce((s, d) => s + d.purchasePrice, 0);
             return (
-              <div key={stage.key} style={{
+              <div key={stage.key} role="list" aria-label={`${stage.label} stage`} style={{
                 minWidth: 210, maxWidth: 280, flex: 1,
                 background: theme.card, border: `1px solid ${theme.cardBorder}`,
                 borderRadius: 8, display: "flex", flexDirection: "column",
@@ -319,7 +322,7 @@ export default function PipelinePage() {
       ) : viewMode === "list" && !isMobile ? (
         /* List View */
         <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }} aria-label="Pipeline deals list">
             <thead>
               <tr style={{ borderBottom: `1px solid ${theme.cardBorder}` }}>
                 {["Property", "Address", "Stage", "Priority", "Purchase", "Expected Sale", "Est. Profit", "ROI", "Days", ""].map((h) => (

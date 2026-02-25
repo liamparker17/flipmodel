@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 export default function ErpError({
   error,
@@ -10,11 +11,14 @@ export default function ErpError({
   reset: () => void;
 }) {
   useEffect(() => {
+    Sentry.captureException(error);
     console.error("[ERP Error]", { message: error.message, digest: error.digest });
   }, [error]);
 
   return (
     <div
+      role="alert"
+      aria-live="assertive"
       style={{
         display: "flex",
         flexDirection: "column",

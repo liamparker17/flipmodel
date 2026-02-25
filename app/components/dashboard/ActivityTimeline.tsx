@@ -2,16 +2,17 @@
 import { theme, styles } from "../theme";
 import { DEAL_STAGES } from "../../utils/dealHelpers";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import type { Deal } from "../../types/deal";
 
 interface ActivityTimelineProps {
-  timelineDeals: any[];
+  timelineDeals: Deal[];
   timeAgo: (dateStr: string) => string;
   router: AppRouterInstance;
 }
 
 export default function ActivityTimeline({ timelineDeals, timeAgo, router }: ActivityTimelineProps) {
   return (
-    <div style={{ ...styles.card, marginTop: 16 }}>
+    <div style={{ ...styles.card, marginTop: 16 }} role="region" aria-label="Activity timeline">
       <h3 style={{ ...styles.sectionHeading as React.CSSProperties, margin: "0 0 12px" }}>Activity Timeline</h3>
       {timelineDeals.length === 0 ? (
         <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>No recent activity.</p>
@@ -34,6 +35,10 @@ export default function ActivityTimeline({ timelineDeals, timeAgo, router }: Act
                 {/* Content */}
                 <div
                   onClick={() => router.push(`/pipeline/${deal.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${deal.name} - ${stageInfo?.label || deal.stage}`}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/pipeline/${deal.id}`); }}
                   style={{ flex: 1, paddingBottom: i < timelineDeals.length - 1 ? 12 : 0, cursor: "pointer" }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>

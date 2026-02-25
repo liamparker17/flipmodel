@@ -2,18 +2,19 @@
 import { theme, fmt, styles } from "../theme";
 import { DEAL_STAGES, getDealProgress, PRIORITY_CONFIG } from "../../utils/dealHelpers";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import type { Deal } from "../../types/deal";
 
 interface ActiveProjectsProps {
-  activeProjects: any[];
+  activeProjects: Deal[];
   router: AppRouterInstance;
 }
 
 export default function ActiveProjects({ activeProjects, router }: ActiveProjectsProps) {
   return (
-    <div style={styles.card}>
+    <div style={styles.card} role="region" aria-label="Active projects">
       <div style={{ ...styles.flexBetween, marginBottom: 12 }}>
         <h3 style={styles.sectionHeading as React.CSSProperties}>Active Projects</h3>
-        <button onClick={() => router.push("/projects")} style={styles.linkBtn as React.CSSProperties}>View all →</button>
+        <button onClick={() => router.push("/projects")} aria-label="View all active projects" style={styles.linkBtn as React.CSSProperties}>View all →</button>
       </div>
       {activeProjects.length === 0 ? (
         <p style={{ fontSize: 12, color: theme.textDim, margin: 0 }}>No active renovation projects.</p>
@@ -22,12 +23,12 @@ export default function ActiveProjects({ activeProjects, router }: ActiveProject
           {activeProjects.slice(0, 4).map((deal) => {
             const progress = getDealProgress(deal);
             const stageColor = DEAL_STAGES.find((s) => s.key === deal.stage)?.color || theme.textDim;
-            const actualExpenses = (deal.expenses || []).filter((e: any) => !e.isProjected).reduce((s: number, e: any) => s + e.amount, 0);
+            const actualExpenses = (deal.expenses || []).filter((e) => !e.isProjected).reduce((s, e) => s + e.amount, 0);
             const budget = deal.data?.quickRenoEstimate || 0;
             const budgetPct = budget > 0 ? (actualExpenses / budget) * 100 : 0;
             const pri = (PRIORITY_CONFIG as Record<string, { color: string; icon: string; label: string }>)[deal.priority as string];
             return (
-              <div key={deal.id} onClick={() => router.push(`/projects/${deal.id}`)} style={{
+              <div key={deal.id} onClick={() => router.push(`/projects/${deal.id}`)} role="button" tabIndex={0} aria-label={`${deal.name} - ${pri?.label || "medium"} priority`} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/projects/${deal.id}`); }} style={{
                 background: theme.input, borderRadius: 6, padding: "8px 10px", cursor: "pointer",
                 borderLeft: `3px solid ${stageColor}`,
               }}>

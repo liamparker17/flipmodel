@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { DEFAULT_CHART_OF_ACCOUNTS } from "@/types/accounting";
@@ -12,7 +13,9 @@ export async function GET() {
       orderBy: { code: "asc" },
     });
 
-    return apiSuccess(accounts);
+    const response = apiSuccess(accounts);
+    response.headers.set("Cache-Control", "private, max-age=300, stale-while-revalidate=600");
+    return response;
   } catch (error) {
     return handleApiError(error);
   }
@@ -46,6 +49,7 @@ export async function POST(req: NextRequest) {
         )
       );
 
+      revalidatePath("/api/accounting/chart-of-accounts");
       return apiSuccess({ seeded: created.length }, 201);
     }
 
@@ -63,6 +67,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    revalidatePath("/api/accounting/chart-of-accounts");
     return apiSuccess(account, 201);
   } catch (error) {
     return handleApiError(error);

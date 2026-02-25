@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const { deals, loaded, createDeal } = useDeals();
   const isMobile = useIsMobile();
 
-  if (!loaded) return <div style={{ padding: 40, color: theme.textDim }}>Loading...</div>;
+  if (!loaded) return <div style={{ padding: 40, color: theme.textDim }} role="status" aria-live="polite">Loading...</div>;
 
   const metrics = getPortfolioMetrics(deals);
   const cashFlow = getCashFlowProjection(deals);
@@ -67,7 +67,7 @@ export default function DashboardPage() {
   // Budget alerts (actual spend > 80% of renovation estimate)
   const budgetAlerts: { dealId: string; dealName: string; actualSpend: number; budget: number; pct: number }[] = [];
   for (const deal of deals) {
-    const actualExpenses = (deal.expenses || []).filter((e: any) => !e.isProjected).reduce((s: number, e: any) => s + e.amount, 0);
+    const actualExpenses = (deal.expenses || []).filter((e) => !e.isProjected).reduce((s, e) => s + e.amount, 0);
     const budget = deal.data?.quickRenoEstimate || 0;
     if (budget > 0 && actualExpenses > budget * BUDGET_ALERT_THRESHOLD) {
       budgetAlerts.push({ dealId: deal.id, dealName: deal.name, actualSpend: actualExpenses, budget, pct: Math.round((actualExpenses / budget) * 100) });
@@ -109,14 +109,14 @@ export default function DashboardPage() {
           <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>Dashboard</h1>
           <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>Portfolio overview &middot; {new Date().toLocaleDateString("en-ZA", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
         </div>
-        <button onClick={handleNewDeal} style={{
+        <button onClick={handleNewDeal} aria-label="Create new property" style={{
           background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
           padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36,
         }}>+ New Property</button>
       </div>
 
       {/* Quick Actions Bar */}
-      <div data-tour="quick-actions" style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+      <div data-tour="quick-actions" role="toolbar" aria-label="Quick actions" style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         {[
           { label: "\uFF0B New Deal", onClick: handleNewDeal, href: undefined as string | undefined },
           { label: "\uD83D\uDCDD Log Expense", onClick: undefined as (() => void) | undefined, href: "/projects" },
@@ -157,10 +157,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Deals */}
-      <div style={styles.card}>
+      <div style={styles.card} role="region" aria-label="Recent activity">
         <div style={{ ...styles.flexBetween, marginBottom: 12 }}>
           <h3 style={styles.sectionHeading as React.CSSProperties}>Recent Activity</h3>
-          <button onClick={() => router.push("/pipeline")} style={styles.linkBtn as React.CSSProperties}>View all &rarr;</button>
+          <button onClick={() => router.push("/pipeline")} aria-label="View all recent activity" style={styles.linkBtn as React.CSSProperties}>View all &rarr;</button>
         </div>
         {recentDeals.length === 0 ? (
           <p style={{ fontSize: 12, color: theme.textDim }}>No properties yet. Add your first property to get started.</p>
@@ -171,7 +171,7 @@ export default function DashboardPage() {
               const stageInfo = DEAL_STAGES.find((s) => s.key === deal.stage);
               const lastActivity = [...(deal.activities || [])].sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
               return (
-                <div key={deal.id} onClick={() => router.push(`/pipeline/${deal.id}`)} style={{
+                <div key={deal.id} onClick={() => router.push(`/pipeline/${deal.id}`)} role="button" tabIndex={0} aria-label={`${deal.name} - ${stageInfo?.label || deal.stage}`} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/pipeline/${deal.id}`); }} style={{
                   background: theme.input, borderRadius: 6, padding: "10px 12px", cursor: "pointer",
                   borderLeft: `3px solid ${stageInfo?.color || theme.textDim}`,
                 }}>

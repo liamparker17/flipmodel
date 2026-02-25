@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { auth } from "./auth";
 import { type ZodSchema } from "zod";
 import { ZodError } from "zod";
@@ -162,11 +163,13 @@ export function handleApiError(error: unknown) {
     return apiError("No organisation membership. Please create or join an organisation.", 403);
   }
   if (error instanceof ForbiddenError) {
-    return apiError(error.message, 403);
+    logger.warn("Forbidden access attempt", { detail: error.message });
+    return apiError("Forbidden", 403);
   }
   if (error instanceof ZodError) {
     return apiError((error as ZodError).issues.map((e) => e.message).join(", "), 400);
   }
+  Sentry.captureException(error);
   logger.error("Unhandled API error", { error: error instanceof Error ? error.message : "Unknown", stack: error instanceof Error ? error.stack : undefined });
   return apiError("Internal server error", 500);
 }

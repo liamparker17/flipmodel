@@ -1,5 +1,17 @@
 import prisma from "@/lib/db";
 import { requireOrgMember, apiSuccess, handleApiError } from "@/lib/api-helpers";
+import type { PrismaClient } from "@prisma/client";
+
+/** Delegate type that exposes updateMany — shared by all Prisma model delegates. */
+type ModelDelegate = {
+  updateMany(args: { where: Record<string, unknown>; data: Record<string, unknown> }): Promise<{ count: number }>;
+};
+
+/** The subset of PrismaClient model keys we need to migrate. */
+type MigratableModelKey =
+  | "deal" | "expense" | "milestone" | "activity" | "contact"
+  | "document" | "shoppingListItem" | "tool" | "toolCheckout"
+  | "toolMaintenance" | "toolIncident" | "notification" | "invoice";
 
 export async function POST() {
   try {
@@ -9,7 +21,7 @@ export async function POST() {
     let totalUpdated = 0;
 
     // Tables with userId + orgId
-    const userOwnedTables = [
+    const userOwnedTables: MigratableModelKey[] = [
       "deal",
       "expense",
       "milestone",
@@ -23,10 +35,11 @@ export async function POST() {
       "toolIncident",
       "notification",
       "invoice",
-    ] as const;
+    ];
 
     for (const table of userOwnedTables) {
-      const result = await (prisma[table] as any).updateMany({
+      const delegate = prisma[table] as unknown as ModelDelegate;
+      const result = await delegate.updateMany({
         where: { userId, orgId: { equals: null } },
         data: { orgId },
       });
@@ -39,7 +52,7 @@ export async function POST() {
       select: { id: true },
     });
     if (userDealIds.length > 0) {
-      const result = await (prisma.dealContact as any).updateMany({
+      const result = await prisma.dealContact.updateMany({
         where: {
           dealId: { in: userDealIds.map((d) => d.id) },
           orgId: null,

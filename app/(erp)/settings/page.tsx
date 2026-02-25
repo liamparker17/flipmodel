@@ -435,9 +435,9 @@ export default function SettingsPage() {
       </div>
 
       {/* Section Tabs */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 16, overflowX: "auto" }}>
+      <div role="tablist" aria-label="Settings sections" style={{ display: "flex", gap: 4, marginBottom: 16, overflowX: "auto" }}>
         {allSections.map((s) => (
-          <button key={s.key} onClick={() => setActiveSection(s.key)} style={{
+          <button key={s.key} role="tab" aria-selected={activeSection === s.key} aria-controls={`settings-panel-${s.key}`} onClick={() => setActiveSection(s.key)} style={{
             background: activeSection === s.key ? theme.accent : "transparent",
             color: activeSection === s.key ? "#000" : theme.textDim,
             border: activeSection === s.key ? "none" : `1px solid ${theme.cardBorder}`,
@@ -899,11 +899,14 @@ export default function SettingsPage() {
 function SettingRow({ label, value, type, onChange, suffix, help, disabled }: {
   label: string; value: string | number; type: "text" | "number"; onChange?: (v: string) => void; suffix?: string; help?: string; disabled?: boolean;
 }) {
+  const id = `setting-${label.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+  const helpId = help ? `${id}-help` : undefined;
   return (
     <div>
-      <label style={{ display: "block", fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3, fontWeight: 500 }}>{label}</label>
+      <label htmlFor={id} style={{ display: "block", fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3, fontWeight: 500 }}>{label}</label>
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <input type={type} value={value} onChange={(e) => onChange?.(e.target.value)} disabled={disabled}
+        <input id={id} type={type} value={value} onChange={(e) => onChange?.(e.target.value)} disabled={disabled}
+          aria-describedby={helpId}
           style={{
             flex: 1, background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6,
             padding: "7px 10px", color: disabled ? theme.textDim : theme.text, fontSize: 13, outline: "none",
@@ -913,7 +916,7 @@ function SettingRow({ label, value, type, onChange, suffix, help, disabled }: {
         />
         {suffix && <span style={{ fontSize: 11, color: theme.textDim, whiteSpace: "nowrap" }}>{suffix}</span>}
       </div>
-      {help && <div style={{ fontSize: 10, color: theme.textDim, marginTop: 3 }}>{help}</div>}
+      {help && <div id={helpId} style={{ fontSize: 10, color: theme.textDim, marginTop: 3 }}>{help}</div>}
     </div>
   );
 }

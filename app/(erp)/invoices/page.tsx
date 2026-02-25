@@ -77,7 +77,7 @@ export default function InvoicesPage() {
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: theme.text, margin: 0 }}>Invoices</h1>
-        <button onClick={() => setShowForm(!showForm)} style={{
+        <button onClick={() => setShowForm(!showForm)} aria-label={showForm ? "Close new invoice form" : "Create new invoice"} aria-expanded={showForm} style={{
           padding: "8px 16px", background: theme.accent, color: "#fff", border: "none",
           borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer",
         }}>+ New Invoice</button>
@@ -86,23 +86,23 @@ export default function InvoicesPage() {
       {showForm && (
         <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 20, marginBottom: 20 }}>
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: "block", color: theme.textDim, fontSize: 11, marginBottom: 4 }}>Invoice Number</label>
-            <input style={{ ...inputStyle, maxWidth: 300 }} value={form.invoiceNumber} onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })} placeholder="Auto-generated if empty" />
+            <label htmlFor="invoice-number" style={{ display: "block", color: theme.textDim, fontSize: 11, marginBottom: 4 }}>Invoice Number</label>
+            <input id="invoice-number" style={{ ...inputStyle, maxWidth: 300 }} value={form.invoiceNumber} onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })} placeholder="Auto-generated if empty" />
           </div>
 
           <div style={{ fontSize: 13, fontWeight: 600, color: theme.text, marginBottom: 8 }}>Line Items</div>
           {form.lineItems.map((li, i) => (
             <div key={i} style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "3fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
-              <input style={inputStyle} value={li.description} onChange={(e) => updateLineItem(i, "description", e.target.value)} placeholder="Description" />
-              <input style={inputStyle} type="number" value={li.quantity} onChange={(e) => updateLineItem(i, "quantity", Number(e.target.value))} placeholder="Qty" />
-              <input style={inputStyle} type="number" value={li.unitPrice} onChange={(e) => updateLineItem(i, "unitPrice", Number(e.target.value))} placeholder="Unit price" />
+              <input style={inputStyle} value={li.description} onChange={(e) => updateLineItem(i, "description", e.target.value)} placeholder="Description" aria-label={`Line item ${i + 1} description`} aria-required="true" />
+              <input style={inputStyle} type="number" value={li.quantity} onChange={(e) => updateLineItem(i, "quantity", Number(e.target.value))} placeholder="Qty" aria-label={`Line item ${i + 1} quantity`} aria-required="true" />
+              <input style={inputStyle} type="number" value={li.unitPrice} onChange={(e) => updateLineItem(i, "unitPrice", Number(e.target.value))} placeholder="Unit price" aria-label={`Line item ${i + 1} unit price`} aria-required="true" />
             </div>
           ))}
-          <button onClick={() => setForm({ ...form, lineItems: [...form.lineItems, { description: "", quantity: 1, unitPrice: 0, total: 0 }] })} style={{ background: "transparent", border: `1px dashed ${theme.cardBorder}`, borderRadius: 6, padding: "6px 12px", color: theme.textDim, fontSize: 12, cursor: "pointer", marginBottom: 12 }}>+ Add line</button>
+          <button onClick={() => setForm({ ...form, lineItems: [...form.lineItems, { description: "", quantity: 1, unitPrice: 0, total: 0 }] })} aria-label="Add another line item" style={{ background: "transparent", border: `1px dashed ${theme.cardBorder}`, borderRadius: 6, padding: "6px 12px", color: theme.textDim, fontSize: 12, cursor: "pointer", marginBottom: 12 }}>+ Add line</button>
 
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: "block", color: theme.textDim, fontSize: 11, marginBottom: 4 }}>Notes</label>
-            <input style={inputStyle} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes" />
+            <label htmlFor="invoice-notes" style={{ display: "block", color: theme.textDim, fontSize: 11, marginBottom: 4 }}>Notes</label>
+            <input id="invoice-notes" style={inputStyle} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes" />
           </div>
 
           <div style={{ display: "flex", gap: 8 }}>
@@ -120,7 +120,7 @@ export default function InvoicesPage() {
         </div>
       ) : (
         <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }} aria-label="Invoices list">
             <thead>
               <tr style={{ borderBottom: `1px solid ${theme.cardBorder}` }}>
                 {["Invoice #", "Status", "Date", "Total"].map((h) => (
