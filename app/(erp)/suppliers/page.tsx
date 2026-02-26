@@ -84,7 +84,8 @@ export default function SuppliersPage() {
     const map: Record<string, EstimatedCategory[]> = {};
     const target = selectedDealId === "all" ? shoppableDeals : shoppableDeals.filter((d) => d.id === selectedDealId);
     for (const deal of target) {
-      map[deal.id] = estimateMaterials(deal.data.rooms as unknown as Record<string, unknown>[], deal.data.prop as unknown as Record<string, unknown>, deal.data.mode);
+      const rooms = Array.isArray(deal.data?.rooms) ? deal.data.rooms : [];
+      map[deal.id] = estimateMaterials(rooms as unknown as Record<string, unknown>[], (deal.data?.prop || {}) as unknown as Record<string, unknown>, deal.data?.mode || "quick");
     }
     return map;
   }, [selectedDealId, shoppableDeals]);

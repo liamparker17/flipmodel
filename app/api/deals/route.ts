@@ -37,10 +37,23 @@ export async function GET(req: NextRequest) {
         dealContacts: {
           select: {
             id: true,
+            daysWorked: true,
+            workDescription: true,
             contact: {
               select: {
+                id: true,
                 name: true,
                 role: true,
+                company: true,
+                phone: true,
+                email: true,
+                profession: true,
+                dailyRate: true,
+                notes: true,
+                bankName: true,
+                accountNumber: true,
+                branchCode: true,
+                accountType: true,
               },
             },
           },

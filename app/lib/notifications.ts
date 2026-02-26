@@ -50,7 +50,7 @@ export function generateNotifications(
     const totalExpenses = deal.expenses
       .filter((e) => !e.isProjected)
       .reduce((s, e) => s + e.amount, 0);
-    const budget = deal.data.quickRenoEstimate || 0;
+    const budget = deal.data?.quickRenoEstimate || 0;
     if (budget > 0 && totalExpenses > budget * BUDGET_ALERT_THRESHOLD) {
       notifications.push({
         type: "budget_alert",

@@ -66,7 +66,7 @@ export default function ListingsPage() {
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 11, color: theme.textDim }}>Property</div>
                       <div style={{ fontSize: 13, color: theme.text }}>
-                        {deal.data.prop.bedrooms} bed, {deal.data.prop.bathrooms} bath, {deal.data.prop.totalSqm}m&sup2;
+                        {deal.data?.prop?.bedrooms || "—"} bed, {deal.data?.prop?.bathrooms || "—"} bath, {deal.data?.prop?.totalSqm || "—"}m&sup2;
                       </div>
                     </div>
                   </div>

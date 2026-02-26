@@ -32,7 +32,7 @@ export function generateSuggestions(deals: Deal[]): AutoSuggestion[] {
     }
 
     // Analysis complete, no offer yet → suggest making offer
-    if (deal.stage === "analysing" && deal.data.resale.expectedPrice > 0 && !deal.offerAmount) {
+    if (deal.stage === "analysing" && deal.data?.resale?.expectedPrice > 0 && !deal.offerAmount) {
       suggestions.push({
         dealId: deal.id,
         dealName: deal.name,
@@ -61,7 +61,7 @@ export function generateSuggestions(deals: Deal[]): AutoSuggestion[] {
     const totalActualExpenses = deal.expenses
       .filter((e) => !e.isProjected)
       .reduce((sum, e) => sum + e.amount, 0);
-    const budgetEstimate = deal.data.quickRenoEstimate || 0;
+    const budgetEstimate = deal.data?.quickRenoEstimate || 0;
     if (budgetEstimate > 0 && totalActualExpenses > budgetEstimate * 0.8) {
       const pct = Math.round((totalActualExpenses / budgetEstimate) * 100);
       suggestions.push({
