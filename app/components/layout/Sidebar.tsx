@@ -2,8 +2,10 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { theme } from "../theme";
-import type { ModuleKey } from "@/types/org";
+import type { ModuleKey, OrgRole } from "@/types/org";
 import useOrgContext from "@/hooks/useOrgContext";
+
+// ─── Navigation Types ───
 
 interface NavItem {
   href: string;
@@ -12,28 +14,122 @@ interface NavItem {
   module?: ModuleKey;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: "\u25A6", module: "dashboard" },
-  { href: "/pipeline", label: "Pipeline", icon: "\u25B6", module: "pipeline" },
-  { href: "/projects", label: "Projects", icon: "\u2692", module: "projects" },
-  { href: "/assignments", label: "My Work", icon: "\u2611", module: "projects" },
-  { href: "/contacts", label: "Contacts", icon: "\uD83D\uDCCB", module: "contacts" },
-  { href: "/suppliers", label: "Suppliers", icon: "\uD83D\uDED2", module: "suppliers" },
-  { href: "/contractors", label: "Contractors", icon: "\uD83D\uDC77", module: "contacts" },
-  { href: "/tools", label: "Tool Locker", icon: "\uD83D\uDD27", module: "tools" },
-  { href: "/finance", label: "Finance", icon: "\u2234", module: "finance" },
-  { href: "/invoices", label: "Invoices", icon: "\uD83D\uDCC4", module: "invoices" },
-  { href: "/documents", label: "Documents", icon: "\uD83D\uDCC2", module: "documents" },
-  { href: "/listings", label: "Listings", icon: "\uD83C\uDFE0", module: "pipeline" },
-  { href: "/reports", label: "Reports", icon: "\u2261", module: "reports" },
-  { href: "/team", label: "Team", icon: "\uD83D\uDC65", module: "team" },
-  { href: "/settings", label: "Settings", icon: "\u2699", module: "settings" },
-];
+interface NavGroup {
+  label?: string;
+  items: NavItem[];
+}
+
+// ─── Role-specific Navigation Configs ───
+
+const ROLE_NAV: Record<OrgRole, NavGroup[]> = {
+  executive: [
+    { label: "Overview", items: [
+      { href: "/dashboard", label: "Portfolio Overview", icon: "\u25E6", module: "dashboard" },
+      { href: "/pipeline", label: "Deal Pipeline", icon: "\u25B6", module: "pipeline" },
+      { href: "/listings", label: "Listings", icon: "\uD83C\uDFE0", module: "pipeline" },
+    ]},
+    { label: "Finance", items: [
+      { href: "/finance", label: "Financials", icon: "\u2234", module: "finance" },
+      { href: "/invoices", label: "Invoices", icon: "\uD83D\uDCC4", module: "invoices" },
+      { href: "/reports", label: "Reports", icon: "\u2261", module: "reports" },
+    ]},
+    { label: "Organisation", items: [
+      { href: "/team", label: "Team", icon: "\uD83D\uDC65", module: "team" },
+      { href: "/settings", label: "Settings", icon: "\u2699", module: "settings" },
+    ]},
+  ],
+
+  finance_manager: [
+    { label: "Overview", items: [
+      { href: "/dashboard", label: "Finance Dashboard", icon: "\u25E6", module: "dashboard" },
+    ]},
+    { label: "Money In", items: [
+      { href: "/invoices", label: "Invoices", icon: "\uD83D\uDCC4", module: "invoices" },
+      { href: "/contacts", label: "Customers", icon: "\uD83D\uDCCB", module: "contacts" },
+    ]},
+    { label: "Money Out", items: [
+      { href: "/finance", label: "Expense Claims", icon: "\u2234", module: "finance" },
+      { href: "/suppliers", label: "Vendors", icon: "\uD83D\uDED2", module: "suppliers" },
+    ]},
+    { label: "Accounting", items: [
+      { href: "/reports", label: "Financial Reports", icon: "\u2261", module: "reports" },
+    ]},
+    { label: "People", items: [
+      { href: "/team", label: "Payroll", icon: "\uD83D\uDC65", module: "team" },
+    ]},
+  ],
+
+  project_manager: [
+    { label: "Overview", items: [
+      { href: "/dashboard", label: "My Projects", icon: "\u25E6", module: "dashboard" },
+      { href: "/pipeline", label: "Properties", icon: "\u25B6", module: "pipeline" },
+    ]},
+    { label: "Site Work", items: [
+      { href: "/projects", label: "Site Progress", icon: "\u2692", module: "projects" },
+      { href: "/assignments", label: "Task Board", icon: "\u2611", module: "projects" },
+      { href: "/contractors", label: "Contractors", icon: "\uD83D\uDC77", module: "contacts" },
+    ]},
+    { label: "Materials", items: [
+      { href: "/suppliers", label: "Materials & Orders", icon: "\uD83D\uDED2", module: "suppliers" },
+      { href: "/tools", label: "Tool Locker", icon: "\uD83D\uDD27", module: "tools" },
+    ]},
+    { label: "Admin", items: [
+      { href: "/finance", label: "Costs", icon: "\u2234", module: "finance" },
+      { href: "/documents", label: "Site Documents", icon: "\uD83D\uDCC2", module: "documents" },
+    ]},
+  ],
+
+  site_supervisor: [
+    { items: [
+      { href: "/dashboard", label: "Today's Work", icon: "\u25E6", module: "dashboard" },
+      { href: "/assignments", label: "My Tasks", icon: "\u2611", module: "projects" },
+      { href: "/projects", label: "Site Status", icon: "\u2692", module: "projects" },
+      { href: "/tools", label: "Tools", icon: "\uD83D\uDD27", module: "tools" },
+      { href: "/documents", label: "Plans & Docs", icon: "\uD83D\uDCC2", module: "documents" },
+      { href: "/finance", label: "Log Expense", icon: "\u2234", module: "finance" },
+    ]},
+  ],
+
+  field_worker: [
+    { items: [
+      { href: "/dashboard", label: "My Day", icon: "\u25E6", module: "dashboard" },
+      { href: "/assignments", label: "Tasks", icon: "\u2611", module: "projects" },
+      { href: "/tools", label: "My Tools", icon: "\uD83D\uDD27", module: "tools" },
+      { href: "/documents", label: "Site Info", icon: "\uD83D\uDCC2", module: "documents" },
+    ]},
+  ],
+
+  viewer: [
+    { items: [
+      { href: "/dashboard", label: "Investment Overview", icon: "\u25E6", module: "dashboard" },
+      { href: "/projects", label: "Project Progress", icon: "\u2692", module: "projects" },
+      { href: "/reports", label: "Reports", icon: "\u2261", module: "reports" },
+      { href: "/documents", label: "Documents", icon: "\uD83D\uDCC2", module: "documents" },
+    ]},
+  ],
+};
+
+// ─── Role-specific Primary Action ───
+
+interface PrimaryAction {
+  label: string;
+  collapsedLabel: string;
+  action: "newDeal" | "navigate";
+  href?: string;
+}
+
+const ROLE_PRIMARY_ACTION: Partial<Record<OrgRole, PrimaryAction>> = {
+  executive: { label: "+ New Property", collapsedLabel: "+", action: "newDeal" },
+  project_manager: { label: "+ New Property", collapsedLabel: "+", action: "newDeal" },
+  finance_manager: { label: "+ New Invoice", collapsedLabel: "+", action: "navigate", href: "/invoices" },
+  site_supervisor: { label: "Log Expense", collapsedLabel: "$", action: "navigate", href: "/finance" },
+};
+
+// ─── Sidebar Component ───
 
 interface SidebarProps {
   onNewDeal: () => void;
 }
-
 
 export default function Sidebar({ onNewDeal }: SidebarProps) {
   const pathname = usePathname();
@@ -41,7 +137,9 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { canAccessModule, hasOrg } = useOrgContext();
+  const { canAccessModule, hasOrg, role } = useOrgContext();
+
+  const effectiveRole: OrgRole = role ?? "executive";
 
   useEffect(() => {
     const check = () => {
@@ -71,10 +169,24 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
     setMobileOpen(false);
   };
 
-  // Filter nav items based on module access
-  const filteredNavItems = hasOrg
-    ? NAV_ITEMS.filter((item) => !item.module || canAccessModule(item.module))
-    : NAV_ITEMS;
+  // Build filtered nav groups for current role
+  const navGroups = ROLE_NAV[effectiveRole].map((group) => ({
+    ...group,
+    items: group.items.filter((item) =>
+      !hasOrg || !item.module || canAccessModule(item.module)
+    ),
+  })).filter((group) => group.items.length > 0);
+
+  const primaryAction = ROLE_PRIMARY_ACTION[effectiveRole] ?? null;
+
+  const handlePrimaryAction = () => {
+    if (!primaryAction) return;
+    if (primaryAction.action === "newDeal") {
+      handleNewDeal();
+    } else if (primaryAction.href) {
+      handleNav(primaryAction.href);
+    }
+  };
 
   if (isMobile) {
     return (
@@ -103,8 +215,9 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
             }}>
               <SidebarContent
                 collapsed={false} isActive={isActive} onNav={handleNav}
-                onNewDeal={handleNewDeal} onClose={() => setMobileOpen(false)}
-                navItems={filteredNavItems}
+                onPrimaryAction={handlePrimaryAction} primaryAction={primaryAction}
+                onClose={() => setMobileOpen(false)}
+                navGroups={navGroups}
               />
             </div>
           </div>
@@ -120,23 +233,31 @@ export default function Sidebar({ onNewDeal }: SidebarProps) {
       display: "flex", flexDirection: "column", transition: "width 0.2s",
       position: "sticky", top: 0, height: "100vh", overflow: "auto",
     }}>
-      <SidebarContent collapsed={collapsed} isActive={isActive} onNav={handleNav} onNewDeal={handleNewDeal} navItems={filteredNavItems} />
+      <SidebarContent
+        collapsed={collapsed} isActive={isActive} onNav={handleNav}
+        onPrimaryAction={handlePrimaryAction} primaryAction={primaryAction}
+        navGroups={navGroups}
+      />
     </div>
   );
 }
+
+// ─── SidebarContent ───
 
 interface SidebarContentProps {
   collapsed: boolean;
   isActive: (href: string) => boolean;
   onNav: (href: string) => void;
-  onNewDeal: () => void;
+  onPrimaryAction: () => void;
+  primaryAction: PrimaryAction | null;
   onClose?: () => void;
-  navItems: NavItem[];
+  navGroups: NavGroup[];
 }
 
-function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose, navItems }: SidebarContentProps) {
+function SidebarContent({ collapsed, isActive, onNav, onPrimaryAction, primaryAction, onClose, navGroups }: SidebarContentProps) {
   return (
     <>
+      {/* Logo / Brand Header */}
       <div style={{
         padding: collapsed ? "14px 8px" : "14px 16px",
         borderBottom: `1px solid ${theme.cardBorder}`,
@@ -160,58 +281,90 @@ function SidebarContent({ collapsed, isActive, onNav, onNewDeal, onClose, navIte
         )}
       </div>
 
-      <div style={{ padding: collapsed ? "10px 8px" : "10px 12px" }}>
-        <button
-          onClick={onNewDeal}
-          data-tour="new-deal"
-          style={{
-            width: "100%", padding: collapsed ? "8px 0" : "8px 14px",
-            background: theme.accent, color: "#fff", border: "none",
-            borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
-            minHeight: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-          }}
-        >
-          <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
-          {!collapsed && "New Property"}
-        </button>
-      </div>
+      {/* Primary Action Button (role-specific) */}
+      {primaryAction && (
+        <div style={{ padding: collapsed ? "10px 8px" : "10px 12px" }}>
+          <button
+            onClick={onPrimaryAction}
+            data-tour="new-deal"
+            style={{
+              width: "100%", padding: collapsed ? "8px 0" : "8px 14px",
+              background: theme.accent, color: "#fff", border: "none",
+              borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
+              minHeight: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+          >
+            <span style={{ fontSize: 14, lineHeight: 1 }}>
+              {collapsed ? primaryAction.collapsedLabel : null}
+            </span>
+            {!collapsed && primaryAction.label}
+          </button>
+        </div>
+      )}
 
+      {/* Navigation Groups */}
       <nav style={{ flex: 1, padding: collapsed ? "2px 8px" : "2px 8px" }}>
-        {navItems.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <button
-              key={item.href}
-              onClick={() => onNav(item.href)}
-              data-tour={`nav-${item.href.replace("/", "")}`}
-              aria-current={active ? "page" : undefined}
-              aria-label={collapsed ? item.label : undefined}
-              style={{
-                width: "100%", display: "flex", alignItems: "center",
-                gap: 8, padding: collapsed ? "8px 0" : "8px 10px",
-                background: active ? `${theme.accent}12` : "transparent",
-                border: active ? `1px solid ${theme.accent}20` : "1px solid transparent",
-                borderRadius: 6, cursor: "pointer",
-                color: active ? theme.accent : theme.textDim,
-                fontSize: 13, fontWeight: active ? 600 : 400,
-                marginBottom: 1, minHeight: 36,
-                justifyContent: collapsed ? "center" : "flex-start",
-                transition: "all 0.1s",
-              }}
-            >
-              <span style={{
-                width: 24, height: 24, borderRadius: 4,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 13, flexShrink: 0,
+        {navGroups.map((group, groupIdx) => (
+          <div key={group.label ?? `group-${groupIdx}`}>
+            {/* Section Header */}
+            {group.label && !collapsed && (
+              <div style={{
+                fontSize: 9,
+                color: theme.textDim,
+                letterSpacing: 1,
+                textTransform: "uppercase" as const,
+                padding: "10px 10px 4px 10px",
+                ...(groupIdx > 0 ? { marginTop: 6 } : {}),
               }}>
-                {item.icon}
-              </span>
-              {!collapsed && item.label}
-            </button>
-          );
-        })}
+                {group.label}
+              </div>
+            )}
+            {/* Collapsed: add a small divider between groups */}
+            {group.label && collapsed && groupIdx > 0 && (
+              <div style={{
+                height: 1,
+                background: theme.cardBorder,
+                margin: "6px 4px",
+              }} />
+            )}
+            {group.items.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <button
+                  key={item.href}
+                  onClick={() => onNav(item.href)}
+                  data-tour={`nav-${item.href.replace("/", "")}`}
+                  aria-current={active ? "page" : undefined}
+                  aria-label={collapsed ? item.label : undefined}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center",
+                    gap: 8, padding: collapsed ? "8px 0" : "8px 10px",
+                    background: active ? `${theme.accent}12` : "transparent",
+                    border: active ? `1px solid ${theme.accent}20` : "1px solid transparent",
+                    borderRadius: 6, cursor: "pointer",
+                    color: active ? theme.accent : theme.textDim,
+                    fontSize: 13, fontWeight: active ? 600 : 400,
+                    marginBottom: 1, minHeight: 36,
+                    justifyContent: collapsed ? "center" : "flex-start",
+                    transition: "all 0.1s",
+                  }}
+                >
+                  <span style={{
+                    width: 24, height: 24, borderRadius: 4,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 13, flexShrink: 0,
+                  }}>
+                    {item.icon}
+                  </span>
+                  {!collapsed && item.label}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
+      {/* Footer */}
       {!collapsed && (
         <div style={{
           padding: "10px 16px", borderTop: `1px solid ${theme.cardBorder}`,
