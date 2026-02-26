@@ -171,7 +171,7 @@ export default function useApiDeals() {
 
   const fetchDeals = useCallback(async () => {
     try {
-      const raw = await api("/api/deals");
+      const raw = await api<any>("/api/deals");
       const items = raw.data ?? raw;
       setDeals(items.map(dbToClientDeal));
     } catch (err) {
@@ -186,7 +186,7 @@ export default function useApiDeals() {
   const getDeal = useCallback((id: string) => deals.find((d) => d.id === id), [deals]);
 
   const createDeal = useCallback(async (name: string): Promise<Deal> => {
-    const raw = await api("/api/deals", {
+    const raw = await api<any>("/api/deals", {
       method: "POST",
       body: JSON.stringify({ name }),
     });
@@ -196,7 +196,7 @@ export default function useApiDeals() {
   }, []);
 
   const updateDeal = useCallback(async (id: string, updates: Partial<Deal>) => {
-    const raw = await api(`/api/deals/${id}`, {
+    const raw = await api<any>(`/api/deals/${id}`, {
       method: "PATCH",
       body: JSON.stringify(updates),
     });
@@ -208,7 +208,7 @@ export default function useApiDeals() {
     const current = deals.find((d) => d.id === dealId);
     if (!current) return;
     const mergedData = { ...current.data, ...dataUpdates };
-    const raw = await api(`/api/deals/${dealId}`, {
+    const raw = await api<any>(`/api/deals/${dealId}`, {
       method: "PATCH",
       body: JSON.stringify({ data: mergedData }),
     });
@@ -228,7 +228,7 @@ export default function useApiDeals() {
   // ─── Expenses ───
   // Matches old signature: addExpense(dealId, expenseWithoutDealId)
   const addExpense = useCallback(async (dealId: string, expense: Omit<Expense, "id" | "dealId" | "createdAt">) => {
-    const raw = await api("/api/expenses", {
+    const raw = await api<any>("/api/expenses", {
       method: "POST",
       body: JSON.stringify({ ...expense, dealId }),
     });
@@ -253,7 +253,7 @@ export default function useApiDeals() {
 
   // ─── Milestones ───
   const addMilestone = useCallback(async (dealId: string, milestone: Omit<Milestone, "id">) => {
-    await api("/api/milestones", {
+    await api<any>("/api/milestones", {
       method: "POST",
       body: JSON.stringify({ ...milestone, dealId }),
     });
@@ -278,7 +278,7 @@ export default function useApiDeals() {
     const task = milestone.tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    await api(`/api/tasks/${taskId}`, {
+    await api<any>(`/api/tasks/${taskId}`, {
       method: "PATCH",
       body: JSON.stringify({ completed: !task.completed }),
     });
@@ -288,7 +288,7 @@ export default function useApiDeals() {
   // ─── Contacts ───
   const addContact = useCallback(async (dealId: string, contact: Omit<DealContact, "id">) => {
     // First create the contact
-    const newContact = await api("/api/contacts", {
+    const newContact = await api<any>("/api/contacts", {
       method: "POST",
       body: JSON.stringify(contact),
     });
@@ -298,7 +298,7 @@ export default function useApiDeals() {
   }, [fetchDeals]);
 
   const deleteContact = useCallback(async (_dealId: string, contactId: string) => {
-    await api(`/api/contacts/${contactId}`, { method: "DELETE" });
+    await api<any>(`/api/contacts/${contactId}`, { method: "DELETE" });
     await fetchDeals();
   }, [fetchDeals]);
 
@@ -306,7 +306,7 @@ export default function useApiDeals() {
   // Matches old signature: updateShoppingItem(dealId, materialKey, category, changes)
   const updateShoppingItem = useCallback(async (dealId: string, materialKey: string, category: string, updates: Partial<ShoppingListItem>) => {
     void category; // category used for matching in localStorage, not needed for API
-    await api("/api/shopping-list", {
+    await api<any>("/api/shopping-list", {
       method: "PATCH",
       body: JSON.stringify({ ...updates, id: materialKey, dealId }),
     });
@@ -326,7 +326,7 @@ export default function useApiDeals() {
   // Matches old signature: addCustomShoppingItem(dealId, { label, category, qty, unit, unitPrice, vendor? })
   const addCustomShoppingItem = useCallback(async (dealId: string, item: { label: string; category: string; qty: number; unit: string; unitPrice: number; vendor?: string }) => {
     const materialKey = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    await api("/api/shopping-list", {
+    await api<any>("/api/shopping-list", {
       method: "POST",
       body: JSON.stringify({
         dealId,
@@ -344,7 +344,7 @@ export default function useApiDeals() {
 
   const removeCustomShoppingItem = useCallback(async (_dealId: string, materialKey: string) => {
     // Need to delete by materialKey
-    await api(`/api/shopping-list?materialKey=${materialKey}`, { method: "DELETE" });
+    await api<any>(`/api/shopping-list?materialKey=${materialKey}`, { method: "DELETE" });
     await fetchDeals();
   }, [fetchDeals]);
 
