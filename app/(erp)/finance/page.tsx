@@ -4,6 +4,7 @@ import { theme, fmt } from "../../components/theme";
 import { styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
 import useIsMobile from "../../hooks/useIsMobile";
+import useOrgContext from "../../hooks/useOrgContext";
 import { computeDealMetrics, getPortfolioMetrics, getCashFlowProjection, getExpensesByCategory, getMonthlyExpenses } from "../../utils/dealHelpers";
 import FinanceOverview from "../../components/finance/FinanceOverview";
 import ExpenseTable from "../../components/finance/ExpenseTable";
@@ -14,7 +15,12 @@ import BudgetTab from "../../components/finance/BudgetTab";
 export default function FinancePage() {
   const { deals, loaded } = useDeals();
   const isMobile = useIsMobile();
-  const [view, setView] = useState<"overview" | "expenses" | "cashflow" | "pnl" | "budget">("overview");
+  const { role } = useOrgContext();
+
+  const defaultTab = role === "site_supervisor" ? "expenses"
+    : role === "project_manager" ? "budget"
+    : "overview";
+  const [view, setView] = useState<"overview" | "expenses" | "cashflow" | "pnl" | "budget">(defaultTab as "overview" | "expenses" | "cashflow" | "pnl" | "budget");
 
   if (!loaded) return <div style={{ padding: 40, color: theme.textDim }}>Loading...</div>;
 
@@ -57,12 +63,28 @@ export default function FinancePage() {
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, paddingLeft: isMobile ? 48 : 0, flexWrap: "wrap", gap: 8 }}>
         <div>
-          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>Finance</h1>
-          <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>Portfolio financials and expense tracking</p>
+          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>
+            {role === "finance_manager" ? "Financial Overview"
+              : role === "project_manager" ? "Project Costs"
+              : role === "site_supervisor" ? "Expenses"
+              : "Finance"}
+          </h1>
+          <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>
+            {role === "finance_manager" ? "Expense management and cash flow tracking"
+              : role === "project_manager" ? "Budget tracking across your projects"
+              : role === "site_supervisor" ? "Log and track site expenses"
+              : "Portfolio financials and expense tracking"}
+          </p>
         </div>
         {/* View tabs */}
         <div style={{ display: "flex", gap: 4 }}>
-          {([{ key: "overview", label: "Overview" }, { key: "expenses", label: "Expenses" }, { key: "cashflow", label: "Cash Flow" }, { key: "pnl", label: "P&L" }, { key: "budget", label: "Budget" }] as const).map((v) => (
+          {([{ key: "overview", label: "Overview" }, { key: "expenses", label: "Expenses" }, { key: "cashflow", label: "Cash Flow" }, { key: "pnl", label: "P&L" }, { key: "budget", label: "Budget" }] as const)
+          .filter((v) => {
+            if (role === "site_supervisor" && (v.key === "pnl" || v.key === "cashflow")) return false;
+            if (role === "viewer" && v.key === "budget") return false;
+            return true;
+          })
+          .map((v) => (
             <button key={v.key} onClick={() => setView(v.key)} style={{
               background: view === v.key ? theme.accent : "transparent", color: view === v.key ? "#000" : theme.textDim,
               border: view === v.key ? "none" : `1px solid ${theme.cardBorder}`, borderRadius: 6,

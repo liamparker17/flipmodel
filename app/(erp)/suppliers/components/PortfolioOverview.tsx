@@ -9,7 +9,7 @@ interface EstimatedCategory {
   items: { key: string; label: string; searchTerm: string; qty: number; unit: string; unitPrice: number; totalCost: number }[];
 }
 
-export function PortfolioOverview({ shoppableDeals, materialsMap, portfolioStats, isMobile, selectedDealId, onSelectDeal, shoppableDealOptions }: {
+export function PortfolioOverview({ shoppableDeals, materialsMap, portfolioStats, isMobile, selectedDealId, onSelectDeal, shoppableDealOptions, title }: {
   shoppableDeals: Deal[];
   materialsMap: Record<string, EstimatedCategory[]>;
   portfolioStats: { totalBudget: number; totalItems: number; categories: number; properties: number };
@@ -17,11 +17,12 @@ export function PortfolioOverview({ shoppableDeals, materialsMap, portfolioStats
   selectedDealId: string;
   onSelectDeal: (id: string) => void;
   shoppableDealOptions: Deal[];
+  title?: string;
 }) {
   return (
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1100 }}>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: theme.text, margin: "0 0 4px" }}>Suppliers</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: theme.text, margin: "0 0 4px" }}>{title || "Suppliers"}</h1>
         <p style={{ fontSize: 13, color: theme.textDim, margin: 0 }}>Material shopping lists across your portfolio</p>
       </div>
 

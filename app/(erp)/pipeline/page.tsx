@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { theme, fmt, pct, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
 import useIsMobile from "../../hooks/useIsMobile";
+import useOrgContext from "../../hooks/useOrgContext";
 import { DEAL_STAGES, groupDealsByStage, computeDealMetrics, PRIORITY_CONFIG, getDealProgress } from "../../utils/dealHelpers";
 import { generateSuggestions } from "../../lib/automation";
 import type { AutoSuggestion } from "../../lib/automation";
 import type { Deal, DealStage } from "../../types/deal";
 
-function DealPipelineCard({ deal, onMove }: { deal: Deal; onMove: (id: string, stage: DealStage) => void }) {
+function DealPipelineCard({ deal, onMove, canMove = true }: { deal: Deal; onMove: (id: string, stage: DealStage) => void; canMove?: boolean }) {
   const router = useRouter();
   const m = computeDealMetrics(deal);
   const stageInfo = DEAL_STAGES.find((s) => s.key === deal.stage);
@@ -73,20 +74,22 @@ function DealPipelineCard({ deal, onMove }: { deal: Deal; onMove: (id: string, s
         </div>
       </div>
       {/* Quick stage move buttons */}
-      <div style={{ display: "flex", gap: 2, marginTop: 4, borderTop: `1px solid ${theme.cardBorder}`, paddingTop: 4 }}>
-        {stageIdx > 0 && (
-          <button onClick={(e) => { e.stopPropagation(); onMove(deal.id, DEAL_STAGES[stageIdx - 1].key); }} aria-label={`Move ${deal.name} back to ${DEAL_STAGES[stageIdx - 1].label}`} style={{
-            background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 3,
-            padding: "2px 6px", fontSize: 8, color: theme.textDim, cursor: "pointer", flex: 1,
-          }}>← {DEAL_STAGES[stageIdx - 1].label}</button>
-        )}
-        {stageIdx < DEAL_STAGES.length - 1 && (
-          <button onClick={(e) => { e.stopPropagation(); onMove(deal.id, DEAL_STAGES[stageIdx + 1].key); }} aria-label={`Move ${deal.name} forward to ${DEAL_STAGES[stageIdx + 1].label}`} style={{
-            background: `${DEAL_STAGES[stageIdx + 1].color}12`, border: `1px solid ${DEAL_STAGES[stageIdx + 1].color}25`, borderRadius: 3,
-            padding: "2px 6px", fontSize: 8, color: DEAL_STAGES[stageIdx + 1].color, cursor: "pointer", flex: 1, fontWeight: 600,
-          }}>{DEAL_STAGES[stageIdx + 1].label} →</button>
-        )}
-      </div>
+      {canMove && (
+        <div style={{ display: "flex", gap: 2, marginTop: 4, borderTop: `1px solid ${theme.cardBorder}`, paddingTop: 4 }}>
+          {stageIdx > 0 && (
+            <button onClick={(e) => { e.stopPropagation(); onMove(deal.id, DEAL_STAGES[stageIdx - 1].key); }} aria-label={`Move ${deal.name} back to ${DEAL_STAGES[stageIdx - 1].label}`} style={{
+              background: "transparent", border: `1px solid ${theme.cardBorder}`, borderRadius: 3,
+              padding: "2px 6px", fontSize: 8, color: theme.textDim, cursor: "pointer", flex: 1,
+            }}>← {DEAL_STAGES[stageIdx - 1].label}</button>
+          )}
+          {stageIdx < DEAL_STAGES.length - 1 && (
+            <button onClick={(e) => { e.stopPropagation(); onMove(deal.id, DEAL_STAGES[stageIdx + 1].key); }} aria-label={`Move ${deal.name} forward to ${DEAL_STAGES[stageIdx + 1].label}`} style={{
+              background: `${DEAL_STAGES[stageIdx + 1].color}12`, border: `1px solid ${DEAL_STAGES[stageIdx + 1].color}25`, borderRadius: 3,
+              padding: "2px 6px", fontSize: 8, color: DEAL_STAGES[stageIdx + 1].color, cursor: "pointer", flex: 1, fontWeight: 600,
+            }}>{DEAL_STAGES[stageIdx + 1].label} →</button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -95,6 +98,10 @@ export default function PipelinePage() {
   const router = useRouter();
   const { deals, loaded, createDeal, moveDeal } = useDeals();
   const isMobile = useIsMobile();
+  const { role, hasPermission } = useOrgContext();
+  const canWriteDeals = hasPermission("deals:write");
+  const pageHeading = role === "finance_manager" ? "Properties" : role === "project_manager" ? "Deal Pipeline" : role === "viewer" ? "Portfolio Pipeline" : "Pipeline";
+  const showSuggestions = role === "executive" || role === "project_manager";
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"updated" | "price" | "profit" | "name">("updated");
@@ -147,13 +154,15 @@ export default function PipelinePage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, paddingLeft: isMobile ? 48 : 0, flexWrap: "wrap", gap: 8 }}>
         <div>
-          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>Pipeline</h1>
+          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>{pageHeading}</h1>
           <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>{filteredDeals.length} propert{filteredDeals.length !== 1 ? "ies" : "y"} {searchQuery ? "(filtered)" : "total"}</p>
         </div>
-        <button onClick={handleNewDeal} style={{
-          background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
-          padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36,
-        }}>+ New Property</button>
+        {canWriteDeals && (
+          <button onClick={handleNewDeal} style={{
+            background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
+            padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36,
+          }}>+ New Property</button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -212,7 +221,7 @@ export default function PipelinePage() {
       </div>
 
       {/* Suggestions Banner */}
-      {suggestions.length > 0 && (
+      {showSuggestions && suggestions.length > 0 && (
         <div style={{
           background: theme.card, border: `1px solid ${theme.cardBorder}`, borderLeft: `3px solid ${theme.accent}`,
           borderRadius: 8, marginBottom: 14, overflow: "hidden",
@@ -310,7 +319,7 @@ export default function PipelinePage() {
                   </div>
                 )}
                 <div style={{ padding: 6, flex: 1, display: "flex", flexDirection: "column", gap: 6, minHeight: 60, overflowY: "auto", maxHeight: "calc(100vh - 280px)" }}>
-                  {stageDeals.map((deal) => <DealPipelineCard key={deal.id} deal={deal} onMove={handleMove} />)}
+                  {stageDeals.map((deal) => <DealPipelineCard key={deal.id} deal={deal} onMove={handleMove} canMove={canWriteDeals} />)}
                   {stageDeals.length === 0 && (
                     <div style={{ fontSize: 10, color: theme.textDim, textAlign: "center", padding: "20px 8px" }}>No properties</div>
                   )}
@@ -376,7 +385,7 @@ export default function PipelinePage() {
                   <span style={{ fontSize: 11, color: theme.textDim }}>({stageDeals.length})</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {stageDeals.map((deal) => <DealPipelineCard key={deal.id} deal={deal} onMove={handleMove} />)}
+                  {stageDeals.map((deal) => <DealPipelineCard key={deal.id} deal={deal} onMove={handleMove} canMove={canWriteDeals} />)}
                 </div>
               </div>
             );
@@ -384,7 +393,7 @@ export default function PipelinePage() {
           {filteredDeals.length === 0 && (
             <div style={{ textAlign: "center", padding: 40, color: theme.textDim }}>
               <p style={{ marginBottom: 12, fontSize: 13 }}>{searchQuery ? "No properties match your search." : "No properties in your pipeline yet."}</p>
-              {!searchQuery && <button onClick={handleNewDeal} style={{ background: theme.accent, color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Add Your First Property</button>}
+              {!searchQuery && canWriteDeals && <button onClick={handleNewDeal} style={{ background: theme.accent, color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Add Your First Property</button>}
             </div>
           )}
         </div>

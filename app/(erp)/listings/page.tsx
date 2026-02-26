@@ -1,18 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { theme, fmt, styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
+import useIsMobile from "../../hooks/useIsMobile";
+import useOrgContext from "../../hooks/useOrgContext";
 
 export default function ListingsPage() {
   const { deals, loaded } = useDeals();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check(); window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+  const isMobile = useIsMobile();
+  const { role } = useOrgContext();
+  const pageHeading = role === "project_manager" ? "Completed Projects" : role === "finance_manager" ? "Property Sales" : role === "viewer" ? "Investment Exits" : "Property Listings";
 
   const listedDeals = deals.filter((d) => d.stage === "listed" || d.stage === "sold");
 
@@ -20,7 +17,7 @@ export default function ListingsPage() {
 
   return (
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1200, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, color: theme.text, margin: 0, marginBottom: 20 }}>Property Listings</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 700, color: theme.text, margin: 0, marginBottom: 20 }}>{pageHeading}</h1>
 
       {listedDeals.length === 0 ? (
         <div style={{ textAlign: "center", padding: 60, color: theme.textDim }}>

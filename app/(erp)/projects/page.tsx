@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { theme, fmt, pct, styles } from "../../components/theme";
+import useOrgContext from "../../hooks/useOrgContext";
 import useDeals from "../../hooks/api/useApiDeals";
 import { getStageColor, getStageLabel, computeDealMetrics, getDealProgress, PRIORITY_CONFIG, getExpensesByCategory } from "../../utils/dealHelpers";
 import type { Deal } from "../../types/deal";
@@ -9,6 +10,7 @@ import type { Deal } from "../../types/deal";
 export default function ProjectsPage() {
   const router = useRouter();
   const { deals, loaded } = useDeals();
+  const { role } = useOrgContext();
   const [isMobile, setIsMobile] = useState(false);
   const [filter, setFilter] = useState<"all" | "purchased" | "renovating">("all");
 
@@ -34,8 +36,12 @@ export default function ProjectsPage() {
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, paddingLeft: isMobile ? 48 : 0, flexWrap: "wrap", gap: 8 }}>
         <div>
-          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>Projects</h1>
-          <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>{projects.length} active renovation{projects.length !== 1 ? "s" : ""}</p>
+          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>
+            {role === "site_supervisor" ? "Site Status" : role === "project_manager" ? "Site Progress" : role === "viewer" ? "Project Progress" : "Projects"}
+          </h1>
+          <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>
+            {role === "site_supervisor" ? "Your active construction sites" : role === "project_manager" ? `${projects.length} active renovation${projects.length !== 1 ? "s" : ""}` : role === "viewer" ? "Overview of active renovations" : `${projects.length} active renovation${projects.length !== 1 ? "s" : ""}`}
+          </p>
         </div>
         {/* Filter */}
         <div style={{ display: "flex", gap: 4 }}>
@@ -52,24 +58,30 @@ export default function ProjectsPage() {
 
       {/* Portfolio KPIs */}
       {projects.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 14 }}>
-            <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Total Budget</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: theme.text, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(totalBudget)}</div>
-          </div>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 14 }}>
-            <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Total Spent</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: theme.orange, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(totalSpent)}</div>
-            {totalBudget > 0 && (
-              <div style={{ height: 4, background: theme.input, borderRadius: 2, marginTop: 4, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${Math.min((totalSpent / totalBudget) * 100, 100)}%`, background: totalSpent > totalBudget ? theme.red : theme.green, borderRadius: 2 }} />
-              </div>
-            )}
-          </div>
-          <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 14 }}>
-            <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Budget Remaining</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: totalBudget - totalSpent >= 0 ? theme.green : theme.red, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(totalBudget - totalSpent)}</div>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : (role === "executive" || role === "project_manager" || role === "finance_manager") ? "1fr 1fr 1fr 1fr" : "1fr", gap: 10, marginBottom: 16 }}>
+          {(role === "executive" || role === "project_manager" || role === "finance_manager") && (
+            <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 14 }}>
+              <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Total Budget</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: theme.text, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(totalBudget)}</div>
+            </div>
+          )}
+          {(role === "executive" || role === "project_manager" || role === "finance_manager") && (
+            <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 14 }}>
+              <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Total Spent</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: theme.orange, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(totalSpent)}</div>
+              {totalBudget > 0 && (
+                <div style={{ height: 4, background: theme.input, borderRadius: 2, marginTop: 4, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.min((totalSpent / totalBudget) * 100, 100)}%`, background: totalSpent > totalBudget ? theme.red : theme.green, borderRadius: 2 }} />
+                </div>
+              )}
+            </div>
+          )}
+          {(role === "executive" || role === "project_manager" || role === "finance_manager") && (
+            <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 14 }}>
+              <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Budget Remaining</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: totalBudget - totalSpent >= 0 ? theme.green : theme.red, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(totalBudget - totalSpent)}</div>
+            </div>
+          )}
           <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 14 }}>
             <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Task Progress</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: theme.accent, fontFamily: "'JetBrains Mono', monospace" }}>{completedTasks}/{totalTasks}</div>
@@ -89,14 +101,15 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {projects.map((deal) => <ProjectCard key={deal.id} deal={deal} onClick={() => router.push(`/projects/${deal.id}`)} isMobile={isMobile} />)}
+          {projects.map((deal) => <ProjectCard key={deal.id} deal={deal} onClick={() => router.push(`/projects/${deal.id}`)} isMobile={isMobile} role={role} />)}
         </div>
       )}
     </div>
   );
 }
 
-function ProjectCard({ deal, onClick, isMobile }: { deal: Deal; onClick: () => void; isMobile: boolean }) {
+function ProjectCard({ deal, onClick, isMobile, role }: { deal: Deal; onClick: () => void; isMobile: boolean; role: string | null }) {
+  const showFinancials = role === "executive" || role === "project_manager" || role === "finance_manager";
   const stageColor = getStageColor(deal.stage);
   const metrics = computeDealMetrics(deal);
   const progress = getDealProgress(deal);
@@ -127,21 +140,23 @@ function ProjectCard({ deal, onClick, isMobile }: { deal: Deal; onClick: () => v
           </div>
           {deal.address && <div style={{ fontSize: 11, color: theme.textDim }}>{deal.address}</div>}
         </div>
-        <div style={{ display: "flex", gap: 12, flexShrink: 0 }}>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase" }}>Profit</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: metrics.estimatedProfit >= 0 ? theme.green : theme.red, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(metrics.estimatedProfit)}</div>
+        {showFinancials && (
+          <div style={{ display: "flex", gap: 12, flexShrink: 0 }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase" }}>Profit</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: metrics.estimatedProfit >= 0 ? theme.green : theme.red, fontFamily: "'JetBrains Mono', monospace" }}>{fmt(metrics.estimatedProfit)}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase" }}>ROI</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: metrics.estimatedRoi >= 0.15 ? theme.green : theme.orange, fontFamily: "'JetBrains Mono', monospace" }}>{pct(metrics.estimatedRoi)}</div>
+            </div>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 9, color: theme.textDim, textTransform: "uppercase" }}>ROI</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: metrics.estimatedRoi >= 0.15 ? theme.green : theme.orange, fontFamily: "'JetBrains Mono', monospace" }}>{pct(metrics.estimatedRoi)}</div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Body */}
       <div style={{ padding: "12px 16px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : (showFinancials ? "1fr 1fr" : "1fr"), gap: 12 }}>
           {/* Progress */}
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: theme.textDim, marginBottom: 4 }}>
@@ -166,26 +181,28 @@ function ProjectCard({ deal, onClick, isMobile }: { deal: Deal; onClick: () => v
             )}
           </div>
 
-          {/* Budget */}
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: theme.textDim, marginBottom: 4 }}>
-              <span>Budget</span>
-              <span>{fmt(actualExpenses)} / {fmt(budget)} ({Math.round(budgetPct)}%)</span>
-            </div>
-            <div style={{ height: 8, background: theme.input, borderRadius: 4, overflow: "hidden", marginBottom: 8 }}>
-              <div style={{ height: "100%", width: `${Math.min(budgetPct, 100)}%`, background: budgetPct > 100 ? theme.red : budgetPct > 80 ? theme.orange : theme.green, borderRadius: 4 }} />
-            </div>
-            {/* Expense breakdown mini */}
-            {categoryBreakdown.length > 0 && (
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {categoryBreakdown.map((cat) => (
-                  <span key={cat.category} style={{ fontSize: 9, color: cat.color, background: `${cat.color}12`, padding: "1px 5px", borderRadius: 3 }}>
-                    {cat.label}: {fmt(cat.actual)}
-                  </span>
-                ))}
+          {/* Budget — hidden from non-financial roles */}
+          {showFinancials && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: theme.textDim, marginBottom: 4 }}>
+                <span>Budget</span>
+                <span>{fmt(actualExpenses)} / {fmt(budget)} ({Math.round(budgetPct)}%)</span>
               </div>
-            )}
-          </div>
+              <div style={{ height: 8, background: theme.input, borderRadius: 4, overflow: "hidden", marginBottom: 8 }}>
+                <div style={{ height: "100%", width: `${Math.min(budgetPct, 100)}%`, background: budgetPct > 100 ? theme.red : budgetPct > 80 ? theme.orange : theme.green, borderRadius: 4 }} />
+              </div>
+              {/* Expense breakdown mini */}
+              {categoryBreakdown.length > 0 && (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {categoryBreakdown.map((cat) => (
+                    <span key={cat.category} style={{ fontSize: 9, color: cat.color, background: `${cat.color}12`, padding: "1px 5px", borderRadius: 3 }}>
+                      {cat.label}: {fmt(cat.actual)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Contractors */}

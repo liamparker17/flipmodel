@@ -1,14 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-
-const theme = {
-  bg: "#0B0E13", card: "#12151C", cardBorder: "#1C2030", accent: "#3B82F6",
-  text: "#E2E4E9", textDim: "#6B7280", input: "#161A24", inputBorder: "#252B3B",
-  green: "#22C55E", red: "#EF4444", orange: "#F59E0B",
-};
-
-const fmt = (n: number) => new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" }).format(n);
+import { theme, fmt, styles } from "../../components/theme";
+import useOrgContext from "../../hooks/useOrgContext";
 
 interface Invoice {
   id: string; invoiceNumber: string; status: string; issueDate: string;
@@ -22,6 +16,8 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function InvoicesPage() {
+  const { role, hasPermission } = useOrgContext();
+  const canWrite = hasPermission("invoices:write");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ invoiceNumber: "", notes: "", lineItems: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }] });
@@ -76,11 +72,15 @@ export default function InvoicesPage() {
   return (
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: theme.text, margin: 0 }}>Invoices</h1>
-        <button onClick={() => setShowForm(!showForm)} aria-label={showForm ? "Close new invoice form" : "Create new invoice"} aria-expanded={showForm} style={{
-          padding: "8px 16px", background: theme.accent, color: "#fff", border: "none",
-          borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer",
-        }}>+ New Invoice</button>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: theme.text, margin: 0 }}>
+          {role === "finance_manager" ? "Invoices & Billing" : role === "viewer" ? "Invoice History" : "Invoices"}
+        </h1>
+        {canWrite && (
+          <button onClick={() => setShowForm(!showForm)} aria-label={showForm ? "Close new invoice form" : "Create new invoice"} aria-expanded={showForm} style={{
+            padding: "8px 16px", background: theme.accent, color: "#fff", border: "none",
+            borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer",
+          }}>+ New Invoice</button>
+        )}
       </div>
 
       {showForm && (
@@ -116,7 +116,9 @@ export default function InvoicesPage() {
         <div style={{ textAlign: "center", padding: 60, color: theme.textDim }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>&#128203;</div>
           <div style={{ fontSize: 15, fontWeight: 500 }}>No invoices yet</div>
-          <div style={{ fontSize: 13, marginTop: 6 }}>Create invoices to track contractor payments</div>
+          <div style={{ fontSize: 13, marginTop: 6 }}>
+            {role === "finance_manager" ? "Issue invoices to clients and track receivables" : "Create invoices to track payments"}
+          </div>
         </div>
       ) : (
         <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, overflow: "hidden" }}>

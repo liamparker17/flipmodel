@@ -1,12 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-
-const theme = {
-  bg: "#0B0E13", card: "#12151C", cardBorder: "#1C2030", accent: "#3B82F6",
-  text: "#E2E4E9", textDim: "#6B7280", input: "#161A24", inputBorder: "#252B3B",
-  green: "#22C55E", red: "#EF4444", orange: "#F59E0B",
-};
+import { theme, fmt, styles } from "../../components/theme";
+import useOrgContext from "../../hooks/useOrgContext";
 
 interface Doc {
   id: string; name: string; type: string; url?: string; notes?: string;
@@ -21,6 +17,12 @@ const DOC_TYPES = [
 const typeLabel = (t: string) => t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function DocumentsPage() {
+  const { role, hasPermission } = useOrgContext();
+  const canWrite = hasPermission("documents:write");
+  const pageHeading = role === "site_supervisor" ? "Plans & Documents"
+    : role === "field_worker" ? "Site Info"
+    : role === "viewer" ? "Project Documents"
+    : "Document Vault";
   const [docs, setDocs] = useState<Doc[]>([]);
   const [filter, setFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -77,11 +79,11 @@ export default function DocumentsPage() {
   return (
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: theme.text, margin: 0 }}>Document Vault</h1>
-        <button onClick={() => setShowAdd(!showAdd)} style={{
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: theme.text, margin: 0 }}>{pageHeading}</h1>
+        {canWrite && <button onClick={() => setShowAdd(!showAdd)} style={{
           padding: "8px 16px", background: theme.accent, color: "#fff", border: "none",
           borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer",
-        }}>+ Add Document</button>
+        }}>+ Add Document</button>}
       </div>
 
       {showAdd && (
@@ -133,7 +135,7 @@ export default function DocumentsPage() {
             <div key={doc.id} style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>{doc.name}</div>
-                <button onClick={() => handleDelete(doc.id)} style={{ background: "transparent", border: "none", color: theme.red, fontSize: 14, cursor: "pointer", padding: 0 }}>&times;</button>
+                {canWrite && <button onClick={() => handleDelete(doc.id)} style={{ background: "transparent", border: "none", color: theme.red, fontSize: 14, cursor: "pointer", padding: 0 }}>&times;</button>}
               </div>
               <div style={{ display: "inline-block", padding: "2px 8px", background: `${theme.accent}15`, color: theme.accent, borderRadius: 4, fontSize: 11, fontWeight: 500, marginBottom: 8 }}>
                 {typeLabel(doc.type)}

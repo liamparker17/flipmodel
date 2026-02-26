@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { theme } from "../../components/theme";
+import useOrgContext from "../../hooks/useOrgContext";
 
 interface AssignmentDeal {
   id: string;
@@ -46,6 +47,16 @@ interface Assignments {
 
 export default function AssignmentsPage() {
   const router = useRouter();
+  const { role } = useOrgContext();
+  const isFieldWorker = role === "field_worker";
+  const pageHeading = role === "field_worker" ? "My Jobs"
+    : role === "site_supervisor" ? "My Tasks"
+    : role === "project_manager" ? "Task Board"
+    : "My Work";
+  const pageSubtitle = role === "field_worker" ? "Your tasks for today and upcoming"
+    : role === "site_supervisor" ? "Tasks and milestones across your sites"
+    : role === "project_manager" ? "All team tasks and milestones"
+    : "Milestones and tasks assigned to you across all projects";
   const [data, setData] = useState<Assignments | null>(null);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -133,9 +144,9 @@ export default function AssignmentsPage() {
   return (
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 900, margin: "0 auto" }}>
       <div style={{ marginBottom: 20, paddingLeft: isMobile ? 48 : 0 }}>
-        <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>My Work</h1>
+        <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>{pageHeading}</h1>
         <p style={{ fontSize: 12, color: theme.textDim, margin: "4px 0 0" }}>
-          Milestones and tasks assigned to you across all projects
+          {pageSubtitle}
         </p>
       </div>
 
@@ -158,17 +169,17 @@ export default function AssignmentsPage() {
             }}>
               {/* Project header */}
               <div
-                onClick={() => router.push(`/projects/${proj.deal.id}`)}
+                onClick={isFieldWorker ? undefined : () => router.push(`/projects/${proj.deal.id}`)}
                 style={{
                   padding: "10px 14px", borderBottom: `1px solid ${theme.cardBorder}`,
-                  cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
+                  cursor: isFieldWorker ? "default" : "pointer", display: "flex", alignItems: "center", gap: 8,
                 }}
               >
                 <span style={{ fontSize: 13, fontWeight: 600, color: theme.text }}>{proj.deal.name}</span>
                 {proj.deal.address && (
                   <span style={{ fontSize: 10, color: theme.textDim }}>{proj.deal.address}</span>
                 )}
-                <span style={{ marginLeft: "auto", fontSize: 10, color: theme.accent }}>View Project &rarr;</span>
+                {!isFieldWorker && <span style={{ marginLeft: "auto", fontSize: 10, color: theme.accent }}>View Project &rarr;</span>}
               </div>
 
               <div style={{ padding: "8px 14px 14px" }}>
@@ -181,6 +192,12 @@ export default function AssignmentsPage() {
                       background: theme.input, borderRadius: 4, borderLeft: `3px solid ${color}`,
                       marginBottom: 6, overflow: "hidden",
                     }}>
+                      {isFieldWorker ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px" }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: theme.text }}>{ms.title}</span>
+                          <span style={{ fontSize: 10, color: theme.textDim, marginLeft: "auto" }}>{proj.deal.name}</span>
+                        </div>
+                      ) : (
                       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px" }}>
                         <div style={{
                           width: 16, height: 16, borderRadius: "50%",
@@ -211,6 +228,7 @@ export default function AssignmentsPage() {
                           </span>
                         )}
                       </div>
+                      )}
                       {ms.tasks.length > 0 && (
                         <div style={{ padding: "0 8px 6px", paddingLeft: 30 }}>
                           {ms.tasks.map((task) => (

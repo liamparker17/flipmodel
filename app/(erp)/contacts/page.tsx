@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { theme, fmt } from "../../components/theme";
+import useOrgContext from "../../hooks/useOrgContext";
 
 type ContactRole =
   | "agent"
@@ -81,10 +82,14 @@ const emptyForm = {
 
 export default function ContactsPage() {
   const router = useRouter();
+  const { role, hasPermission } = useOrgContext();
+  const canWriteContacts = hasPermission("contacts:write");
+  const pageHeading = role === "finance_manager" ? "Customers" : role === "project_manager" ? "Contacts & Contractors" : role === "site_supervisor" ? "Site Contacts" : "Contacts";
+  const pageSubtitle = role === "finance_manager" ? "customers" : role === "project_manager" ? "contacts & contractors" : role === "site_supervisor" ? "site contacts" : "contacts";
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<ContactRole | "all">("all");
+  const [roleFilter, setRoleFilter] = useState<ContactRole | "all">(role === "finance_manager" ? "all" : "all");
   const [showAddForm, setShowAddForm] = useState(false);
   const [form, setForm] = useState({ ...emptyForm });
   const [saving, setSaving] = useState(false);
@@ -193,30 +198,32 @@ export default function ContactsPage() {
       >
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: theme.text, margin: "0 0 4px" }}>
-            Contacts
+            {pageHeading}
           </h1>
           <p style={{ fontSize: 13, color: theme.textDim, margin: 0 }}>
-            {contacts.length} contact{contacts.length !== 1 ? "s" : ""} in your network
+            {contacts.length} {pageSubtitle} in your network
           </p>
         </div>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          aria-expanded={showAddForm}
-          aria-label={showAddForm ? "Cancel adding contact" : "Add new contact"}
-          style={{
-            background: showAddForm ? theme.red : theme.accent,
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            padding: "8px 16px",
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: "pointer",
-            minHeight: 36,
-          }}
-        >
-          {showAddForm ? "Cancel" : "+ Add Contact"}
-        </button>
+        {canWriteContacts && (
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            aria-expanded={showAddForm}
+            aria-label={showAddForm ? "Cancel adding contact" : "Add new contact"}
+            style={{
+              background: showAddForm ? theme.red : theme.accent,
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              padding: "8px 16px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              minHeight: 36,
+            }}
+          >
+            {showAddForm ? "Cancel" : "+ Add Contact"}
+          </button>
+        )}
       </div>
 
       {error && (
@@ -237,7 +244,7 @@ export default function ContactsPage() {
       )}
 
       {/* Add Contact Form */}
-      {showAddForm && (
+      {canWriteContacts && showAddForm && (
         <div
           style={{
             background: theme.card,

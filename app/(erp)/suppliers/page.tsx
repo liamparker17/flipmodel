@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { theme, fmt, styles } from "../../components/theme";
+import useOrgContext from "../../hooks/useOrgContext";
 import useDeals from "../../hooks/api/useApiDeals";
 import useIsMobile from "../../hooks/useIsMobile";
 import { estimateMaterials } from "../../utils/materialEstimator";
@@ -41,13 +42,14 @@ function getShoppingEntry(deal: Deal, materialKey: string, category: string): Sh
 
 export default function SuppliersPage() {
   const { deals, loaded, markItemPurchased, addCustomShoppingItem, removeCustomShoppingItem, updateShoppingItem } = useDeals();
+  const { role } = useOrgContext();
   const [selectedDealId, setSelectedDealId] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [showPurchased, setShowPurchased] = useState(true);
   const isMobile = useIsMobile();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<ViewTab>("shopping");
+  const [activeTab, setActiveTab] = useState<ViewTab>(role === "finance_manager" ? "spend" : "shopping");
   const [showPrintPreview, setShowPrintPreview] = useState(false);
 
   // Bulk selection state
@@ -278,6 +280,7 @@ export default function SuppliersPage() {
         shoppableDeals={shoppableDeals} materialsMap={materialsMap} portfolioStats={portfolioStats}
         isMobile={isMobile} selectedDealId={selectedDealId} onSelectDeal={(id) => resetView(id)}
         shoppableDealOptions={shoppableDeals}
+        title={role === "finance_manager" ? "Vendor Spend" : role === "project_manager" ? "Materials & Orders" : "Suppliers & Materials"}
       />
     );
   }
@@ -307,7 +310,13 @@ export default function SuppliersPage() {
 
       {/* Tab Switcher — now with Spend Tracker */}
       <div style={{ display: "flex", gap: 0, marginBottom: 20, borderBottom: `1px solid ${theme.cardBorder}` }}>
-        {([["shopping", "Shopping List"], ["compare", "Compare Prices"], ["spend", "Spend Tracker"]] as const).map(([key, label]) => (
+        {([["shopping", "Shopping List"], ["compare", "Compare Prices"], ["spend", "Spend Tracker"]] as const)
+          .filter(([key]) => {
+            if (key === "compare" && (role === "viewer" || role === "site_supervisor")) return false;
+            if (key === "spend" && role === "site_supervisor") return false;
+            return true;
+          })
+          .map(([key, label]) => (
           <button key={key} onClick={() => setActiveTab(key)}
             style={{
               background: "transparent", border: "none",
@@ -327,18 +336,20 @@ export default function SuppliersPage() {
           {/* Recommendations Banner */}
           <RecommendationBanner recommendations={recommendations} />
 
-          {/* Stats Row */}
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-            <StatBox label="Estimated Budget" value={fmt(purchaseStats.estimatedTotal)} />
-            <StatBox label="Remaining" value={`${purchaseStats.remaining} items`} />
-            <StatBox label="Purchased" value={`${purchaseStats.purchased} items`} color={theme.green} />
-            {purchaseStats.runOver !== 0 && (
-              <StatBox label={purchaseStats.runOver > 0 ? "Run Over" : "Under Budget"} value={fmt(Math.abs(purchaseStats.runOver))} sub="on estimated items" color={purchaseStats.runOver > 0 ? theme.red : theme.green} />
-            )}
-            {purchaseStats.customCount > 0 && (
-              <StatBox label="Unanticipated" value={fmt(purchaseStats.unanticipatedTotal)} sub={`${purchaseStats.customCount} extra item${purchaseStats.customCount !== 1 ? "s" : ""}`} color={theme.orange} />
-            )}
-          </div>
+          {/* Stats Row — hidden for site_supervisor (simplified view) */}
+          {role !== "site_supervisor" && (
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+              <StatBox label="Estimated Budget" value={fmt(purchaseStats.estimatedTotal)} />
+              <StatBox label="Remaining" value={`${purchaseStats.remaining} items`} />
+              <StatBox label="Purchased" value={`${purchaseStats.purchased} items`} color={theme.green} />
+              {purchaseStats.runOver !== 0 && (
+                <StatBox label={purchaseStats.runOver > 0 ? "Run Over" : "Under Budget"} value={fmt(Math.abs(purchaseStats.runOver))} sub="on estimated items" color={purchaseStats.runOver > 0 ? theme.red : theme.green} />
+              )}
+              {purchaseStats.customCount > 0 && (
+                <StatBox label="Unanticipated" value={fmt(purchaseStats.unanticipatedTotal)} sub={`${purchaseStats.customCount} extra item${purchaseStats.customCount !== 1 ? "s" : ""}`} color={theme.orange} />
+              )}
+            </div>
+          )}
 
           {/* Shop All Buttons */}
           <ShopAllButtons items={flatItems} shoppingList={selectedDeal.shoppingList || []} isMobile={isMobile} />
@@ -373,8 +384,8 @@ export default function SuppliersPage() {
             <AddCustomItemForm dealId={selectedDeal.id} onAdd={(item) => { addCustomShoppingItem(selectedDeal.id, item); setShowAddForm(false); }} onCancel={() => setShowAddForm(false)} />
           )}
 
-          {/* Category Budget Tips */}
-          {categoryTips.map((tip) => tip && (
+          {/* Category Budget Tips — hidden for site_supervisor */}
+          {role !== "site_supervisor" && categoryTips.map((tip) => tip && (
             <div key={tip.category} style={{
               background: `${tip.bestSupplierColor}08`, border: `1px solid ${tip.bestSupplierColor}20`,
               borderRadius: 8, padding: "8px 14px", marginBottom: 12,

@@ -4,6 +4,7 @@ import { theme, fmt, styles } from "../../components/theme";
 import useTools from "../../hooks/api/useApiTools";
 import useDeals from "../../hooks/api/useApiDeals";
 import useIsMobile from "../../hooks/useIsMobile";
+import useOrgContext from "../../hooks/useOrgContext";
 import type { Tool, ToolCheckout, ToolMaintenanceEntry, ToolIncident, ToolCategoryKey, ToolStatus, ToolCondition } from "../../types/tool";
 import { TOOL_CATEGORY_DEFAULTS } from "../../types/tool";
 
@@ -35,6 +36,11 @@ const CONDITION_COLORS: Record<ToolCondition, string> = {
 };
 
 function ToolsPageInner() {
+  const { role, hasPermission } = useOrgContext();
+  const canWrite = hasPermission("tools:write");
+  const canCheckout = hasPermission("tools:checkout");
+  const isFieldWorker = role === "field_worker";
+  const isSiteSupervisor = role === "site_supervisor";
   const {
     tools, checkouts, maintenance, incidents, loaded,
     addTool, updateTool, deleteTool,
@@ -150,19 +156,19 @@ function ToolsPageInner() {
             {selectedTool.serialNumber && <div style={{ fontSize: 11, color: theme.textDim, fontFamily: "'JetBrains Mono', monospace" }}>S/N: {selectedTool.serialNumber}</div>}
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {selectedTool.status === "available" && (
+            {canCheckout && selectedTool.status === "available" && (
               <ActionBtn label="Check Out" color={theme.orange} onClick={() => setShowCheckout(true)} />
             )}
-            {selectedTool.status === "checked_out" && activeCheckout && (
+            {canCheckout && selectedTool.status === "checked_out" && activeCheckout && (
               <ActionBtn label="Return" color={theme.green} onClick={() => setShowReturn(true)} />
             )}
-            <ActionBtn label="+ Maintenance" color={theme.accent} onClick={() => setShowMaintenance(true)} />
-            <ActionBtn label="Report Incident" color={theme.red} onClick={() => setShowIncident(true)} />
+            {!isFieldWorker && <ActionBtn label="+ Maintenance" color={theme.accent} onClick={() => setShowMaintenance(true)} />}
+            {!isFieldWorker && <ActionBtn label="Report Incident" color={theme.red} onClick={() => setShowIncident(true)} />}
           </div>
         </div>
 
         {/* Lifecycle Panel */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile || (isFieldWorker || isSiteSupervisor) ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 24 }}>
           <div style={styles.card}>
             <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Lifecycle</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
@@ -180,15 +186,17 @@ function ToolsPageInner() {
               </div>
             </div>
           </div>
-          <div style={styles.card}>
-            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Financials</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
-              <DetailRow label="Purchase Cost" value={fmt(selectedTool.purchaseCost)} mono />
-              <DetailRow label="Current Value (est.)" value={fmt(depreciatedValue)} mono />
-              <DetailRow label="Replacement Cost" value={fmt(selectedTool.replacementCost)} mono />
-              <DetailRow label="Maintenance Spent" value={fmt(toolMaintenance.reduce((s, m) => s + (m.cost || 0), 0))} mono />
+          {!isFieldWorker && !isSiteSupervisor && (
+            <div style={styles.card}>
+              <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Financials</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+                <DetailRow label="Purchase Cost" value={fmt(selectedTool.purchaseCost)} mono />
+                <DetailRow label="Current Value (est.)" value={fmt(depreciatedValue)} mono />
+                <DetailRow label="Replacement Cost" value={fmt(selectedTool.replacementCost)} mono />
+                <DetailRow label="Maintenance Spent" value={fmt(toolMaintenance.reduce((s, m) => s + (m.cost || 0), 0))} mono />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Current Holder */}
@@ -257,7 +265,7 @@ function ToolsPageInner() {
         <div style={{ ...styles.card, overflow: "hidden", padding: 0, marginBottom: 24 }}>
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${theme.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h3 style={styles.sectionHeading}>Maintenance Log</h3>
-            <button onClick={() => setShowMaintenance(true)} style={{ background: "transparent", border: `1px solid ${theme.accent}30`, borderRadius: 4, padding: "3px 10px", color: theme.accent, fontSize: 10, fontWeight: 600, cursor: "pointer" }}>+ Add Entry</button>
+            {!isFieldWorker && <button onClick={() => setShowMaintenance(true)} style={{ background: "transparent", border: `1px solid ${theme.accent}30`, borderRadius: 4, padding: "3px 10px", color: theme.accent, fontSize: 10, fontWeight: 600, cursor: "pointer" }}>+ Add Entry</button>}
           </div>
           {toolMaintenance.length === 0 ? (
             <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: theme.textDim }}>No maintenance records</div>
@@ -312,7 +320,7 @@ function ToolsPageInner() {
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 3, fontWeight: 600, background: `${recoveryColors[inc.recoveryStatus]}15`, color: recoveryColors[inc.recoveryStatus], textTransform: "uppercase" }}>{inc.recoveryStatus.replace("_", " ")}</span>
                     {inc.recoveryAmount != null && inc.recoveryAmount > 0 && <span style={{ fontSize: 10, color: theme.green, fontFamily: "'JetBrains Mono', monospace" }}>Recovered: {fmt(inc.recoveryAmount)}</span>}
-                    {inc.recoveryStatus === "pending" && (
+                    {!isFieldWorker && inc.recoveryStatus === "pending" && (
                       <button onClick={() => setShowResolve(inc.id)} style={{ background: "transparent", border: `1px solid ${theme.accent}30`, borderRadius: 4, padding: "2px 8px", color: theme.accent, fontSize: 10, fontWeight: 600, cursor: "pointer" }}>Resolve</button>
                     )}
                   </div>
@@ -372,10 +380,12 @@ function ToolsPageInner() {
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1100 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, paddingLeft: isMobile ? 48 : 0, flexWrap: "wrap", gap: 8 }}>
         <div>
-          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>Tool Locker</h1>
+          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>
+            {isFieldWorker ? "My Tools" : isSiteSupervisor ? "Site Tools" : "Tool Locker"}
+          </h1>
           <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>Equipment tracking &amp; lifecycle management</p>
         </div>
-        <ActionBtn label="+ Add Tool" color={theme.accent} onClick={() => setShowAddTool(true)} />
+        {canWrite && <ActionBtn label="+ Add Tool" color={theme.accent} onClick={() => setShowAddTool(true)} />}
       </div>
 
       {/* KPI Row */}
@@ -383,9 +393,9 @@ function ToolsPageInner() {
         <KPI label="Total Tools" value={String(kpis.total)} />
         <KPI label="Checked Out" value={String(kpis.checkedOut)} color={theme.orange} />
         <KPI label="Available" value={String(kpis.available)} color={theme.green} />
-        <KPI label="Maintenance" value={String(kpis.inMaintenance)} color={theme.accent} />
-        <KPI label="Lost / Damaged" value={String(kpis.lostDamaged)} color={theme.red} />
-        <KPI label="Total Value" value={fmt(kpis.totalValue)} />
+        {!isFieldWorker && <KPI label="Maintenance" value={String(kpis.inMaintenance)} color={theme.accent} />}
+        {!isFieldWorker && <KPI label="Lost / Damaged" value={String(kpis.lostDamaged)} color={theme.red} />}
+        {!isFieldWorker && !isSiteSupervisor && <KPI label="Total Value" value={fmt(kpis.totalValue)} />}
       </div>
 
       {/* Filters */}
@@ -460,7 +470,7 @@ function ToolsPageInner() {
               )}
 
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: theme.textDim, paddingTop: 8, borderTop: `1px solid ${theme.cardBorder}` }}>
-                <span>{fmt(tool.purchaseCost)}</span>
+                {!isFieldWorker && !isSiteSupervisor ? <span>{fmt(tool.purchaseCost)}</span> : <span />}
                 <span>{ageMonths}mo old</span>
               </div>
             </div>
@@ -469,7 +479,7 @@ function ToolsPageInner() {
       </div>
 
       {/* Add Tool Modal */}
-      {showAddTool && (
+      {canWrite && showAddTool && (
         <AddToolForm
           onSubmit={(t) => { addTool(t); setShowAddTool(false); showToast("Tool added"); }}
           onClose={() => setShowAddTool(false)}

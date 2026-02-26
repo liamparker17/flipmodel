@@ -51,7 +51,7 @@ function saveSettings(settings: AppSettings) {
 
 export default function SettingsPage() {
   const { deals, loaded } = useDeals();
-  const { org, hasPermission, canAccessModule, refetch: refetchOrg } = useOrgContext();
+  const { org, role, hasPermission, canAccessModule, refetch: refetchOrg } = useOrgContext();
   const isMobile = useIsMobile();
   const [toastMsg, setToastMsg] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
@@ -400,14 +400,27 @@ export default function SettingsPage() {
 
   if (!loaded) return <div style={{ padding: 40, color: theme.textDim }}>Loading...</div>;
 
+  // Role-based tab visibility:
+  // - "Defaults" hidden from site_supervisor, field_worker, viewer
+  // - "Accounting" only for executive and finance_manager
+  // - "Data" hidden from field_worker and viewer
+  // - "Roles" hidden from field_worker and viewer
+  // - field_worker only sees "General"
+  const showDefaults = role !== "site_supervisor" && role !== "field_worker" && role !== "viewer";
+  const showAccounting = (role === "executive" || role === "finance_manager") && canAccessModule("accounting");
+  const showData = role !== "field_worker" && role !== "viewer";
+  const showRoles = role !== "field_worker" && role !== "viewer";
+  const showOrganisation = role !== "field_worker";
+  const showAbout = role !== "field_worker";
+
   const allSections = [
     { key: "general" as const, label: "General" },
-    { key: "defaults" as const, label: "Calculator Defaults" },
-    { key: "organisation" as const, label: "Organisation" },
-    { key: "roles" as const, label: "Roles & Permissions" },
-    ...(canAccessModule("accounting") ? [{ key: "accounting" as const, label: "Accounting" }] : []),
-    { key: "data" as const, label: "Data Management" },
-    { key: "about" as const, label: "About" },
+    ...(showDefaults ? [{ key: "defaults" as const, label: "Calculator Defaults" }] : []),
+    ...(showOrganisation ? [{ key: "organisation" as const, label: "Organisation" }] : []),
+    ...(showRoles ? [{ key: "roles" as const, label: "Roles & Permissions" }] : []),
+    ...(showAccounting ? [{ key: "accounting" as const, label: "Accounting" }] : []),
+    ...(showData ? [{ key: "data" as const, label: "Data Management" }] : []),
+    ...(showAbout ? [{ key: "about" as const, label: "About" }] : []),
   ];
 
   const profileValue = (key: keyof UserProfile) =>

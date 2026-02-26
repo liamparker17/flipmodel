@@ -2,6 +2,7 @@
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { theme, fmt, styles } from "../../components/theme";
+import useOrgContext from "../../hooks/useOrgContext";
 import useDeals from "../../hooks/api/useApiDeals";
 import useTools from "../../hooks/api/useApiTools";
 import { TOOL_CATEGORY_DEFAULTS } from "../../types/tool";
@@ -63,6 +64,7 @@ export default function ContractorsPage() {
 
 function ContractorsPageInner() {
   const { deals, loaded } = useDeals();
+  const { role, hasPermission } = useOrgContext();
   const { tools, checkouts, incidents } = useTools();
   const searchParams = useSearchParams();
   const [selectedContractor, setSelectedContractor] = useState<string | null>(null);
@@ -260,20 +262,22 @@ function ContractorsPageInner() {
             </div>
           </div>
 
-          {/* Banking Details */}
-          <div style={styles.card}>
-            <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Banking Details</h3>
-            {selected.bankName ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
-                <Row label="Bank" value={selected.bankName} />
-                {selected.accountNumber && <Row label="Account" value={selected.accountNumber} mono />}
-                {selected.branchCode && <Row label="Branch Code" value={selected.branchCode} mono />}
-                {selected.accountType && <Row label="Type" value={selected.accountType.charAt(0).toUpperCase() + selected.accountType.slice(1)} />}
-              </div>
-            ) : (
-              <div style={{ fontSize: 12, color: theme.textDim, padding: "12px 0" }}>No banking details recorded</div>
-            )}
-          </div>
+          {/* Banking Details — only visible to executive and finance_manager */}
+          {(role === "executive" || role === "finance_manager") && (
+            <div style={styles.card}>
+              <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Banking Details</h3>
+              {selected.bankName ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+                  <Row label="Bank" value={selected.bankName} />
+                  {selected.accountNumber && <Row label="Account" value={selected.accountNumber} mono />}
+                  {selected.branchCode && <Row label="Branch Code" value={selected.branchCode} mono />}
+                  {selected.accountType && <Row label="Type" value={selected.accountType.charAt(0).toUpperCase() + selected.accountType.slice(1)} />}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: theme.textDim, padding: "12px 0" }}>No banking details recorded</div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* KPI Row */}
@@ -362,8 +366,8 @@ function ContractorsPageInner() {
           })}
         </div>
 
-        {/* Payments & Sign-off Timeline */}
-        {selected.projects.some((p) => p.expenses.length > 0) && (
+        {/* Payments & Sign-off Timeline — only visible to executive, finance_manager, project_manager */}
+        {(role === "executive" || role === "finance_manager" || role === "project_manager") && selected.projects.some((p) => p.expenses.length > 0) && (
           <div style={{ ...styles.card, overflow: "hidden", padding: 0 }}>
             <div style={{ padding: "12px 16px", borderBottom: `1px solid ${theme.cardBorder}` }}>
               <h3 style={styles.sectionHeading}>Payments &amp; Sign-off Timeline</h3>
@@ -481,7 +485,7 @@ function ContractorsPageInner() {
   return (
     <div style={{ padding: 28, maxWidth: 1100 }}>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: theme.text, margin: "0 0 4px" }}>Contractors</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: theme.text, margin: "0 0 4px" }}>{role === "project_manager" ? "Contractors & Crew" : "Contractors"}</h1>
         <p style={{ fontSize: 13, color: theme.textDim, margin: 0 }}>All contractors across your portfolio</p>
       </div>
 
@@ -489,7 +493,9 @@ function ContractorsPageInner() {
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
         <KPI label="Total Contractors" value={String(contractors.length)} />
         <KPI label="Active (on site)" value={String(contractors.filter((c) => c.projects.some((p) => p.dealStage === "renovating" && p.daysWorked > 0)).length)} color={theme.orange} />
-        <KPI label="Total Paid" value={fmt(contractors.reduce((s, c) => s + c.totalEarned, 0))} color={theme.green} />
+        {role !== "site_supervisor" && role !== "field_worker" && (
+          <KPI label="Total Paid" value={fmt(contractors.reduce((s, c) => s + c.totalEarned, 0))} color={theme.green} />
+        )}
       </div>
 
       {/* Active Contractors Dashboard */}

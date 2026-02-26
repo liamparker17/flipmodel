@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import { theme, fmt, pct, styles } from "../../components/theme";
+import useOrgContext from "../../hooks/useOrgContext";
 import useDeals from "../../hooks/api/useApiDeals";
 import { DEAL_STAGES, computeDealMetrics, getPortfolioMetrics, getStageIndex, getDealProgress, getExpensesByCategory } from "../../utils/dealHelpers";
 
 export default function ReportsPage() {
   const { deals, loaded } = useDeals();
+  const { role } = useOrgContext();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -97,8 +99,18 @@ export default function ReportsPage() {
   return (
     <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ marginBottom: 24, paddingLeft: isMobile ? 48 : 0 }}>
-        <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>Reports & Analytics</h1>
-        <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>Portfolio performance, deal velocity, and insights</p>
+        <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 600, margin: 0, color: theme.text }}>
+          {role === "finance_manager" ? "Financial Reports"
+            : role === "viewer" ? "Portfolio Reports"
+            : role === "project_manager" ? "Project Analytics"
+            : "Reports & Analytics"}
+        </h1>
+        <p style={{ fontSize: 12, color: theme.textDim, margin: "2px 0 0" }}>
+          {role === "finance_manager" ? "Revenue, expenses, and profitability analysis"
+            : role === "viewer" ? "Investment performance and returns"
+            : role === "project_manager" ? "Renovation progress and deal velocity"
+            : "Portfolio performance, deal velocity, and insights"}
+        </p>
       </div>
 
       {/* Top-level KPIs */}
@@ -132,6 +144,7 @@ export default function ReportsPage() {
         </div>
 
         {/* ROI Distribution */}
+        {role !== "project_manager" && (
         <div style={styles.card}>
           <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>ROI Distribution</h3>
           {deals.length === 0 ? (
@@ -156,10 +169,12 @@ export default function ReportsPage() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
         {/* Deal Velocity */}
+        {role !== "finance_manager" && (
         <div style={styles.card}>
           <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Deal Velocity (Days per Stage)</h3>
           {dealVelocity.length === 0 ? (
@@ -183,8 +198,10 @@ export default function ReportsPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Expense Categories */}
+        {role !== "viewer" && (
         <div style={styles.card}>
           <h3 style={{ ...styles.sectionHeading, margin: "0 0 12px" }}>Portfolio Expense Breakdown</h3>
           {expenseCategories.length === 0 ? (
@@ -205,6 +222,7 @@ export default function ReportsPage() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Sold Deals Performance */}
