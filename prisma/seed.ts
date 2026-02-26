@@ -31,6 +31,64 @@ async function main() {
 
   console.log(`User: ${user.email} (${user.id})`);
 
+  // ─── Additional Role Users ───
+  const financeUser = await prisma.user.upsert({
+    where: { email: "finance@flipmodel.co.za" },
+    update: {},
+    create: {
+      email: "finance@flipmodel.co.za",
+      name: "Nomsa Dlamini",
+      company: "FlipModel Properties",
+      passwordHash,
+    },
+  });
+
+  const pmUser = await prisma.user.upsert({
+    where: { email: "pm@flipmodel.co.za" },
+    update: {},
+    create: {
+      email: "pm@flipmodel.co.za",
+      name: "Pieter Botha",
+      company: "FlipModel Properties",
+      passwordHash,
+    },
+  });
+
+  const supervisorUser = await prisma.user.upsert({
+    where: { email: "supervisor@flipmodel.co.za" },
+    update: {},
+    create: {
+      email: "supervisor@flipmodel.co.za",
+      name: "Bongani Zulu",
+      company: "FlipModel Properties",
+      passwordHash,
+    },
+  });
+
+  const fieldUser = await prisma.user.upsert({
+    where: { email: "field@flipmodel.co.za" },
+    update: {},
+    create: {
+      email: "field@flipmodel.co.za",
+      name: "Mandla Khumalo",
+      company: "FlipModel Properties",
+      passwordHash,
+    },
+  });
+
+  const viewerUser = await prisma.user.upsert({
+    where: { email: "viewer@flipmodel.co.za" },
+    update: {},
+    create: {
+      email: "viewer@flipmodel.co.za",
+      name: "Sarah van Niekerk",
+      company: "FlipModel Properties",
+      passwordHash,
+    },
+  });
+
+  console.log("Role users created: 6");
+
   // ─── Organisation ───
   let org = await prisma.organisation.findUnique({ where: { slug: "flipmodel-properties" } });
   if (!org) {
@@ -66,7 +124,81 @@ async function main() {
     },
   });
 
+  // ─── Departments ───
+  const constructionDept = await prisma.department.upsert({
+    where: { id: "dept-construction" },
+    update: {},
+    create: { id: "dept-construction", orgId: org.id, name: "Construction" },
+  });
+
+  const financeDept = await prisma.department.upsert({
+    where: { id: "dept-finance" },
+    update: {},
+    create: { id: "dept-finance", orgId: org.id, name: "Finance" },
+  });
+
+  // ─── OrgMembers for all roles ───
+  await prisma.orgMember.upsert({
+    where: { orgId_userId: { orgId: org.id, userId: financeUser.id } },
+    update: {},
+    create: {
+      orgId: org.id,
+      userId: financeUser.id,
+      role: "finance_manager",
+      title: "Financial Manager",
+      departmentId: financeDept.id,
+    },
+  });
+
+  await prisma.orgMember.upsert({
+    where: { orgId_userId: { orgId: org.id, userId: pmUser.id } },
+    update: {},
+    create: {
+      orgId: org.id,
+      userId: pmUser.id,
+      role: "project_manager",
+      title: "Project Manager",
+      departmentId: constructionDept.id,
+    },
+  });
+
+  await prisma.orgMember.upsert({
+    where: { orgId_userId: { orgId: org.id, userId: supervisorUser.id } },
+    update: {},
+    create: {
+      orgId: org.id,
+      userId: supervisorUser.id,
+      role: "site_supervisor",
+      title: "Site Supervisor",
+      departmentId: constructionDept.id,
+    },
+  });
+
+  await prisma.orgMember.upsert({
+    where: { orgId_userId: { orgId: org.id, userId: fieldUser.id } },
+    update: {},
+    create: {
+      orgId: org.id,
+      userId: fieldUser.id,
+      role: "field_worker",
+      title: "General Labourer",
+      departmentId: constructionDept.id,
+    },
+  });
+
+  await prisma.orgMember.upsert({
+    where: { orgId_userId: { orgId: org.id, userId: viewerUser.id } },
+    update: {},
+    create: {
+      orgId: org.id,
+      userId: viewerUser.id,
+      role: "viewer",
+      title: "Investor",
+    },
+  });
+
   console.log(`Organisation: ${org.name} (${org.id})`);
+  console.log("All 6 role members created");
 
   const orgId = org.id;
 
@@ -407,6 +539,126 @@ async function main() {
 
   console.log("Deal 4 (Stellenbosch): sold stage");
 
+  // ─── Deal 5: Greenpoint (purchased, early stage) ───
+  const deal5 = await prisma.deal.create({
+    data: {
+      orgId,
+      userId: user.id,
+      name: "7 Loader Street, Green Point",
+      address: "7 Loader Street, Green Point, Cape Town, 8005",
+      purchasePrice: 2800000,
+      expectedSalePrice: 4100000,
+      stage: "purchased",
+      priority: "high",
+      notes: "3-bed apartment with mountain views. Transfer complete, planning renovation.",
+      tags: JSON.stringify(["cpt", "apartment", "mountain-view", "3bed"]),
+      data: {
+        rooms: { bedrooms: 3, bathrooms: 2, garage: 1 },
+        acquisition: { transferCost: 95000, bondRegistration: 20000 },
+        holding: { monthlyBond: 29200, monthlyRates: 4100, monthlyInsurance: 1500 },
+        resale: { agentCommission: 5, complianceCerts: 9000 },
+      },
+      purchaseDate: new Date("2026-01-15"),
+      transferDate: new Date("2026-02-20"),
+    },
+  });
+
+  await prisma.milestone.create({
+    data: {
+      orgId, userId: user.id, dealId: deal5.id,
+      title: "Planning & Design",
+      description: "Architect drawings, council approval, contractor quotes",
+      status: "in_progress", order: 1,
+      dueDate: new Date("2026-03-15"),
+      tasks: {
+        create: [
+          { title: "Get architect drawings", completed: true, completedAt: new Date("2026-02-25"), assignedTo: pmUser.name },
+          { title: "Submit to council for approval", completed: false, dueDate: new Date("2026-03-05"), assignedTo: pmUser.name },
+          { title: "Get 3 contractor quotes", completed: false, dueDate: new Date("2026-03-10"), assignedTo: pmUser.name },
+          { title: "Finalise renovation scope", completed: false, dueDate: new Date("2026-03-15"), assignedTo: supervisorUser.name },
+        ],
+      },
+    },
+  });
+
+  await prisma.milestone.create({
+    data: {
+      orgId, userId: user.id, dealId: deal5.id,
+      title: "Demolition",
+      description: "Strip out old kitchen, bathrooms, and flooring",
+      status: "pending", order: 2,
+      dueDate: new Date("2026-04-01"),
+      tasks: {
+        create: [
+          { title: "Remove old kitchen units", completed: false, dueDate: new Date("2026-03-20"), assignedTo: fieldUser.name },
+          { title: "Strip bathroom tiles", completed: false, dueDate: new Date("2026-03-22"), assignedTo: fieldUser.name },
+          { title: "Remove flooring", completed: false, dueDate: new Date("2026-03-25"), assignedTo: fieldUser.name },
+          { title: "Clear rubble and disposal", completed: false, dueDate: new Date("2026-03-28"), assignedTo: supervisorUser.name },
+        ],
+      },
+    },
+  });
+
+  await prisma.expense.createMany({
+    data: [
+      { orgId, userId: user.id, dealId: deal5.id, category: "materials", description: "Estimated kitchen & bathroom materials", amount: 120000, date: new Date("2026-02-20"), isProjected: true },
+      { orgId, userId: user.id, dealId: deal5.id, category: "labour", description: "Estimated labour (6 weeks)", amount: 90000, date: new Date("2026-02-20"), isProjected: true },
+    ],
+  });
+
+  await prisma.dealContact.createMany({
+    data: [
+      { orgId, dealId: deal5.id, contactId: contractor.id, workDescription: "Main contractor for renovation" },
+      { orgId, dealId: deal5.id, contactId: plumber.id, workDescription: "Bathroom plumbing" },
+    ],
+  });
+
+  console.log("Deal 5 (Green Point): purchased stage");
+
+  // ─── Documents ───
+  await prisma.document.createMany({
+    data: [
+      { orgId, userId: user.id, dealId: deal1.id, name: "Title Deed - 12 Oak Lane", type: "title_deed", url: "https://example.com/docs/title-deed-rosebank.pdf", notes: "Original title deed from transfer attorney" },
+      { orgId, userId: user.id, dealId: deal1.id, name: "Floor Plan - Ground Floor", type: "floor_plan", url: "https://example.com/docs/floor-plan-rosebank.pdf", notes: "Architect drawing showing kitchen layout changes" },
+      { orgId, userId: user.id, dealId: deal1.id, name: "Electrical COC", type: "compliance_certificate", url: "https://example.com/docs/coc-electrical-rosebank.pdf", notes: "Pending - to be issued after rewiring complete" },
+      { orgId, userId: user.id, dealId: deal2.id, name: "Valuation Report - Camps Bay", type: "valuation", url: "https://example.com/docs/valuation-camps-bay.pdf", notes: "Bank valuation for bond application" },
+      { orgId, userId: user.id, dealId: deal2.id, name: "Offer to Purchase", type: "offer_to_purchase", url: "https://example.com/docs/otp-camps-bay.pdf" },
+      { orgId, userId: user.id, dealId: deal5.id, name: "Architect Drawings - Green Point", type: "floor_plan", url: "https://example.com/docs/architect-greenpoint.pdf", notes: "Renovation layout plan from architect" },
+      { orgId, userId: user.id, dealId: deal5.id, name: "Council Submission", type: "other", url: "https://example.com/docs/council-greenpoint.pdf", notes: "Building plan submission to City of Cape Town" },
+    ],
+  });
+
+  console.log("Documents created: 7");
+
+  // ─── Notifications ───
+  await prisma.notification.createMany({
+    data: [
+      { orgId, userId: user.id, type: "deadline_warning", title: "Task overdue: Electrical rewiring", message: "The electrical rewiring task at 12 Oak Lane is past its due date.", read: false },
+      { orgId, userId: pmUser.id, type: "milestone_overdue", title: "Milestone due soon: Planning & Design", message: "Planning & Design at 7 Loader Street is due in 2 weeks.", read: false },
+      { orgId, userId: supervisorUser.id, type: "general", title: "New task assigned: Clear rubble", message: "You have been assigned to clear rubble at 7 Loader Street.", read: false },
+      { orgId, userId: fieldUser.id, type: "general", title: "New tasks assigned", message: "You have 3 new tasks at 7 Loader Street, Green Point.", read: false },
+      { orgId, userId: financeUser.id, type: "deadline_warning", title: "Invoice overdue: INV-2026-002", message: "Invoice INV-2026-002 from Sparks Electrical is past due.", read: false },
+    ],
+  });
+
+  console.log("Notifications created: 5");
+
+  // ─── Bank Account ───
+  await prisma.bankAccount.create({
+    data: {
+      orgId,
+      name: "FlipModel Business Account",
+      bankName: "FNB",
+      accountNumber: "62800001234",
+      branchCode: "250655",
+      accountType: "business",
+      currency: "ZAR",
+      currentBalance: 1250000,
+    },
+  });
+
+  console.log("Bank account created: 1");
+
   // ─── Tools ───
   await prisma.tool.createMany({
     data: [
@@ -439,7 +691,73 @@ async function main() {
     ],
   });
 
-  console.log("Tools created: 3");
+  // Tool checked out to field worker
+  await prisma.tool.create({
+    data: {
+      orgId, userId: user.id,
+      name: "Circular Saw", category: "power_tools", brand: "DeWalt", model: "DWE575",
+      serialNumber: "DW-CS-2025-001", purchaseDate: new Date("2025-02-15"),
+      purchaseCost: 2899, expectedLifespanMonths: 48, replacementCost: 3199,
+      status: "checked_out", condition: "good",
+      currentHolderName: fieldUser.name, currentHolderId: fieldUser.id,
+      currentDealId: deal1.id, currentDealName: "12 Oak Lane, Rosebank",
+      notes: "185mm blade. For cutting floor boards and skirting.",
+    },
+  });
+
+  // Tool in maintenance
+  await prisma.tool.create({
+    data: {
+      orgId, userId: user.id,
+      name: "Rotary Hammer Drill", category: "power_tools", brand: "Hilti", model: "TE 30-A36",
+      serialNumber: "HLT-RH-2024-002", purchaseDate: new Date("2024-09-01"),
+      purchaseCost: 8999, expectedLifespanMonths: 60, replacementCost: 9499,
+      status: "maintenance", condition: "fair",
+      notes: "SDS-plus. Chuck needs servicing — sent to Hilti centre.",
+    },
+  });
+
+  console.log("Tools created: 5");
+
+  // ─── Employees (HR module) ───
+  await prisma.employee.createMany({
+    data: [
+      {
+        orgId, userId: supervisorUser.id,
+        employeeNumber: "EMP-001", firstName: "Bongani", lastName: "Zulu",
+        email: "supervisor@flipmodel.co.za", phone: "+27 82 111 2222",
+        position: "Site Supervisor", department: "Construction",
+        startDate: new Date("2024-06-01"), employmentType: "full_time",
+        status: "active", baseSalary: 28000, taxNumber: "9876543210",
+      },
+      {
+        orgId, userId: fieldUser.id,
+        employeeNumber: "EMP-002", firstName: "Mandla", lastName: "Khumalo",
+        email: "field@flipmodel.co.za", phone: "+27 73 333 4444",
+        position: "General Labourer", department: "Construction",
+        startDate: new Date("2025-01-15"), employmentType: "full_time",
+        status: "active", baseSalary: 12000, taxNumber: "1122334455",
+      },
+      {
+        orgId, userId: financeUser.id,
+        employeeNumber: "EMP-003", firstName: "Nomsa", lastName: "Dlamini",
+        email: "finance@flipmodel.co.za", phone: "+27 84 555 6666",
+        position: "Financial Manager", department: "Finance",
+        startDate: new Date("2024-03-01"), employmentType: "full_time",
+        status: "active", baseSalary: 45000, taxNumber: "5566778899",
+      },
+      {
+        orgId, userId: pmUser.id,
+        employeeNumber: "EMP-004", firstName: "Pieter", lastName: "Botha",
+        email: "pm@flipmodel.co.za", phone: "+27 61 777 8888",
+        position: "Project Manager", department: "Construction",
+        startDate: new Date("2024-08-01"), employmentType: "full_time",
+        status: "active", baseSalary: 38000, taxNumber: "6677889900",
+      },
+    ],
+  });
+
+  console.log("Employees created: 4");
 
   // ─── Invoices ───
   await prisma.invoice.create({

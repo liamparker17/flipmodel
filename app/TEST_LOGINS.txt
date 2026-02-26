@@ -1,0 +1,160 @@
+================================================================
+  FlipModel ERP — Test Environment Logins
+================================================================
+
+Organisation: FlipModel Properties
+All passwords: demo1234
+
+----------------------------------------------------------------
+ROLE: Executive (Owner/Director — full access)
+----------------------------------------------------------------
+  Email:    demo@flipmodel.co.za
+  Password: demo1234
+  Name:     Demo User
+  Title:    Owner
+
+  What you'll see:
+  - Full sidebar: Portfolio Overview, Deal Pipeline, Listings,
+    Financials, Invoices, Reports, Team, Settings
+  - Dashboard: "Portfolio Overview" with all KPIs, pipeline
+    funnel, cash flow chart, deadlines
+  - All actions available: create deals, manage team, finances
+
+----------------------------------------------------------------
+ROLE: Finance Manager (Accountant)
+----------------------------------------------------------------
+  Email:    finance@flipmodel.co.za
+  Password: demo1234
+  Name:     Nomsa Dlamini
+  Title:    Financial Manager
+
+  What you'll see:
+  - Sidebar: Finance Dashboard, Invoices, Customers, Expense
+    Claims, Vendors, Financial Reports, Payroll
+  - Dashboard: "Finance Dashboard" with Outstanding, Expenses,
+    Projected Revenue, Cash Position
+  - Pipeline shows as "Properties" (read-only, no create/move)
+  - Invoices page: "Invoices & Billing" with full create access
+  - Contractors: banking details visible
+  - Settings: General, Defaults, Accounting, Data
+
+----------------------------------------------------------------
+ROLE: Project Manager
+----------------------------------------------------------------
+  Email:    pm@flipmodel.co.za
+  Password: demo1234
+  Name:     Pieter Botha
+  Title:    Project Manager
+
+  What you'll see:
+  - Sidebar: My Projects, Properties, Site Progress, Task Board,
+    Contractors, Materials & Orders, Tool Locker, Costs, Site Docs
+  - Dashboard: "My Projects" with Active Projects count, Tasks
+    Due This Week, Budget Health, Overdue Milestones
+  - Pipeline shows as "Deal Pipeline" with full create/move
+  - Projects page: "Site Progress" with full financial data
+  - Reports page: "Project Analytics" (no ROI distribution)
+  - Suppliers page: "Materials & Orders" (shopping list tab)
+
+----------------------------------------------------------------
+ROLE: Site Supervisor
+----------------------------------------------------------------
+  Email:    supervisor@flipmodel.co.za
+  Password: demo1234
+  Name:     Bongani Zulu
+  Title:    Site Supervisor
+
+  What you'll see:
+  - Sidebar: Today's Work, My Tasks, Site Status, Tools,
+    Plans & Docs, Log Expense
+  - Dashboard: "Today's Work" with task count, active sites,
+    simplified layout
+  - Projects page: "Site Status" (no profit/ROI/budget numbers)
+  - Tools page: "Site Tools" (no financial KPIs, can checkout)
+  - Finance page: "Expenses" (defaults to Expenses tab, no P&L)
+  - Documents page: "Plans & Documents"
+  - Settings: General tab only (profile)
+
+----------------------------------------------------------------
+ROLE: Field Worker (Labourer)
+----------------------------------------------------------------
+  Email:    field@flipmodel.co.za
+  Password: demo1234
+  Name:     Mandla Khumalo
+  Title:    General Labourer
+
+  What you'll see:
+  - Sidebar: My Day, Tasks, My Tools, Site Info (only 4 items)
+  - Dashboard: "My Day" with large task count, card-based task
+    list with checkboxes, mobile-optimised
+  - Assignments page: "My Jobs" (simplified, no project links)
+  - Tools page: "My Tools" (only checked-out tools visible,
+    no add/delete/maintenance actions)
+  - Documents page: "Site Info" (read-only)
+  - Settings: General tab only (profile)
+
+----------------------------------------------------------------
+ROLE: Viewer (Investor/Stakeholder — read-only)
+----------------------------------------------------------------
+  Email:    viewer@flipmodel.co.za
+  Password: demo1234
+  Name:     Sarah van Niekerk
+  Title:    Investor
+
+  What you'll see:
+  - Sidebar: Investment Overview, Project Progress, Reports,
+    Documents
+  - Dashboard: "Investment Overview" with Total Invested,
+    Portfolio Value, Projected Returns
+  - Pipeline shows as "Portfolio Pipeline" (read-only)
+  - Projects page: "Project Progress" (no financial data)
+  - Reports page: "Portfolio Reports" (no expense breakdown)
+  - Listings page: "Investment Exits"
+  - No create/edit/delete actions anywhere
+
+================================================================
+TEST DATA INCLUDED
+================================================================
+
+5 Properties (deals):
+  1. 12 Oak Lane, Rosebank — renovation stage (active reno)
+  2. 45 Beach Road, Camps Bay — listed stage (renovation done)
+  3. 8 Main Street, Sandton — lead stage (potential deal)
+  4. 22 Protea Avenue, Stellenbosch — sold (completed flip)
+  5. 7 Loader Street, Green Point — purchased (planning phase)
+
+4 Contacts:
+  - Sipho Ndlovu (Plumber)
+  - Johan van der Merwe (Electrician)
+  - Lerato Moloi (Estate Agent)
+  - Thabo Mokoena (General Contractor)
+
+5 Tools:
+  - Angle Grinder (checked out to Thabo)
+  - Cordless Drill (available)
+  - Laser Level (available)
+  - Circular Saw (checked out to Mandla/field worker)
+  - Rotary Hammer Drill (in maintenance)
+
+2 Invoices:
+  - INV-2026-001 (Plumber, paid)
+  - INV-2026-002 (Electrician, sent/overdue)
+
+7 Documents (title deeds, floor plans, COCs, valuations)
+1 Bank Account (FNB business, R1.25M balance)
+4 Employees (linked to role users)
+5 Notifications (role-appropriate alerts)
+2 Departments (Construction, Finance)
+
+================================================================
+HOW TO SEED
+================================================================
+
+  npx tsx prisma/seed.ts
+
+Note: Run this against a clean database or after resetting.
+To reset and re-seed:
+
+  npx prisma migrate reset
+
+================================================================
