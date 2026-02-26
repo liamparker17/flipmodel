@@ -17,7 +17,9 @@ export async function GET(req: NextRequest) {
       prisma.toolIncident.findMany({ where: { orgId: ctx.orgId }, orderBy: { date: "desc" } }),
     ]);
 
-    return apiSuccess({ ...paginatedResult(tools, total, pagination), checkouts, maintenance, incidents });
+    const response = apiSuccess({ ...paginatedResult(tools, total, pagination), checkouts, maintenance, incidents });
+    response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=120");
+    return response;
   } catch (error) {
     return handleApiError(error);
   }

@@ -4,13 +4,14 @@ import prisma from "@/lib/db";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { signupSchema } from "@/lib/validations/auth";
 import { rateLimit } from "@/lib/rate-limit";
+import { SIGNUP_RATE_LIMIT_MAX, SIGNUP_RATE_LIMIT_WINDOW_MS } from "@/lib/constants";
 
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting
     const forwarded = req.headers.get("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
-    const { success } = rateLimit(`signup:${ip}`, 5, 15 * 60 * 1000);
+    const { success } = rateLimit(`signup:${ip}`, SIGNUP_RATE_LIMIT_MAX, SIGNUP_RATE_LIMIT_WINDOW_MS);
     if (!success) {
       return apiError("Too many requests. Please try again later.", 429);
     }

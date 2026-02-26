@@ -6,6 +6,7 @@ import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiErr
 import { canManageRole } from "@/lib/permissions";
 import { z } from "zod";
 import type { OrgRole } from "@/types/org";
+import { GENERATED_PASSWORD_LENGTH } from "@/lib/constants";
 
 const inviteMemberSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -17,7 +18,7 @@ const inviteMemberSchema = z.object({
 });
 
 function generatePassword(): string {
-  // Generate a strong 16-character password with mixed character types
+  // Generate a strong password with mixed character types
   const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
   const lower = "abcdefghjkmnpqrstuvwxyz";
   const digits = "23456789";
@@ -31,8 +32,9 @@ function generatePassword(): string {
   pwd += digits[crypto.randomInt(digits.length)];
   pwd += special[crypto.randomInt(special.length)];
 
-  // Fill remaining 12 characters from full set
-  for (let i = 0; i < 12; i++) pwd += all[crypto.randomInt(all.length)];
+  // Fill remaining characters from full set
+  const remaining = GENERATED_PASSWORD_LENGTH - 4;
+  for (let i = 0; i < remaining; i++) pwd += all[crypto.randomInt(all.length)];
 
   // Shuffle to avoid predictable pattern
   return pwd.split("").sort(() => crypto.randomInt(3) - 1).join("");

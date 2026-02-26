@@ -8,6 +8,7 @@ export async function GET() {
     const [deals, tools, contacts, documents, invoices] = await Promise.all([
       prisma.deal.findMany({
         where: { orgId: ctx.orgId },
+        take: 10000,
         include: {
           expenses: true,
           milestones: { include: { tasks: true } },
@@ -17,16 +18,16 @@ export async function GET() {
           shoppingListItems: true,
         },
       }),
-      prisma.tool.findMany({ where: { orgId: ctx.orgId } }),
-      prisma.contact.findMany({ where: { orgId: ctx.orgId } }),
-      prisma.document.findMany({ where: { orgId: ctx.orgId } }),
-      prisma.invoice.findMany({ where: { orgId: ctx.orgId } }),
+      prisma.tool.findMany({ where: { orgId: ctx.orgId }, take: 10000 }),
+      prisma.contact.findMany({ where: { orgId: ctx.orgId }, take: 10000 }),
+      prisma.document.findMany({ where: { orgId: ctx.orgId }, take: 10000 }),
+      prisma.invoice.findMany({ where: { orgId: ctx.orgId }, take: 10000 }),
     ]);
 
     const [checkouts, maintenance, incidents] = await Promise.all([
-      prisma.toolCheckout.findMany({ where: { orgId: ctx.orgId } }),
-      prisma.toolMaintenance.findMany({ where: { orgId: ctx.orgId } }),
-      prisma.toolIncident.findMany({ where: { orgId: ctx.orgId } }),
+      prisma.toolCheckout.findMany({ where: { orgId: ctx.orgId }, take: 10000 }),
+      prisma.toolMaintenance.findMany({ where: { orgId: ctx.orgId }, take: 10000 }),
+      prisma.toolIncident.findMany({ where: { orgId: ctx.orgId }, take: 10000 }),
     ]);
 
     return apiSuccess({

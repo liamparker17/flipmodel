@@ -48,7 +48,9 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { updatedAt: "desc" },
     });
-    return apiSuccess(paginatedResult(deals, total, pagination));
+    const response = apiSuccess(paginatedResult(deals, total, pagination));
+    response.headers.set("Cache-Control", "private, max-age=15, stale-while-revalidate=30");
+    return response;
   } catch (error) {
     return handleApiError(error);
   }

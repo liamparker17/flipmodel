@@ -24,7 +24,9 @@ export async function GET(req: NextRequest) {
       prisma.bankAccount.count({ where }),
     ]);
 
-    return apiSuccess(paginatedResult(accounts, total, pagination));
+    const response = apiSuccess(paginatedResult(accounts, total, pagination));
+    response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=120");
+    return response;
   } catch (error) {
     return handleApiError(error);
   }

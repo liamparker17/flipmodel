@@ -6,6 +6,7 @@ import { xeroProvider } from "@/lib/accounting/xero";
 import { quickbooksProvider } from "@/lib/accounting/quickbooks";
 import type { AccountingProvider } from "@/lib/accounting/providers";
 import { rateLimit } from "@/lib/rate-limit";
+import { SYNC_RATE_LIMIT_MAX, SYNC_RATE_LIMIT_WINDOW_MS } from "@/lib/constants";
 
 function getProvider(name: string): AccountingProvider {
   if (name === "xero") return xeroProvider;
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
     const ctx = await requirePermission("accounting:write");
 
     // Rate limit: max 1 sync per 2 minutes per org
-    const { success: rlOk } = rateLimit(`sync:${ctx.orgId}`, 1, 2 * 60 * 1000);
+    const { success: rlOk } = rateLimit(`sync:${ctx.orgId}`, SYNC_RATE_LIMIT_MAX, SYNC_RATE_LIMIT_WINDOW_MS);
     if (!rlOk) return apiError("Please wait before syncing again", 429);
 
     const body = await req.json();
@@ -42,33 +43,35 @@ export async function POST(req: NextRequest) {
       const externalAccounts = await provider.getAccounts(tokens);
       let imported = 0;
 
-      for (const acct of externalAccounts) {
-        // Upsert by externalId
-        const existing = await prisma.chartOfAccount.findFirst({
-          where: { orgId: ctx.orgId, externalId: acct.externalId },
-        });
+      await prisma.$transaction(async (tx) => {
+        for (const acct of externalAccounts) {
+          // Upsert by externalId
+          const existing = await tx.chartOfAccount.findFirst({
+            where: { orgId: ctx.orgId, externalId: acct.externalId },
+          });
 
-        if (existing) {
-          await prisma.chartOfAccount.update({
-            where: { id: existing.id },
-            data: { name: acct.name, code: acct.code || existing.code },
-          });
-        } else {
-          await prisma.chartOfAccount.create({
-            data: {
-              orgId: ctx.orgId,
-              code: acct.code || `EXT-${acct.externalId.slice(0, 8)}`,
-              name: acct.name,
-              type: mapAccountType(acct.type),
-              subtype: "other_expense",
-              externalId: acct.externalId,
-              isActive: acct.status !== "ARCHIVED",
-              isSystemAccount: false,
-            },
-          });
-          imported++;
+          if (existing) {
+            await tx.chartOfAccount.update({
+              where: { id: existing.id },
+              data: { name: acct.name, code: acct.code || existing.code },
+            });
+          } else {
+            await tx.chartOfAccount.create({
+              data: {
+                orgId: ctx.orgId,
+                code: acct.code || `EXT-${acct.externalId.slice(0, 8)}`,
+                name: acct.name,
+                type: mapAccountType(acct.type),
+                subtype: "other_expense",
+                externalId: acct.externalId,
+                isActive: acct.status !== "ARCHIVED",
+                isSystemAccount: false,
+              },
+            });
+            imported++;
+          }
         }
-      }
+      });
 
       results.accounts = { total: externalAccounts.length, imported };
     }
@@ -78,40 +81,42 @@ export async function POST(req: NextRequest) {
       const externalContacts = await provider.getContacts(tokens);
       let imported = 0;
 
-      for (const ext of externalContacts) {
-        // Check if contact already synced
-        const syncRecord = await prisma.accountingSync.findFirst({
-          where: { orgId: ctx.orgId, entityType: "contact", externalId: ext.externalId },
-        });
-
-        if (!syncRecord) {
-          // Create contact in our system
-          const contact = await prisma.contact.create({
-            data: {
-              orgId: ctx.orgId,
-              userId: ctx.userId,
-              name: ext.name,
-              email: ext.email || null,
-              phone: ext.phone || null,
-              role: ext.isSupplier ? "contractor" : "buyer",
-            },
+      await prisma.$transaction(async (tx) => {
+        for (const ext of externalContacts) {
+          // Check if contact already synced
+          const syncRecord = await tx.accountingSync.findFirst({
+            where: { orgId: ctx.orgId, entityType: "contact", externalId: ext.externalId },
           });
 
-          // Track the sync mapping
-          await prisma.accountingSync.create({
-            data: {
-              orgId: ctx.orgId,
-              entityType: "contact",
-              entityId: contact.id,
-              externalId: ext.externalId,
-              direction: "inbound",
-              status: "synced",
-              lastSyncedAt: new Date(),
-            },
-          });
-          imported++;
+          if (!syncRecord) {
+            // Create contact in our system
+            const contact = await tx.contact.create({
+              data: {
+                orgId: ctx.orgId,
+                userId: ctx.userId,
+                name: ext.name,
+                email: ext.email || null,
+                phone: ext.phone || null,
+                role: ext.isSupplier ? "contractor" : "buyer",
+              },
+            });
+
+            // Track the sync mapping
+            await tx.accountingSync.create({
+              data: {
+                orgId: ctx.orgId,
+                entityType: "contact",
+                entityId: contact.id,
+                externalId: ext.externalId,
+                direction: "inbound",
+                status: "synced",
+                lastSyncedAt: new Date(),
+              },
+            });
+            imported++;
+          }
         }
-      }
+      });
 
       results.contacts = { total: externalContacts.length, imported };
     }

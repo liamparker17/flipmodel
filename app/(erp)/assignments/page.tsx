@@ -64,8 +64,8 @@ export default function AssignmentsPage() {
         const json = await res.json();
         setData(json);
       }
-    } catch (err) {
-      console.error("Failed to fetch assignments:", err);
+    } catch {
+      // Silently handle fetch failure
     } finally {
       setLoading(false);
     }
@@ -81,8 +81,8 @@ export default function AssignmentsPage() {
         body: JSON.stringify({ completed: !completed }),
       });
       fetchAssignments();
-    } catch (err) {
-      console.error("Failed to toggle task:", err);
+    } catch {
+      // Silently handle toggle failure
     }
   };
 

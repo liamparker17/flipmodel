@@ -19,6 +19,21 @@ export const DEFAULT_CURRENCY = "ZAR";
 /** Maximum login attempts before lockout */
 export const LOGIN_MAX_ATTEMPTS = 5;
 
+/** Maximum signup attempts per IP within the rate limit window */
+export const SIGNUP_RATE_LIMIT_MAX = 5;
+
+/** Signup rate limit window in milliseconds (15 minutes) */
+export const SIGNUP_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+
+/** Maximum sync requests per org within the rate limit window */
+export const SYNC_RATE_LIMIT_MAX = 1;
+
+/** Sync rate limit window in milliseconds (2 minutes) */
+export const SYNC_RATE_LIMIT_WINDOW_MS = 2 * 60 * 1000;
+
+/** Length of auto-generated passwords for new team members */
+export const GENERATED_PASSWORD_LENGTH = 16;
+
 // ─── Pagination ───
 /** Default number of items per page */
 export const DEFAULT_PAGE_SIZE = 20;

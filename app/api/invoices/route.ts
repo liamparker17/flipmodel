@@ -39,7 +39,9 @@ export async function GET(req: NextRequest) {
       take: pagination.limit,
       skip: pagination.skip,
     });
-    return apiSuccess(paginatedResult(invoices, total, pagination));
+    const response = apiSuccess(paginatedResult(invoices, total, pagination));
+    response.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=60");
+    return response;
   } catch (error) {
     return handleApiError(error);
   }

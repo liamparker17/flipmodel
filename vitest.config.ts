@@ -7,6 +7,11 @@ export default defineConfig({
     environment: "node",
     include: ["**/*.test.ts", "**/*.test.tsx"],
     exclude: ["node_modules", ".next"],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      exclude: ['node_modules', 'e2e', '**/*.test.ts', '**/*.spec.ts', '**/*.config.*'],
+    },
   },
   resolve: {
     alias: {

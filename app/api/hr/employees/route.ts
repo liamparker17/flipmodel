@@ -27,7 +27,9 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    return apiSuccess(paginatedResult(employees, total, pagination));
+    const response = apiSuccess(paginatedResult(employees, total, pagination));
+    response.headers.set("Cache-Control", "private, max-age=120, stale-while-revalidate=300");
+    return response;
   } catch (error) {
     return handleApiError(error);
   }

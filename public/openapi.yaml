@@ -6,6 +6,7 @@ info:
     Property flipping and construction project management ERP API.
     All list endpoints support pagination via `page` and `limit` query parameters.
     State-changing requests require a CSRF token in the `x-csrf-token` header.
+    Currency: ZAR (South African Rand). VAT rate: 15%.
 
 servers:
   - url: http://localhost:3000
@@ -30,6 +31,8 @@ tags:
     description: Invoice management
   - name: GL
     description: General Ledger - journal entries
+  - name: ChartOfAccounts
+    description: Chart of accounts management
   - name: Payables
     description: Accounts Payable - vendor bills
   - name: Receivables
@@ -104,6 +107,15 @@ components:
         hasMore:
           type: boolean
 
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
     Error:
       type: object
       properties:
@@ -133,6 +145,15 @@ components:
           type: array
           items:
             type: string
+        data:
+          type: object
+          description: Detailed deal modelling data (acquisition, property, renovation, resale)
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     Contact:
       type: object
@@ -149,6 +170,78 @@ components:
           type: string
         phone:
           type: string
+        profession:
+          type: string
+        dailyRate:
+          type: number
+
+    Expense:
+      type: object
+      properties:
+        id:
+          type: string
+        dealId:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+        category:
+          type: string
+        signOffStatus:
+          type: string
+          enum: [pending, approved, rejected]
+        date:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+        invoiceNumber:
+          type: string
+        dealId:
+          type: string
+        contactId:
+          type: string
+        status:
+          type: string
+          enum: [draft, sent, paid, overdue, cancelled]
+        issueDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+        subtotal:
+          type: number
+        tax:
+          type: number
+        total:
+          type: number
+        notes:
+          type: string
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceLineItem"
+
+    InvoiceLineItem:
+      type: object
+      properties:
+        description:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        amount:
+          type: number
 
     JournalEntry:
       type: object
@@ -161,6 +254,8 @@ components:
           type: string
           format: date
         description:
+          type: string
+        reference:
           type: string
         status:
           type: string
@@ -177,10 +272,37 @@ components:
           type: string
         accountName:
           type: string
+        description:
+          type: string
         debit:
           type: number
         credit:
           type: number
+        dealId:
+          type: string
+        contactId:
+          type: string
+
+    ChartOfAccount:
+      type: object
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          description: "Account type (asset, liability, equity, revenue, expense)"
+        subtype:
+          type: string
+        parentId:
+          type: string
+        isActive:
+          type: boolean
+        isSystemAccount:
+          type: boolean
 
     VendorBill:
       type: object
@@ -189,12 +311,264 @@ components:
           type: string
         billNumber:
           type: string
+        contactId:
+          type: string
+        dealId:
+          type: string
         status:
           type: string
           enum: [draft, approved, partially_paid, paid, overdue, cancelled]
+        issueDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+        subtotal:
+          type: number
+        tax:
+          type: number
         total:
           type: number
         amountPaid:
+          type: number
+        currency:
+          type: string
+          default: ZAR
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/VendorBillLine"
+
+    VendorBillLine:
+      type: object
+      properties:
+        description:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        amount:
+          type: number
+        accountCode:
+          type: string
+        dealId:
+          type: string
+
+    CustomerReceivable:
+      type: object
+      properties:
+        id:
+          type: string
+        invoiceId:
+          type: string
+        contactId:
+          type: string
+        dealId:
+          type: string
+        totalAmount:
+          type: number
+        amountPaid:
+          type: number
+        status:
+          type: string
+          enum: [outstanding, partially_paid, paid, written_off]
+        dueDate:
+          type: string
+          format: date
+        currency:
+          type: string
+          default: ZAR
+
+    PurchaseOrder:
+      type: object
+      properties:
+        id:
+          type: string
+        poNumber:
+          type: string
+        contactId:
+          type: string
+        dealId:
+          type: string
+        status:
+          type: string
+          enum: [draft, approved, sent, partially_received, received, cancelled]
+        orderDate:
+          type: string
+          format: date
+        expectedDate:
+          type: string
+          format: date
+        subtotal:
+          type: number
+        tax:
+          type: number
+        total:
+          type: number
+        shippingCost:
+          type: number
+        currency:
+          type: string
+          default: ZAR
+        deliveryAddress:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/PurchaseOrderLine"
+
+    PurchaseOrderLine:
+      type: object
+      properties:
+        description:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        amount:
+          type: number
+        inventoryItemId:
+          type: string
+        accountCode:
+          type: string
+
+    InventoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+        sku:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        unit:
+          type: string
+        quantityOnHand:
+          type: number
+        reorderPoint:
+          type: number
+        reorderQuantity:
+          type: number
+        costPrice:
+          type: number
+        location:
+          type: string
+
+    InventoryTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+        inventoryItemId:
+          type: string
+        type:
+          type: string
+          description: "Transaction type (receipt, issue, adjustment)"
+        quantity:
+          type: number
+        unitCost:
+          type: number
+        reference:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    BankAccount:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        bankName:
+          type: string
+        accountNumber:
+          type: string
+        branchCode:
+          type: string
+        accountType:
+          type: string
+          default: cheque
+        currency:
+          type: string
+          default: ZAR
+        currentBalance:
+          type: number
+        accountCode:
+          type: string
+        isActive:
+          type: boolean
+
+    BankTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+        bankAccountId:
+          type: string
+        date:
+          type: string
+          format: date
+        description:
+          type: string
+        amount:
+          type: number
+        type:
+          type: string
+        reference:
+          type: string
+        isReconciled:
+          type: boolean
+
+    FinancialPeriod:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [open, closed]
+
+    Tool:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        brand:
+          type: string
+        model:
+          type: string
+        serialNumber:
+          type: string
+        status:
+          type: string
+          enum: [available, checked_out, maintenance, retired]
+        condition:
+          type: string
+          enum: [new, good, fair, poor]
+        purchaseCost:
+          type: number
+        replacementCost:
           type: number
 
     Employee:
@@ -208,11 +582,119 @@ components:
           type: string
         lastName:
           type: string
+        email:
+          type: string
+        phone:
+          type: string
         position:
           type: string
+        department:
+          type: string
+        employmentType:
+          type: string
+          enum: [full_time, part_time, contract, temporary]
         status:
           type: string
           enum: [active, on_leave, terminated, suspended]
+        startDate:
+          type: string
+          format: date
+        baseSalary:
+          type: number
+        hourlyRate:
+          type: number
+
+    LeaveRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        employeeId:
+          type: string
+        leaveType:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        days:
+          type: number
+
+    Payslip:
+      type: object
+      properties:
+        id:
+          type: string
+        employeeId:
+          type: string
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+        grossPay:
+          type: number
+        totalDeductions:
+          type: number
+        netPay:
+          type: number
+        status:
+          type: string
+
+    Milestone:
+      type: object
+      properties:
+        id:
+          type: string
+        dealId:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        dueDate:
+          type: string
+          format: date
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        milestoneId:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        assignedTo:
+          type: string
+        dueDate:
+          type: string
+          format: date
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+        dealId:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+        type:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
 
 paths:
   /api/auth/signup:
@@ -257,6 +739,17 @@ paths:
       responses:
         "200":
           description: Paginated list of deals
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Deal"
         "401":
           description: Unauthorized
     post:
@@ -282,9 +775,19 @@ paths:
                   type: string
                 priority:
                   type: string
+                notes:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
       responses:
         "201":
           description: Deal created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deal"
         "401":
           description: Unauthorized
         "403":
@@ -294,6 +797,7 @@ paths:
     get:
       tags: [Deals]
       summary: Get deal details
+      description: Returns full deal with expenses, milestones, contacts, documents, and shopping list items
       parameters:
         - name: dealId
           in: path
@@ -303,6 +807,10 @@ paths:
       responses:
         "200":
           description: Deal details with expenses, milestones, contacts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deal"
         "404":
           description: Not found
     patch:
@@ -314,6 +822,31 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+                stage:
+                  type: string
+                priority:
+                  type: string
+                purchasePrice:
+                  type: number
+                expectedSalePrice:
+                  type: number
+                tags:
+                  type: array
+                  items:
+                    type: string
+                data:
+                  type: object
       responses:
         "200":
           description: Deal updated
@@ -341,15 +874,125 @@ paths:
           in: query
           schema:
             type: string
+          description: Filter by contact role
       responses:
         "200":
           description: Paginated contacts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Contact"
     post:
       tags: [Contacts]
       summary: Create a contact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                role:
+                  type: string
+                company:
+                  type: string
+                phone:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                profession:
+                  type: string
+                dailyRate:
+                  type: number
+                notes:
+                  type: string
+                bankName:
+                  type: string
+                accountNumber:
+                  type: string
+                branchCode:
+                  type: string
+                accountType:
+                  type: string
       responses:
         "201":
           description: Contact created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+
+  /api/contacts/{contactId}:
+    get:
+      tags: [Contacts]
+      summary: Get contact details
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Contact details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+        "404":
+          description: Not found
+    patch:
+      tags: [Contacts]
+      summary: Update a contact
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                role:
+                  type: string
+                company:
+                  type: string
+                phone:
+                  type: string
+                email:
+                  type: string
+      responses:
+        "200":
+          description: Contact updated
+    delete:
+      tags: [Contacts]
+      summary: Delete a contact
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Contact deleted
 
   /api/expenses:
     get:
@@ -362,19 +1005,113 @@ paths:
           in: query
           schema:
             type: string
+          description: Filter expenses by deal
         - name: signOffStatus
           in: query
           schema:
             type: string
+            enum: [pending, approved, rejected]
+          description: Filter by approval status
       responses:
         "200":
           description: Paginated expenses
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Expense"
     post:
       tags: [Expenses]
       summary: Create an expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dealId, description, amount, category, date]
+              properties:
+                dealId:
+                  type: string
+                description:
+                  type: string
+                amount:
+                  type: number
+                category:
+                  type: string
+                date:
+                  type: string
+                  format: date
+                notes:
+                  type: string
       responses:
         "201":
           description: Expense created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+
+  /api/expenses/{expenseId}:
+    get:
+      tags: [Expenses]
+      summary: Get expense details
+      parameters:
+        - name: expenseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Expense details
+        "404":
+          description: Not found
+    patch:
+      tags: [Expenses]
+      summary: Update an expense
+      parameters:
+        - name: expenseId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+                amount:
+                  type: number
+                category:
+                  type: string
+                signOffStatus:
+                  type: string
+      responses:
+        "200":
+          description: Expense updated
+    delete:
+      tags: [Expenses]
+      summary: Delete an expense
+      parameters:
+        - name: expenseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Expense deleted
 
   /api/invoices:
     get:
@@ -383,15 +1120,69 @@ paths:
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/limit"
+        - name: dealId
+          in: query
+          schema:
+            type: string
+          description: Filter invoices by deal
       responses:
         "200":
           description: Paginated invoices
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Invoice"
     post:
       tags: [Invoices]
       summary: Create an invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invoiceNumber]
+              properties:
+                invoiceNumber:
+                  type: string
+                dealId:
+                  type: string
+                contactId:
+                  type: string
+                status:
+                  type: string
+                issueDate:
+                  type: string
+                  format: date
+                dueDate:
+                  type: string
+                  format: date
+                subtotal:
+                  type: number
+                tax:
+                  type: number
+                total:
+                  type: number
+                notes:
+                  type: string
+                lineItems:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/InvoiceLineItem"
       responses:
         "201":
           description: Invoice created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
 
   /api/invoices/{invoiceId}:
     get:
@@ -406,15 +1197,57 @@ paths:
       responses:
         "200":
           description: Invoice details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "404":
+          description: Not found
     patch:
       tags: [Invoices]
       summary: Update an invoice
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                dueDate:
+                  type: string
+                  format: date
+                subtotal:
+                  type: number
+                tax:
+                  type: number
+                total:
+                  type: number
+                notes:
+                  type: string
+                lineItems:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/InvoiceLineItem"
       responses:
         "200":
           description: Invoice updated
     delete:
       tags: [Invoices]
       summary: Delete an invoice (not paid)
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Invoice deleted
@@ -425,6 +1258,7 @@ paths:
     get:
       tags: [GL]
       summary: List journal entries
+      description: Returns journal entries with their debit/credit lines included
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/limit"
@@ -438,25 +1272,140 @@ paths:
           schema:
             type: string
             format: date
+          description: Filter entries on or after this date
         - name: endDate
           in: query
           schema:
             type: string
             format: date
+          description: Filter entries on or before this date
       responses:
         "200":
           description: Paginated journal entries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/JournalEntry"
     post:
       tags: [GL]
       summary: Create a journal entry (debits must equal credits)
+      description: Creates a draft journal entry with debit/credit lines. Entry number is auto-generated (JE-XXXXXX).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, description, lines]
+              properties:
+                date:
+                  type: string
+                  format: date
+                description:
+                  type: string
+                reference:
+                  type: string
+                sourceType:
+                  type: string
+                sourceId:
+                  type: string
+                notes:
+                  type: string
+                lines:
+                  type: array
+                  minItems: 2
+                  items:
+                    type: object
+                    required: [accountCode, accountName]
+                    properties:
+                      accountCode:
+                        type: string
+                      accountName:
+                        type: string
+                      description:
+                        type: string
+                      debit:
+                        type: number
+                      credit:
+                        type: number
+                      dealId:
+                        type: string
+                      contactId:
+                        type: string
       responses:
         "201":
           description: Journal entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
+
+  /api/gl/{entryId}:
+    get:
+      tags: [GL]
+      summary: Get a journal entry by ID
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Journal entry details with lines
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
+        "404":
+          description: Not found
+    patch:
+      tags: [GL]
+      summary: Update a draft journal entry
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date
+                description:
+                  type: string
+                reference:
+                  type: string
+                notes:
+                  type: string
+                lines:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/JournalLine"
+      responses:
+        "200":
+          description: Journal entry updated
+        "400":
+          description: Cannot update a posted entry
 
   /api/gl/{entryId}/post:
     post:
       tags: [GL]
       summary: Post a draft journal entry to the ledger
+      description: Changes entry status from draft to posted. Cannot be undone except by creating a reversal entry.
       parameters:
         - name: entryId
           in: path
@@ -469,10 +1418,62 @@ paths:
         "400":
           description: Entry is not in draft status
 
+  /api/accounting/chart-of-accounts:
+    get:
+      tags: [ChartOfAccounts]
+      summary: List chart of accounts
+      description: Returns all accounts ordered by code. Response is cached (5 min).
+      responses:
+        "200":
+          description: List of accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChartOfAccount"
+    post:
+      tags: [ChartOfAccounts]
+      summary: Create an account or seed defaults
+      description: Send `{"action":"seedDefaults"}` to populate the default chart of accounts, or send account fields to create a single account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [action]
+                  properties:
+                    action:
+                      type: string
+                      enum: [seedDefaults]
+                  description: Seed the default chart of accounts
+                - type: object
+                  required: [code, name, type]
+                  properties:
+                    code:
+                      type: string
+                    name:
+                      type: string
+                    type:
+                      type: string
+                    subtype:
+                      type: string
+                    parentId:
+                      type: string
+                  description: Create a single account
+      responses:
+        "201":
+          description: Account(s) created
+        "400":
+          description: Chart of accounts already has entries (for seedDefaults)
+
   /api/payables:
     get:
       tags: [Payables]
       summary: List vendor bills
+      description: Returns vendor bills with their line items included
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/limit"
@@ -480,26 +1481,153 @@ paths:
           in: query
           schema:
             type: string
+            enum: [draft, approved, partially_paid, paid, overdue, cancelled]
+        - name: contactId
+          in: query
+          schema:
+            type: string
+          description: Filter bills by vendor/contact
+        - name: dealId
+          in: query
+          schema:
+            type: string
+          description: Filter bills by deal
       responses:
         "200":
           description: Paginated vendor bills
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/VendorBill"
     post:
       tags: [Payables]
       summary: Create a vendor bill
+      description: Creates a draft vendor bill with line items. Audit logged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [billNumber, subtotal, tax, total, lines]
+              properties:
+                billNumber:
+                  type: string
+                contactId:
+                  type: string
+                dealId:
+                  type: string
+                issueDate:
+                  type: string
+                  format: date
+                dueDate:
+                  type: string
+                  format: date
+                subtotal:
+                  type: number
+                tax:
+                  type: number
+                total:
+                  type: number
+                currency:
+                  type: string
+                  default: ZAR
+                notes:
+                  type: string
+                documentUrl:
+                  type: string
+                lines:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/VendorBillLine"
       responses:
         "201":
           description: Vendor bill created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorBill"
 
-  /api/payables/{billId}/pay:
-    post:
+  /api/payables/{billId}:
+    get:
       tags: [Payables]
-      summary: Record a payment against a vendor bill
+      summary: Get vendor bill details
       parameters:
         - name: billId
           in: path
           required: true
           schema:
             type: string
+      responses:
+        "200":
+          description: Vendor bill with lines and payments
+        "404":
+          description: Not found
+    patch:
+      tags: [Payables]
+      summary: Update a vendor bill
+      parameters:
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                dueDate:
+                  type: string
+                  format: date
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: Vendor bill updated
+
+  /api/payables/{billId}/pay:
+    post:
+      tags: [Payables]
+      summary: Record a payment against a vendor bill
+      description: Records a payment and updates the bill status (partially_paid or paid). Audit logged.
+      parameters:
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, date]
+              properties:
+                amount:
+                  type: number
+                  description: Payment amount in bill currency
+                date:
+                  type: string
+                  format: date
+                reference:
+                  type: string
+                bankAccountId:
+                  type: string
+                notes:
+                  type: string
       responses:
         "201":
           description: Payment recorded
@@ -513,26 +1641,124 @@ paths:
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/limit"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [outstanding, partially_paid, paid, written_off]
+        - name: contactId
+          in: query
+          schema:
+            type: string
+          description: Filter by customer/contact
       responses:
         "200":
           description: Paginated receivables
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CustomerReceivable"
     post:
       tags: [Receivables]
       summary: Create a receivable
+      description: Creates an outstanding receivable. Audit logged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [totalAmount]
+              properties:
+                invoiceId:
+                  type: string
+                contactId:
+                  type: string
+                dealId:
+                  type: string
+                totalAmount:
+                  type: number
+                dueDate:
+                  type: string
+                  format: date
+                currency:
+                  type: string
+                  default: ZAR
+                notes:
+                  type: string
       responses:
         "201":
           description: Receivable created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerReceivable"
 
-  /api/receivables/{receivableId}/pay:
-    post:
+  /api/receivables/{receivableId}:
+    get:
       tags: [Receivables]
-      summary: Record incoming payment
+      summary: Get receivable details
       parameters:
         - name: receivableId
           in: path
           required: true
           schema:
             type: string
+      responses:
+        "200":
+          description: Receivable details with payments
+        "404":
+          description: Not found
+    patch:
+      tags: [Receivables]
+      summary: Update a receivable
+      parameters:
+        - name: receivableId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Receivable updated
+
+  /api/receivables/{receivableId}/pay:
+    post:
+      tags: [Receivables]
+      summary: Record incoming payment
+      description: Records a customer payment against a receivable. Audit logged.
+      parameters:
+        - name: receivableId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, date]
+              properties:
+                amount:
+                  type: number
+                date:
+                  type: string
+                  format: date
+                reference:
+                  type: string
+                bankAccountId:
+                  type: string
+                notes:
+                  type: string
       responses:
         "201":
           description: Payment recorded
@@ -544,20 +1770,117 @@ paths:
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/limit"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, approved, sent, partially_received, received, cancelled]
+        - name: contactId
+          in: query
+          schema:
+            type: string
+          description: Filter by supplier/contact
+        - name: dealId
+          in: query
+          schema:
+            type: string
+          description: Filter by deal
       responses:
         "200":
           description: Paginated purchase orders
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/PurchaseOrder"
     post:
       tags: [PurchaseOrders]
       summary: Create a purchase order
+      description: Creates a draft PO with auto-generated number (PO-XXXXXX). Audit logged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subtotal, tax, total, lines]
+              properties:
+                contactId:
+                  type: string
+                dealId:
+                  type: string
+                orderDate:
+                  type: string
+                  format: date
+                expectedDate:
+                  type: string
+                  format: date
+                subtotal:
+                  type: number
+                tax:
+                  type: number
+                total:
+                  type: number
+                shippingCost:
+                  type: number
+                currency:
+                  type: string
+                  default: ZAR
+                deliveryAddress:
+                  type: string
+                notes:
+                  type: string
+                lines:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/PurchaseOrderLine"
       responses:
         "201":
           description: PO created with auto-generated number
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseOrder"
+
+  /api/purchase-orders/{poId}:
+    get:
+      tags: [PurchaseOrders]
+      summary: Get purchase order details
+      parameters:
+        - name: poId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Purchase order with lines
+        "404":
+          description: Not found
+    patch:
+      tags: [PurchaseOrders]
+      summary: Update a purchase order
+      parameters:
+        - name: poId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: PO updated
 
   /api/purchase-orders/{poId}/approve:
     post:
       tags: [PurchaseOrders]
       summary: Approve a purchase order
+      description: Changes PO status from draft to approved. Requires purchase_orders:approve permission.
       parameters:
         - name: poId
           in: path
@@ -567,6 +1890,8 @@ paths:
       responses:
         "200":
           description: PO approved
+        "400":
+          description: PO is not in draft status
 
   /api/inventory:
     get:
@@ -579,19 +1904,109 @@ paths:
           in: query
           schema:
             type: string
+          description: Filter by item category
         - name: belowReorderPoint
           in: query
           schema:
             type: boolean
+          description: "When true, only returns items where quantity on hand is at or below reorder point"
       responses:
         "200":
           description: Paginated inventory items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/InventoryItem"
     post:
       tags: [Inventory]
       summary: Create an inventory item
+      description: Creates a new inventory item with zero quantity on hand. Audit logged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, name]
+              properties:
+                sku:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                unit:
+                  type: string
+                reorderPoint:
+                  type: number
+                reorderQuantity:
+                  type: number
+                costPrice:
+                  type: number
+                location:
+                  type: string
+                notes:
+                  type: string
       responses:
         "201":
           description: Item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItem"
+
+  /api/inventory/{itemId}:
+    get:
+      tags: [Inventory]
+      summary: Get inventory item details
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Inventory item details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItem"
+        "404":
+          description: Not found
+    patch:
+      tags: [Inventory]
+      summary: Update an inventory item
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Item updated
+    delete:
+      tags: [Inventory]
+      summary: Delete an inventory item
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Item deleted
 
   /api/inventory/transactions:
     get:
@@ -603,9 +2018,42 @@ paths:
       responses:
         "200":
           description: Paginated transactions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/InventoryTransaction"
     post:
       tags: [Inventory]
       summary: Record an inventory transaction (updates stock levels)
+      description: Records a stock receipt, issue, or adjustment and updates the item quantity on hand.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [inventoryItemId, type, quantity]
+              properties:
+                inventoryItemId:
+                  type: string
+                type:
+                  type: string
+                  description: "Transaction type (receipt, issue, adjustment)"
+                quantity:
+                  type: number
+                unitCost:
+                  type: number
+                reference:
+                  type: string
+                notes:
+                  type: string
       responses:
         "201":
           description: Transaction recorded
@@ -617,15 +2065,96 @@ paths:
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/limit"
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active/inactive status
       responses:
         "200":
           description: Paginated bank accounts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/BankAccount"
     post:
       tags: [Banking]
       summary: Create a bank account
+      description: Creates a new bank account. Audit logged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, bankName, accountNumber, branchCode]
+              properties:
+                name:
+                  type: string
+                bankName:
+                  type: string
+                accountNumber:
+                  type: string
+                branchCode:
+                  type: string
+                accountType:
+                  type: string
+                  default: cheque
+                currency:
+                  type: string
+                  default: ZAR
+                currentBalance:
+                  type: number
+                  default: 0
+                accountCode:
+                  type: string
+                  description: Linked chart of accounts code
       responses:
         "201":
           description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankAccount"
+
+  /api/bank-accounts/{accountId}:
+    get:
+      tags: [Banking]
+      summary: Get bank account details
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Bank account details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankAccount"
+        "404":
+          description: Not found
+    patch:
+      tags: [Banking]
+      summary: Update a bank account
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Bank account updated
 
   /api/bank-accounts/{accountId}/transactions:
     get:
@@ -643,12 +2172,43 @@ paths:
           in: query
           schema:
             type: boolean
+          description: Filter by reconciliation status
       responses:
         "200":
           description: Paginated bank transactions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/BankTransaction"
     post:
       tags: [Banking]
       summary: Create a bank transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, description, amount, type]
+              properties:
+                date:
+                  type: string
+                  format: date
+                description:
+                  type: string
+                amount:
+                  type: number
+                type:
+                  type: string
+                reference:
+                  type: string
       responses:
         "201":
           description: Transaction created
@@ -657,6 +2217,18 @@ paths:
     post:
       tags: [Banking]
       summary: Reconcile a bank transaction
+      description: Marks a bank transaction as reconciled. Requires bank:reconcile permission.
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Transaction reconciled
@@ -665,6 +2237,7 @@ paths:
     get:
       tags: [FinancialStatements]
       summary: Generate financial statements
+      description: Generates trial balance, income statement, or balance sheet from posted journal entries.
       parameters:
         - name: type
           in: query
@@ -677,11 +2250,13 @@ paths:
           schema:
             type: string
             format: date
+          description: Point-in-time date for balance sheet
         - name: startDate
           in: query
           schema:
             type: string
             format: date
+          description: Period start date for income statement
       responses:
         "200":
           description: Financial statement data
@@ -696,9 +2271,36 @@ paths:
       responses:
         "200":
           description: Paginated periods
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FinancialPeriod"
     post:
       tags: [FinancialPeriods]
       summary: Create a financial period
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, startDate, endDate]
+              properties:
+                name:
+                  type: string
+                startDate:
+                  type: string
+                  format: date
+                endDate:
+                  type: string
+                  format: date
       responses:
         "201":
           description: Period created
@@ -707,6 +2309,13 @@ paths:
     post:
       tags: [FinancialPeriods]
       summary: Close a financial period
+      description: Closes the period, preventing new journal entries from being posted within the period date range.
+      parameters:
+        - name: periodId
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Period closed
@@ -722,19 +2331,140 @@ paths:
           in: query
           schema:
             type: string
+            enum: [active, on_leave, terminated, suspended]
+          description: Filter by employment status
         - name: department
           in: query
           schema:
             type: string
+          description: Filter by department
       responses:
         "200":
           description: Paginated employees
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Employee"
     post:
       tags: [HR]
       summary: Create an employee
+      description: Creates an employee record. Sensitive fields (ID number, bank details) are encrypted at rest. Audit logged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employeeNumber, firstName, lastName, startDate]
+              properties:
+                employeeNumber:
+                  type: string
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                idNumber:
+                  type: string
+                  description: SA ID number (encrypted at rest)
+                taxNumber:
+                  type: string
+                position:
+                  type: string
+                department:
+                  type: string
+                employmentType:
+                  type: string
+                  enum: [full_time, part_time, contract, temporary]
+                  default: full_time
+                startDate:
+                  type: string
+                  format: date
+                baseSalary:
+                  type: number
+                hourlyRate:
+                  type: number
+                bankName:
+                  type: string
+                accountNumber:
+                  type: string
+                  description: Encrypted at rest
+                branchCode:
+                  type: string
+                  description: Encrypted at rest
+                contactId:
+                  type: string
+                notes:
+                  type: string
       responses:
         "201":
           description: Employee created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+  /api/hr/employees/{employeeId}:
+    get:
+      tags: [HR]
+      summary: Get employee details
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Employee details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "404":
+          description: Not found
+    patch:
+      tags: [HR]
+      summary: Update an employee
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                position:
+                  type: string
+                department:
+                  type: string
+                status:
+                  type: string
+                baseSalary:
+                  type: number
+      responses:
+        "200":
+          description: Employee updated
 
   /api/hr/leave:
     get:
@@ -746,9 +2476,40 @@ paths:
       responses:
         "200":
           description: Paginated leave records
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/LeaveRecord"
     post:
       tags: [HR]
       summary: Create a leave request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employeeId, leaveType, startDate, endDate]
+              properties:
+                employeeId:
+                  type: string
+                leaveType:
+                  type: string
+                startDate:
+                  type: string
+                  format: date
+                endDate:
+                  type: string
+                  format: date
+                notes:
+                  type: string
       responses:
         "201":
           description: Leave request created
@@ -788,23 +2549,173 @@ paths:
       responses:
         "200":
           description: Paginated payslips
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Payslip"
     post:
       tags: [HR]
       summary: Create a payslip (auto-calculates gross, deductions, net)
+      description: Generates a payslip for an employee including UIF, PAYE, and other deductions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employeeId, periodStart, periodEnd]
+              properties:
+                employeeId:
+                  type: string
+                periodStart:
+                  type: string
+                  format: date
+                periodEnd:
+                  type: string
+                  format: date
+                hoursWorked:
+                  type: number
+                overtimeHours:
+                  type: number
+                allowances:
+                  type: number
+                deductions:
+                  type: number
+                notes:
+                  type: string
       responses:
         "201":
           description: Payslip created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payslip"
 
   /api/tools:
     get:
       tags: [Tools]
-      summary: List tools
+      summary: List tools with checkouts, maintenance, and incidents
+      description: Returns paginated tools plus all checkout records, maintenance logs, and incident reports for the org.
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/limit"
       responses:
         "200":
-          description: Paginated tools
+          description: Paginated tools with related records
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      checkouts:
+                        type: array
+                        items:
+                          type: object
+                      maintenance:
+                        type: array
+                        items:
+                          type: object
+                      incidents:
+                        type: array
+                        items:
+                          type: object
+    post:
+      tags: [Tools]
+      summary: Create a tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category]
+              properties:
+                name:
+                  type: string
+                category:
+                  type: string
+                brand:
+                  type: string
+                model:
+                  type: string
+                serialNumber:
+                  type: string
+                purchaseDate:
+                  type: string
+                  format: date
+                purchaseCost:
+                  type: number
+                expectedLifespanMonths:
+                  type: integer
+                  default: 24
+                replacementCost:
+                  type: number
+                status:
+                  type: string
+                  enum: [available, checked_out, maintenance, retired]
+                  default: available
+                condition:
+                  type: string
+                  enum: [new, good, fair, poor]
+                  default: new
+                notes:
+                  type: string
+      responses:
+        "201":
+          description: Tool created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tool"
+
+  /api/tools/{toolId}:
+    get:
+      tags: [Tools]
+      summary: Get tool details
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tool details
+        "404":
+          description: Not found
+    patch:
+      tags: [Tools]
+      summary: Update a tool
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tool updated
+    delete:
+      tags: [Tools]
+      summary: Delete a tool
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tool deleted
 
   /api/milestones:
     get:
@@ -816,6 +2727,178 @@ paths:
       responses:
         "200":
           description: Paginated milestones
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Milestone"
+
+  /api/milestones/{milestoneId}:
+    get:
+      tags: [Milestones]
+      summary: Get milestone details
+      parameters:
+        - name: milestoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Milestone with tasks
+        "404":
+          description: Not found
+    patch:
+      tags: [Milestones]
+      summary: Update a milestone
+      parameters:
+        - name: milestoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Milestone updated
+    delete:
+      tags: [Milestones]
+      summary: Delete a milestone
+      parameters:
+        - name: milestoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Milestone deleted
+
+  /api/tasks:
+    post:
+      tags: [Tasks]
+      summary: Create a task under a milestone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [milestoneId, title]
+              properties:
+                milestoneId:
+                  type: string
+                title:
+                  type: string
+                assignedTo:
+                  type: string
+                dueDate:
+                  type: string
+                  format: date
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /api/tasks/{taskId}:
+    patch:
+      tags: [Tasks]
+      summary: Update a task
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                status:
+                  type: string
+                assignedTo:
+                  type: string
+                dueDate:
+                  type: string
+                  format: date
+      responses:
+        "200":
+          description: Task updated
+    delete:
+      tags: [Tasks]
+      summary: Delete a task
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task deleted
+
+  /api/documents:
+    get:
+      tags: [Documents]
+      summary: List documents
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Paginated documents
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Document"
+
+  /api/documents/{documentId}:
+    get:
+      tags: [Documents]
+      summary: Get document details
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Document details
+        "404":
+          description: Not found
+    delete:
+      tags: [Documents]
+      summary: Delete a document
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Document deleted
 
   /api/notifications:
     get:
@@ -836,17 +2919,6 @@ paths:
         "200":
           description: Email send results
 
-  /api/documents:
-    get:
-      tags: [Documents]
-      summary: List documents
-      parameters:
-        - $ref: "#/components/parameters/page"
-        - $ref: "#/components/parameters/limit"
-      responses:
-        "200":
-          description: Paginated documents
-
   /api/search:
     get:
       tags: [Search]
@@ -858,9 +2930,10 @@ paths:
           schema:
             type: string
             minLength: 2
+          description: Search query (minimum 2 characters)
       responses:
         "200":
-          description: Search results
+          description: Search results grouped by entity type
 
   /api/health:
     get:
