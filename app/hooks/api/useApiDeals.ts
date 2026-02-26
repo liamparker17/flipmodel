@@ -163,17 +163,7 @@ function dbToClientShoppingItem(raw: Record<string, unknown>): ShoppingListItem 
   };
 }
 
-async function api(url: string, options?: RequestInit) {
-  const res = await fetch(url, {
-    ...options,
-    headers: { "Content-Type": "application/json", ...options?.headers },
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(err.error || "Request failed");
-  }
-  return res.json();
-}
+import { api } from "@/lib/client-fetch";
 
 export default function useApiDeals() {
   const [deals, setDeals] = useState<Deal[]>([]);

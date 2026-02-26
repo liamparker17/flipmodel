@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { theme } from "../../components/theme";
+import { api } from "@/lib/client-fetch";
 
 const STEPS = [
   "Company Profile",
@@ -108,33 +109,35 @@ function OnboardingContent() {
     return true;
   };
 
+  const [finishError, setFinishError] = useState("");
+
   const handleFinish = async () => {
     setSaving(true);
+    setFinishError("");
     try {
       const name = companyName.trim();
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-      // 1. Create organisation
-      const orgRes = await fetch("/api/org", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, slug }),
-      });
-      if (!orgRes.ok) {
-        const err = await orgRes.json().catch(() => null);
+      // 1. Create organisation (uses api() helper for CSRF token)
+      try {
+        await api("/api/org", {
+          method: "POST",
+          body: JSON.stringify({ name, slug }),
+        });
+      } catch (err: unknown) {
         // If user already has an org, treat as success
-        if (!(err?.error && err.error.includes("already belong"))) {
-          throw new Error(err?.error || "Failed to create organisation");
+        const msg = err instanceof Error ? err.message : "";
+        if (!msg.includes("already belong")) {
+          throw new Error(msg || "Failed to create organisation");
         }
       }
 
       // 2. Migrate existing data to the new org
-      await fetch("/api/org/migrate", { method: "POST" }).catch(() => {});
+      await api("/api/org/migrate", { method: "POST" }).catch(() => {});
 
       // 3. Save user profile preferences
-      await fetch("/api/user/profile", {
+      await api("/api/user/profile", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           companyName: name,
           location: location.trim(),
@@ -149,12 +152,13 @@ function OnboardingContent() {
           },
           onboardingComplete: true,
         }),
-      });
+      }).catch(() => {});
 
       // Full page reload to refresh JWT session with new org data
       window.location.href = "/dashboard";
-    } catch {
-      window.location.href = "/dashboard";
+    } catch (err) {
+      setSaving(false);
+      setFinishError(err instanceof Error ? err.message : "Setup failed. Please try again.");
     }
   };
 
@@ -606,6 +610,19 @@ function OnboardingContent() {
                 </div>
               ))}
             </div>
+            {finishError && (
+              <div style={{
+                background: "#EF444415",
+                border: "1px solid #EF444430",
+                borderRadius: 8,
+                padding: "10px 14px",
+                color: "#EF4444",
+                fontSize: 13,
+                marginTop: 12,
+              }}>
+                {finishError}
+              </div>
+            )}
             <button
               onClick={handleFinish}
               disabled={saving}
