@@ -97,6 +97,35 @@ Browser request
 
 ## Key Patterns
 
+### Financial Transaction Pattern (REQUIRED for all financial writes)
+
+```typescript
+import { withFinancialTransaction } from "@/lib/financial-transaction";
+
+const result = await withFinancialTransaction({
+  tx: async (tx) => {
+    // All reads and writes use `tx` (not `prisma`) for atomicity
+    const bill = await tx.vendorBill.findFirst({ where: { id, orgId } });
+    // ... business logic ...
+    return result;
+  },
+  audit: (result) => ({
+    orgId: ctx.orgId,
+    userId: ctx.userId,
+    action: "payment",
+    entityType: "VendorBill",
+    entityId: billId,
+    metadata: { paymentId: result.payment.id },
+  }),
+  isolationLevel: "Serializable", // Default — never weaken for financial ops
+});
+```
+
+The `withFinancialTransaction` wrapper guarantees:
+1. Business logic + audit log are atomically committed or rolled back
+2. Serializable isolation prevents phantom reads and write skew
+3. No audit gaps from server crashes between commit and audit write
+
 ### API Route Template (GET with Pagination)
 
 ```typescript
@@ -107,7 +136,7 @@ import { parsePagination, paginatedResult } from "@/lib/pagination";
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = await requireOrgMember();  // or requirePermission("module:read")
+    const ctx = await requirePermission("module:read");  // Use requirePermission, not requireOrgMember, for financial routes
     const pagination = parsePagination(req);
 
     const where: Record<string, unknown> = { orgId: ctx.orgId };
@@ -282,13 +311,13 @@ User, Account, Session, VerificationToken, Organisation, Department, OrgMember, 
 Deal, Expense, Milestone, Task, Activity, Contact, DealContact, Document, ShoppingListItem
 
 **Finance & Accounting:**
-Invoice, Loan, JournalEntry, JournalLine, FinancialPeriod, ChartOfAccount, AccountingConnection, AccountingSync, OAuthState
+Invoice, Loan, JournalEntry (has `version` for optimistic locking), JournalLine, JournalEntrySequence, FinancialPeriod, ChartOfAccount, AccountingConnection, AccountingSync, OAuthState
 
 **Accounts Payable:**
-VendorBill, VendorBillLine, BillPayment
+VendorBill (has `version`), VendorBillLine, BillPayment (has `idempotencyKey`, unique per org)
 
 **Accounts Receivable:**
-CustomerReceivable, ReceivablePayment
+CustomerReceivable (has `version`), ReceivablePayment (has `idempotencyKey`, unique per org)
 
 **Procurement & Inventory:**
 PurchaseOrder, PurchaseOrderLine, GoodsReceipt, InventoryItem, InventoryTransaction
@@ -406,7 +435,9 @@ apiError(message, status?)  // -> NextResponse.json({ error: message }, { status
 |------|------|
 | Auth config (NextAuth) | `app/lib/auth.ts` |
 | DB client (Prisma) | `app/lib/db.ts` |
-| API helpers (auth, response) | `app/lib/api-helpers.ts` |
+| API helpers (auth, response, errors) | `app/lib/api-helpers.ts` |
+| Financial transaction wrapper | `app/lib/financial-transaction.ts` |
+| Optimistic locking helper | `app/lib/optimistic-lock.ts` |
 | Pagination | `app/lib/pagination.ts` |
 | RBAC permissions | `app/lib/permissions.ts` |
 | Types (Permission, OrgRole, ModuleKey) | `app/types/org.ts` |
@@ -423,6 +454,7 @@ apiError(message, status?)  // -> NextResponse.json({ error: message }, { status
 | Middleware (proxy) | `proxy.ts` (root) |
 | Prisma schema | `prisma/schema.prisma` |
 | Prisma seed | `prisma/seed.ts` |
+| Prisma config | `prisma.config.ts` (env vars loaded from `.env.local`) |
 | Next.js config | `next.config.mjs` |
 | Vitest config | `vitest.config.ts` |
 | Playwright config | `playwright.config.ts` |
@@ -444,6 +476,24 @@ apiError(message, status?)  // -> NextResponse.json({ error: message }, { status
 | `validations/receivables.ts` | `createReceivableSchema`, `updateReceivableSchema`, `createReceivablePaymentSchema` |
 | `validations/purchase-orders.ts` | `createPurchaseOrderSchema`, `updatePurchaseOrderSchema`, `approvePurchaseOrderSchema` |
 | `validations/inventory.ts` | `createInventoryItemSchema`, `updateInventoryItemSchema`, `createInventoryTransactionSchema` |
+
+### Financial API Routes
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/gl` | GET | List journal entries (requires `accounting:read`) |
+| `/api/gl` | POST | Create draft journal entry (Serializable tx) |
+| `/api/gl/[entryId]` | PATCH | Update draft entry (optimistic locking via `version`) |
+| `/api/gl/[entryId]/post` | POST | Post entry (re-validates balance, account codes, financial period inside Serializable tx) |
+| `/api/gl/[entryId]/reverse` | POST | Reverse a posted entry (mirrors debits/credits, prevents double reversal) |
+| `/api/payables` | GET | List vendor bills (requires `payables:read`) |
+| `/api/payables` | POST | Create draft vendor bill |
+| `/api/payables/[billId]` | PATCH | Update bill (optimistic locking via `version`) |
+| `/api/payables/[billId]/approve` | POST | Approve bill (draft -> approved) |
+| `/api/payables/[billId]/pay` | POST | Record payment (Serializable tx, idempotency via `x-idempotency-key` header) |
+| `/api/payables/[billId]/pay/[paymentId]` | DELETE | Delete payment (Serializable tx, recalculates amountPaid/status) |
+| `/api/receivables/[receivableId]/pay` | POST | Record payment (Serializable tx, idempotency via `x-idempotency-key` header) |
+| `/api/receivables/[receivableId]/pay/[paymentId]` | DELETE | Delete payment (Serializable tx, recalculates amountPaid/status) |
 
 ---
 
@@ -543,13 +593,13 @@ apiError(message, status?)  // -> NextResponse.json({ error: message }, { status
 
 - **CSRF protection:** Double-submit cookie pattern. On safe requests (GET/HEAD/OPTIONS), a `csrf-token` cookie is set. On mutating API requests (POST/PATCH/DELETE), the frontend MUST send an `x-csrf-token` header matching the cookie value.
 
-- **Financial operations MUST use `prisma.$transaction()`** for atomicity (e.g., posting journal entries, recording payments, inventory adjustments).
+- **Financial operations MUST use `withFinancialTransaction()`** from `@/lib/financial-transaction.ts` for atomicity. This wraps business logic + audit log in a single Serializable transaction. Never use raw `prisma.$transaction()` for financial writes.
 
 - **All server-side logging must use `logger` from `@/lib/logger`**, never `console.log`. The logger outputs structured JSON with level, message, timestamp, and optional data.
 
 - **Sensitive fields** (bank account numbers, branch codes) are encrypted at rest using `encryptSensitiveFields()` from `@/lib/field-encryption.ts`. Decrypt with `decryptSensitiveFields()`. Mask for display with `maskSensitiveField()`.
 
-- **Audit trail is required** for all financial write operations (journal entries, payments, payroll, etc.). Use `writeAuditLog()` from `@/lib/audit.ts`. Audit failures are caught and logged but never break the main flow.
+- **Audit trail is required** for all financial write operations (journal entries, payments, payroll, etc.). Use `withFinancialTransaction()` to write audit logs atomically inside the transaction. Valid audit actions: `create`, `update`, `delete`, `delete_payment`, `approve`, `reject`, `login`, `logout`, `post`, `reverse`, `reconcile`, `payment`.
 
 - **South African context:** VAT rate is 15% (`SA_VAT_RATE = 0.15`), default currency is ZAR, fiscal year typically starts in March.
 
@@ -557,6 +607,34 @@ apiError(message, status?)  // -> NextResponse.json({ error: message }, { status
 
 - **Pagination defaults:** 50 items per page, max 200 (`MAX_LIMIT`). Constants file has `DEFAULT_PAGE_SIZE = 20` and `MAX_PAGE_SIZE = 100` (used in some contexts).
 
-- **Budget thresholds:** Alert at 80%, warning at 100%, hard limit at 120% of budget.
+- **Budget thresholds:** Alert at 80%, warning at 100%, hard limit at 120% of budget. Budget override returns structured error: `{ code: "BUDGET_LIMIT_EXCEEDED", canOverride: true }`.
 
 - **DB client** uses `@prisma/adapter-pg` (native PostgreSQL pool) instead of Prisma's default connection handling. The singleton pattern prevents multiple instances in development.
+
+- **Env vars are in `.env.local`** (not `.env`). The `prisma.config.ts` loads env via `dotenv/config`. For interactive migrations use `source .env.local && npx prisma migrate dev`. For deploy: `source .env.local && npx prisma migrate deploy`.
+
+---
+
+## Financial Integrity Rules (Production Hardened)
+
+These rules are enforced in code and must NOT be weakened:
+
+1. **Journal entries must be balanced to post.** The post route re-fetches lines inside a Serializable transaction and rejects if `|debits - credits| >= 0.01`. Never trust client-submitted totals.
+
+2. **Account codes are validated on post.** All `accountCode` values in journal lines are checked against `ChartOfAccount` (active, same org) inside the post transaction.
+
+3. **Financial period enforcement.** Posting or reversing a journal entry into a closed/locked `FinancialPeriod` is rejected. The `periodName` is set on successful post.
+
+4. **Vendor bills require approval before payment.** Status flow: `draft` -> `approved` -> `partially_paid` -> `paid`. The payment route rejects bills that are not `approved` or `partially_paid`.
+
+5. **Receivable totalAmount is immutable after payments.** If `amountPaid > 0` or `status !== "outstanding"`, PATCH rejects changes to `totalAmount`.
+
+6. **Payments can be deleted (reversed).** DELETE endpoints recalculate `amountPaid` from remaining payments via aggregate, inside a Serializable transaction. Payments linked to posted journal entries are blocked — reverse the JE first.
+
+7. **Optimistic locking.** `JournalEntry`, `VendorBill`, and `CustomerReceivable` have a `version` field. PATCH routes check `version` from request body against DB and return 409 on mismatch. Version is incremented on every update.
+
+8. **Idempotency on payments.** Payment routes accept an `x-idempotency-key` header. The key is stored and unique per org. Duplicate keys return the existing payment (safe replay).
+
+9. **Validation enums.** `currency` is restricted to `ZAR | USD | EUR | GBP`. `paymentMethod` is restricted to `eft | cash | card | cheque`. Expense `amount` must be `positive()`. Vendor bill `subtotal + tax` must equal `total`, and line amounts must sum to `subtotal`.
+
+10. **Error classes.** `api-helpers.ts` exports: `AuthError`, `NoOrgError`, `ForbiddenError`, `NotFoundError`, `ValidationError`, `BudgetExceededError`. `handleApiError()` maps these + Prisma `P2002` (409 with field names) and `P2025` (404) to structured responses.
