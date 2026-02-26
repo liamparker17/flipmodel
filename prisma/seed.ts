@@ -18,7 +18,7 @@ function hashPasswordSync(password: string): Promise<string> {
   });
 }
 
-async function main() {
+export async function seed() {
   console.log("Seeding database...");
 
   // ─── Demo User ───
@@ -212,6 +212,9 @@ async function main() {
   console.log("All 6 role members created");
 
   const orgId = org.id;
+  // wipe any existing deals for this org so demo dataset is deterministically rebuilt
+  await prisma.deal.deleteMany({ where: { orgId } });
+  console.log("Existing deals deleted (demo refresh)");
 
   // ─── Contacts ───
   const plumber = await prisma.contact.create({
@@ -1539,12 +1542,15 @@ async function main() {
   console.log("\nSeed completed successfully!");
 }
 
-main()
-  .catch((e) => {
-    console.error("Seed failed:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-    await pool.end();
-  });
+// When executed as a script (e.g. npx prisma db seed) run the seeding function
+if (require.main === module) {
+  seed()
+    .catch((e) => {
+      console.error("Seed failed:", e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+      await pool.end();
+    });
+}
