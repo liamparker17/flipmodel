@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
-import bcrypt from "bcryptjs";
 import prisma from "@/lib/db";
 import { apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { signupSchema } from "@/lib/validations/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { SIGNUP_RATE_LIMIT_MAX, SIGNUP_RATE_LIMIT_WINDOW_MS } from "@/lib/constants";
+import { hashPassword } from "@/lib/password";
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       return apiError("An account with this email already exists", 409);
     }
 
-    const passwordHash = await bcrypt.hash(data.password, 12);
+    const passwordHash = await hashPassword(data.password);
 
     const user = await prisma.user.create({
       data: {

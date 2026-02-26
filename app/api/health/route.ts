@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import bcrypt from "bcryptjs";
+import { verifyPassword } from "@/lib/password";
 
 export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get("test_auth");
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
       }
       const hasPassword = !!user.passwordHash;
       const passwordValid = hasPassword
-        ? await bcrypt.compare("demo1234", user.passwordHash!)
+        ? await verifyPassword("demo1234", user.passwordHash!)
         : false;
 
       const member = await prisma.orgMember.findFirst({

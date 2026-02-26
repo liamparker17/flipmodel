@@ -2,9 +2,9 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import bcrypt from "bcryptjs";
 import prisma from "./db";
 import { rateLimit } from "./rate-limit";
+import { verifyPassword } from "./password";
 
 declare module "next-auth" {
   interface Session {
@@ -27,10 +27,8 @@ declare module "@auth/core/jwt" {
   }
 }
 
-const adapter = PrismaAdapter(prisma);
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter,
+  adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   debug: process.env.NODE_ENV === "development",
   pages: {
@@ -44,11 +42,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials, request) {
+      async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        // Rate limiting by email to prevent brute-force attacks
         const email = credentials.email as string;
+        const password = credentials.password as string;
+
+        // Rate limiting by email to prevent brute-force attacks
         const { success } = rateLimit(`login:${email}`, 5, 15 * 60 * 1000);
         if (!success) return null;
 
@@ -58,10 +58,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!user || !user.passwordHash) return null;
 
-        const valid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash
-        );
+        const valid = await verifyPassword(password, user.passwordHash);
         if (!valid) return null;
 
         return {
@@ -77,7 +74,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           Google({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-
             authorization: {
               params: {
                 prompt: "consent",

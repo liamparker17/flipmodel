@@ -1,21 +1,32 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
-import bcrypt from "bcryptjs";
+import { scrypt, randomBytes } from "crypto";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+// Inline password hashing for seed (matches app/lib/password.ts format)
+function hashPasswordSync(password: string): Promise<string> {
+  const salt = randomBytes(16).toString("hex");
+  return new Promise((resolve, reject) => {
+    scrypt(password, salt, 64, (err, derivedKey) => {
+      if (err) reject(err);
+      else resolve(`scrypt:${salt}:${derivedKey.toString("hex")}`);
+    });
+  });
+}
+
 async function main() {
   console.log("Seeding database...");
 
   // ─── Demo User ───
-  const passwordHash = await bcrypt.hash("demo1234", 12);
+  const passwordHash = await hashPasswordSync("demo1234");
 
   const user = await prisma.user.upsert({
     where: { email: "demo@flipmodel.co.za" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "demo@flipmodel.co.za",
       name: "Demo User",
@@ -34,7 +45,7 @@ async function main() {
   // ─── Additional Role Users ───
   const financeUser = await prisma.user.upsert({
     where: { email: "finance@flipmodel.co.za" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "finance@flipmodel.co.za",
       name: "Nomsa Dlamini",
@@ -45,7 +56,7 @@ async function main() {
 
   const pmUser = await prisma.user.upsert({
     where: { email: "pm@flipmodel.co.za" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "pm@flipmodel.co.za",
       name: "Pieter Botha",
@@ -56,7 +67,7 @@ async function main() {
 
   const supervisorUser = await prisma.user.upsert({
     where: { email: "supervisor@flipmodel.co.za" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "supervisor@flipmodel.co.za",
       name: "Bongani Zulu",
@@ -67,7 +78,7 @@ async function main() {
 
   const fieldUser = await prisma.user.upsert({
     where: { email: "field@flipmodel.co.za" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "field@flipmodel.co.za",
       name: "Mandla Khumalo",
@@ -78,7 +89,7 @@ async function main() {
 
   const viewerUser = await prisma.user.upsert({
     where: { email: "viewer@flipmodel.co.za" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "viewer@flipmodel.co.za",
       name: "Sarah van Niekerk",
@@ -305,6 +316,7 @@ async function main() {
   });
 
   await prisma.expense.createMany({
+    skipDuplicates: true,
     data: [
       { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Kitchen cabinets and countertops", amount: 45000, date: new Date("2026-01-10"), vendor: "Builders Warehouse", paymentMethod: "eft" },
       { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Kitchen installation labour", amount: 18000, date: new Date("2026-01-15"), vendor: "Mokoena Builders", paymentMethod: "eft" },
@@ -368,6 +380,7 @@ async function main() {
   });
 
   await prisma.dealContact.createMany({
+    skipDuplicates: true,
     data: [
       { orgId, dealId: deal1.id, contactId: plumber.id, workDescription: "Full bathroom replumbing" },
       { orgId, dealId: deal1.id, contactId: electrician.id, workDescription: "Rewiring and compliance certificate" },
@@ -407,6 +420,7 @@ async function main() {
   });
 
   await prisma.expense.createMany({
+    skipDuplicates: true,
     data: [
       { orgId, userId: user.id, dealId: deal2.id, category: "materials", description: "Imported Italian floor tiles", amount: 95000, date: new Date("2025-08-10"), vendor: "Tile Africa", paymentMethod: "eft" },
       { orgId, userId: user.id, dealId: deal2.id, category: "labour", description: "Full renovation labour (8 weeks)", amount: 120000, date: new Date("2025-10-15"), vendor: "Mokoena Builders", paymentMethod: "eft" },
@@ -457,6 +471,7 @@ async function main() {
   });
 
   await prisma.dealContact.createMany({
+    skipDuplicates: true,
     data: [
       { orgId, dealId: deal2.id, contactId: agent.id, workDescription: "Listing and sales agent" },
       { orgId, dealId: deal2.id, contactId: contractor.id, workDescription: "Full renovation", daysWorked: 40 },
@@ -494,6 +509,7 @@ async function main() {
   });
 
   await prisma.expense.createMany({
+    skipDuplicates: true,
     data: [
       { orgId, userId: user.id, dealId: deal3.id, category: "materials", description: "Estimated renovation materials", amount: 85000, date: new Date("2026-02-10"), isProjected: true },
       { orgId, userId: user.id, dealId: deal3.id, category: "labour", description: "Estimated labour costs", amount: 65000, date: new Date("2026-02-10"), isProjected: true },
@@ -536,6 +552,7 @@ async function main() {
   });
 
   await prisma.expense.createMany({
+    skipDuplicates: true,
     data: [
       { orgId, userId: user.id, dealId: deal4.id, category: "materials", description: "Paint (Plascon double velvet, 60L)", amount: 12000, date: new Date("2025-05-05"), vendor: "Mica Hardware", paymentMethod: "card" },
       { orgId, userId: user.id, dealId: deal4.id, category: "labour", description: "Painting labour (interior and exterior)", amount: 22000, date: new Date("2025-05-20"), vendor: "Mokoena Builders", paymentMethod: "eft" },
@@ -546,6 +563,7 @@ async function main() {
   });
 
   await prisma.dealContact.createMany({
+    skipDuplicates: true,
     data: [
       { orgId, dealId: deal4.id, contactId: agent.id, workDescription: "Sales agent for Stellenbosch property" },
       { orgId, dealId: deal4.id, contactId: electrician.id, workDescription: "COC certificate" },
@@ -620,6 +638,7 @@ async function main() {
   });
 
   await prisma.expense.createMany({
+    skipDuplicates: true,
     data: [
       { orgId, userId: user.id, dealId: deal5.id, category: "materials", description: "Estimated kitchen & bathroom materials", amount: 120000, date: new Date("2026-02-20"), isProjected: true },
       { orgId, userId: user.id, dealId: deal5.id, category: "labour", description: "Estimated labour (6 weeks)", amount: 90000, date: new Date("2026-02-20"), isProjected: true },
@@ -627,6 +646,7 @@ async function main() {
   });
 
   await prisma.dealContact.createMany({
+    skipDuplicates: true,
     data: [
       { orgId, dealId: deal5.id, contactId: contractor.id, workDescription: "Main contractor for renovation" },
       { orgId, dealId: deal5.id, contactId: plumber.id, workDescription: "Bathroom plumbing" },
@@ -637,6 +657,7 @@ async function main() {
 
   // ─── Documents ───
   await prisma.document.createMany({
+    skipDuplicates: true,
     data: [
       { orgId, userId: user.id, dealId: deal1.id, name: "Title Deed - 12 Oak Lane", type: "title_deed", url: "https://example.com/docs/title-deed-rosebank.pdf", notes: "Original title deed from transfer attorney" },
       { orgId, userId: user.id, dealId: deal1.id, name: "Floor Plan - Ground Floor", type: "floor_plan", url: "https://example.com/docs/floor-plan-rosebank.pdf", notes: "Architect drawing showing kitchen layout changes" },
@@ -652,6 +673,7 @@ async function main() {
 
   // ─── Notifications ───
   await prisma.notification.createMany({
+    skipDuplicates: true,
     data: [
       { orgId, userId: user.id, type: "deadline_warning", title: "Task overdue: Electrical rewiring", message: "The electrical rewiring task at 12 Oak Lane is past its due date.", read: false },
       { orgId, userId: pmUser.id, type: "milestone_overdue", title: "Milestone due soon: Planning & Design", message: "Planning & Design at 7 Loader Street is due in 2 weeks.", read: false },
@@ -681,6 +703,7 @@ async function main() {
 
   // ─── Tools ───
   await prisma.tool.createMany({
+    skipDuplicates: true,
     data: [
       {
         orgId, userId: user.id,
@@ -741,6 +764,7 @@ async function main() {
 
   // ─── Employees (HR module) ───
   await prisma.employee.createMany({
+    skipDuplicates: true,
     data: [
       {
         orgId, userId: supervisorUser.id,

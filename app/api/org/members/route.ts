@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { hashPassword } from "@/lib/password";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { canManageRole } from "@/lib/permissions";
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       // Create the user account (Shopify-style: owner creates team accounts)
-      const passwordHash = await bcrypt.hash(plainPassword, 12);
+      const passwordHash = await hashPassword(plainPassword);
       user = await prisma.user.create({
         data: {
           name: data.name,
