@@ -46,7 +46,7 @@ function LoginForm() {
     });
 
     if (result?.error) {
-      setError("Invalid email or password");
+      setError(result.code === "credentials" ? "Invalid email or password" : `Auth error: ${result.error} (${result.code || "unknown"})`);
       setLoading(false);
     } else {
       router.push(callbackUrl);
