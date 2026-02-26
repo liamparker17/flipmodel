@@ -438,62 +438,199 @@ async function main() {
   await prisma.expense.createMany({
     skipDuplicates: true,
     data: [
-      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Kitchen cabinets and countertops", amount: 45000, date: new Date("2026-01-10"), vendor: "Builders Warehouse", paymentMethod: "eft" },
-      { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Kitchen installation labour", amount: 18000, date: new Date("2026-01-15"), vendor: "Mokoena Builders", paymentMethod: "eft" },
-      { orgId, userId: user.id, dealId: deal1.id, category: "plumbing", description: "Bathroom replumbing and fixtures", amount: 32000, date: new Date("2026-01-20"), vendor: "Ndlovu Plumbing Services", paymentMethod: "eft" },
-      { orgId, userId: user.id, dealId: deal1.id, category: "electrical", description: "Rewiring and new DB board", amount: 28000, date: new Date("2026-02-01"), vendor: "Sparks Electrical CC", paymentMethod: "eft" },
-      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Floor tiles (porcelain 60x60)", amount: 15500, date: new Date("2026-02-05"), vendor: "CTM", paymentMethod: "card" },
+      // Completed expenses
+      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Demolition waste removal", amount: 8500, date: new Date("2025-12-28"), vendor: "Waste Removal SA", paymentMethod: "eft", isProjected: false },
+      { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Demolition and strip-out labour (5 days)", amount: 12000, date: new Date("2026-01-05"), vendor: "Mokoena Builders", paymentMethod: "eft", isProjected: false },
+      { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Structural inspection and repairs", amount: 6500, date: new Date("2026-01-08"), vendor: "BuildTest CC", paymentMethod: "card", isProjected: false },
+      { orgId, userId: user.id, dealId: deal1.id, category: "plumbing", description: "Rough-in plumbing - kitchen & bathrooms", amount: 16800, date: new Date("2026-01-15"), vendor: "Ndlovu Plumbing Services", paymentMethod: "eft", isProjected: false },
+      { orgId, userId: user.id, dealId: deal1.id, category: "electrical", description: "Electrical rough-in and DB board", amount: 24500, date: new Date("2026-01-20"), vendor: "Sparks Electrical CC", paymentMethod: "eft", isProjected: false },
+      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Geyser and hot water pipes", amount: 8200, date: new Date("2026-01-22"), vendor: "Builders Warehouse", paymentMethod: "card", isProjected: false },
+      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Plasterboard and drywall materials", amount: 12500, date: new Date("2026-01-25"), vendor: "Plasterboard SA", paymentMethod: "eft", isProjected: false },
+      { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Plastering and drywall labour (6 days)", amount: 14400, date: new Date("2026-02-02"), vendor: "Mokoena Builders", paymentMethod: "eft", isProjected: false },
+      
+      // In-progress expenses
+      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Kitchen cabinets and countertops", amount: 45000, date: new Date("2026-02-05"), vendor: "Builders Warehouse", paymentMethod: "eft", isProjected: false },
+      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Floor tiles (porcelain 60x60)", amount: 15500, date: new Date("2026-02-05"), vendor: "CTM", paymentMethod: "card", isProjected: false },
+      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Bathroom tiles and grout", amount: 8900, date: new Date("2026-02-08"), vendor: "CTM", paymentMethod: "card", isProjected: false },
+      { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Kitchen installation labour", amount: 18000, date: new Date("2026-02-10"), vendor: "Mokoena Builders", paymentMethod: "eft", isProjected: false },
+      { orgId, userId: user.id, dealId: deal1.id, category: "plumbing", description: "Bathroom replumbing and fixtures", amount: 32000, date: new Date("2026-02-12"), vendor: "Ndlovu Plumbing Services", paymentMethod: "eft", isProjected: false },
+      
+      // Projected/upcoming expenses
+      { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Flooring installation labour (4 days)", amount: 9600, date: new Date("2026-02-20"), vendor: "Mokoena Builders", paymentMethod: "eft", isProjected: true },
+      { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Tiling labour for bathrooms (3 days)", amount: 7200, date: new Date("2026-02-25"), vendor: "Mokoena Builders", paymentMethod: "eft", isProjected: true },
+      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Paint and primer (15 rooms)", amount: 9800, date: new Date("2026-03-01"), vendor: "Builders Warehouse", paymentMethod: "card", isProjected: true },
+      { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Painting labour (5 days)", amount: 12000, date: new Date("2026-03-05"), vendor: "Mokoena Builders", paymentMethod: "eft", isProjected: true },
+      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Light fittings and switches (complete set)", amount: 11200, date: new Date("2026-03-08"), vendor: "Hirsch's", paymentMethod: "eft", isProjected: true },
+      { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Final electrical inspection and COC", amount: 5500, date: new Date("2026-03-12"), vendor: "Sparks Electrical CC", paymentMethod: "eft", isProjected: true },
+      { orgId, userId: user.id, dealId: deal1.id, category: "labour", description: "Plumbing final inspection", amount: 3200, date: new Date("2026-03-14"), vendor: "Ndlovu Plumbing Services", paymentMethod: "eft", isProjected: true },
+      { orgId, userId: user.id, dealId: deal1.id, category: "materials", description: "Contingency - punch-list items", amount: 15000, date: new Date("2026-03-20"), vendor: "Various", paymentMethod: "eft", isProjected: true },
     ],
   });
 
+  // Phase 1: Demolition & Strip-out
   await prisma.milestone.create({
     data: {
       orgId, userId: user.id, dealId: deal1.id,
       title: "Demolition & Strip-out",
-      description: "Remove old kitchen, strip bathrooms, remove damaged flooring",
+      description: "Remove old kitchen, bathrooms, flooring, prepare for major works",
       status: "completed", order: 1,
       dueDate: new Date("2026-01-08"), completedDate: new Date("2026-01-07"),
+      assignedContractorId: contractor.id,
       tasks: {
         create: [
-          { title: "Remove old kitchen units", completed: true, completedAt: new Date("2026-01-05") },
-          { title: "Strip bathroom tiles and fixtures", completed: true, completedAt: new Date("2026-01-06") },
-          { title: "Remove damaged flooring", completed: true, completedAt: new Date("2026-01-07") },
+          { title: "Assess and mark areas for demolition", completed: true, completedAt: new Date("2026-01-02") },
+          { title: "Remove old kitchen units and appliances", completed: true, completedAt: new Date("2026-01-04") },
+          { title: "Strip bathroom tiles, fixtures and fittings", completed: true, completedAt: new Date("2026-01-05") },
+          { title: "Remove damaged and deteriorated flooring", completed: true, completedAt: new Date("2026-01-06") },
+          { title: "Clear and remove all waste", completed: true, completedAt: new Date("2026-01-07") },
         ],
       },
     },
   });
 
+  // Phase 2: Structural & Pest Treatment
+  await prisma.milestone.create({
+    data: {
+      orgId, userId: user.id, dealId: deal1.id,
+      title: "Structural Repairs & Treatment",
+      description: "Address any structural issues, damp proofing, pest treatment",
+      status: "completed", order: 2,
+      dueDate: new Date("2026-01-15"), completedDate: new Date("2026-01-14"),
+      tasks: {
+        create: [
+          { title: "Inspect for structural damage and cracks", completed: true, completedAt: new Date("2026-01-08") },
+          { title: "Apply damp proofing to affected areas", completed: true, completedAt: new Date("2026-01-10") },
+          { title: "Treat for termites and pests", completed: true, completedAt: new Date("2026-01-12") },
+          { title: "Repair any cracked walls or ceilings", completed: true, completedAt: new Date("2026-01-14") },
+        ],
+      },
+    },
+  });
+
+  // Phase 3: Plumbing & Electrical Rough-in
   await prisma.milestone.create({
     data: {
       orgId, userId: user.id, dealId: deal1.id,
       title: "Plumbing & Electrical Rough-in",
-      description: "First fix plumbing and electrical work before tiling",
-      status: "in_progress", order: 2,
-      dueDate: new Date("2026-02-15"),
+      description: "First fix plumbing and electrical - all pipes and wiring laid out",
+      status: "in_progress", order: 3,
+      dueDate: new Date("2026-02-10"),
       assignedContractorId: plumber.id,
       tasks: {
         create: [
-          { title: "Rough-in plumbing for kitchen", completed: true, completedAt: new Date("2026-01-22") },
-          { title: "Rough-in plumbing for bathrooms", completed: true, completedAt: new Date("2026-01-25") },
-          { title: "Electrical rewiring and new DB board", completed: false, dueDate: new Date("2026-02-10") },
-          { title: "Install geyser", completed: false, dueDate: new Date("2026-02-12") },
+          { title: "Rough-in plumbing for kitchen sink and appliances", completed: true, completedAt: new Date("2026-01-20") },
+          { title: "Rough-in plumbing for main bathroom", completed: true, completedAt: new Date("2026-01-22") },
+          { title: "Rough-in plumbing for ensuite and second bathroom", completed: true, completedAt: new Date("2026-01-24") },
+          { title: "Install geyser and hot water connections", completed: true, completedAt: new Date("2026-01-26") },
+          { title: "Electrical cabling throughout property", completed: false, dueDate: new Date("2026-02-05") },
+          { title: "Install new DB board and earthing", completed: false, dueDate: new Date("2026-02-08") },
+          { title: "Electrical COC inspection", completed: false, dueDate: new Date("2026-02-10") },
         ],
       },
     },
   });
 
+  // Phase 4: Plastering & Drywall
+  await prisma.milestone.create({
+    data: {
+      orgId, userId: user.id, dealId: deal1.id,
+      title: "Plastering & Drywall",
+      description: "Prepare all surfaces with drywall and plaster ready for painting",
+      status: "in_progress", order: 4,
+      dueDate: new Date("2026-02-18"),
+      tasks: {
+        create: [
+          { title: "Install plasterboard to walls (kitchen, bathrooms)", completed: true, completedAt: new Date("2026-02-01") },
+          { title: "Plaster and skim finish all walls", completed: true, completedAt: new Date("2026-02-08") },
+          { title: "Fill and sand all joints and imperfections", completed: false, dueDate: new Date("2026-02-15") },
+          { title: "Patch and repair damaged ceiling areas", completed: false, dueDate: new Date("2026-02-16") },
+          { title: "Final plaster prep for painting", completed: false, dueDate: new Date("2026-02-18") },
+        ],
+      },
+    },
+  });
+
+  // Phase 5: Flooring Installation
+  await prisma.milestone.create({
+    data: {
+      orgId, userId: user.id, dealId: deal1.id,
+      title: "Flooring Installation",
+      description: "Install all flooring - tiles, laminates, and other finishes",
+      status: "pending", order: 5,
+      dueDate: new Date("2026-02-25"),
+      tasks: {
+        create: [
+          { title: "Prepare and level all floor surfaces", completed: false, dueDate: new Date("2026-02-18") },
+          { title: "Install porcelain tiles in kitchen and dining area", completed: false, dueDate: new Date("2026-02-20") },
+          { title: "Install laminate flooring in bedrooms", completed: false, dueDate: new Date("2026-02-22") },
+          { title: "Install tile flooring in bathrooms", completed: false, dueDate: new Date("2026-02-24") },
+          { title: "Grout, seal and finish all flooring", completed: false, dueDate: new Date("2026-02-25") },
+        ],
+      },
+    },
+  });
+
+  // Phase 6: Bathroom & Kitchen Fit-out
   await prisma.milestone.create({
     data: {
       orgId, userId: user.id, dealId: deal1.id,
       title: "Kitchen & Bathroom Fit-out",
-      description: "Install new kitchen, tile bathrooms, fit vanities and shower",
-      status: "pending", order: 3,
-      dueDate: new Date("2026-03-10"),
+      description: "Install fixtures, fittings, cabinets and all bathroom items",
+      status: "pending", order: 6,
+      dueDate: new Date("2026-03-08"),
       tasks: {
         create: [
-          { title: "Install kitchen cabinets and countertop", completed: false },
-          { title: "Tile bathroom floors and walls", completed: false },
-          { title: "Install vanities, toilets, and shower screens", completed: false },
+          { title: "Install kitchen cabinets and island", completed: false, dueDate: new Date("2026-02-20") },
+          { title: "Install kitchen countertops and splashback", completed: false, dueDate: new Date("2026-02-22") },
+          { title: "Install kitchen sink and taps", completed: false, dueDate: new Date("2026-02-23") },
+          { title: "Install bathroom vanities and mirrors", completed: false, dueDate: new Date("2026-02-25") },
+          { title: "Install toilets, baths and shower enclosures", completed: false, dueDate: new Date("2026-02-28") },
+          { title: "Fit shower and bath screens and hardware", completed: false, dueDate: new Date("2026-03-02") },
+          { title: "Install taps and bathroom fittings", completed: false, dueDate: new Date("2026-03-05") },
+          { title: "Bathroom seal and final inspection", completed: false, dueDate: new Date("2026-03-08") },
+        ],
+      },
+    },
+  });
+
+  // Phase 7: Finishes & Painting
+  await prisma.milestone.create({
+    data: {
+      orgId, userId: user.id, dealId: deal1.id,
+      title: "Painting & Interior Finishes",
+      description: "Paint all interior surfaces and apply final finishes",
+      status: "pending", order: 7,
+      dueDate: new Date("2026-03-15"),
+      tasks: {
+        create: [
+          { title: "Preparation - fill, sand, prime all surfaces", completed: false, dueDate: new Date("2026-03-01") },
+          { title: "Paint bedrooms (2 coats)", completed: false, dueDate: new Date("2026-03-05") },
+          { title: "Paint kitchen and dining area", completed: false, dueDate: new Date("2026-03-07") },
+          { title: "Paint bathrooms and passages", completed: false, dueDate: new Date("2026-03-09") },
+          { title: "Paint trim, doors and door frames", completed: false, dueDate: new Date("2026-03-12") },
+          { title: "Touch-ups and final painting inspection", completed: false, dueDate: new Date("2026-03-15") },
+        ],
+      },
+    },
+  });
+
+  // Phase 8: Final Fixtures & Testing
+  await prisma.milestone.create({
+    data: {
+      orgId, userId: user.id, dealId: deal1.id,
+      title: "Final Fixtures & Inspections",
+      description: "Install all light fittings, do final electrical and plumbing checks",
+      status: "pending", order: 8,
+      dueDate: new Date("2026-03-20"),
+      tasks: {
+        create: [
+          { title: "Install all light fittings and switches", completed: false, dueDate: new Date("2026-03-12") },
+          { title: "Install skirting and trim", completed: false, dueDate: new Date("2026-03-13") },
+          { title: "Final electrical inspection and testing", completed: false, dueDate: new Date("2026-03-15") },
+          { title: "Final plumbing inspection and pressure test", completed: false, dueDate: new Date("2026-03-16") },
+          { title: "Electrical Certificate of Compliance issued", completed: false, dueDate: new Date("2026-03-17") },
+          { title: "Plumbing Certificate of Compliance issued", completed: false, dueDate: new Date("2026-03-18") },
+          { title: "Final walk-through and punch-list items", completed: false, dueDate: new Date("2026-03-20") },
         ],
       },
     },
@@ -502,13 +639,30 @@ async function main() {
   await prisma.dealContact.createMany({
     skipDuplicates: true,
     data: [
-      { orgId, dealId: deal1.id, contactId: plumber.id, workDescription: "Full bathroom replumbing" },
-      { orgId, dealId: deal1.id, contactId: electrician.id, workDescription: "Rewiring and compliance certificate" },
-      { orgId, dealId: deal1.id, contactId: contractor.id, workDescription: "Kitchen demo and tiling", daysWorked: 12 },
+      { orgId, dealId: deal1.id, contactId: contractor.id, workDescription: "Demolition, plastering, flooring & general works", daysWorked: 16 },
+      { orgId, dealId: deal1.id, contactId: plumber.id, workDescription: "Plumbing rough-in and bathroom fixtures", daysWorked: 8 },
+      { orgId, dealId: deal1.id, contactId: electrician.id, workDescription: "Electrical rough-in, DB board, and final inspection", daysWorked: 6 },
     ],
   });
 
-  console.log("Deal 1 (Rosebank): renovation stage");
+  // Activity logs for project tracking
+  await prisma.activity.createMany({
+    skipDuplicates: true,
+    data: [
+      { orgId, userId: user.id, dealId: deal1.id, type: "deal_created", description: "Deal created and added to pipeline", timestamp: new Date("2025-11-10") },
+      { orgId, userId: user.id, dealId: deal1.id, type: "deal_moved", description: "Moved to 'purchased' stage", metadata: { fromStage: "offer_made", toStage: "purchased" }, timestamp: new Date("2025-11-20") },
+      { orgId, userId: user.id, dealId: deal1.id, type: "deal_moved", description: "Moved to 'renovating' stage - work commenced", metadata: { fromStage: "purchased", toStage: "renovating" }, timestamp: new Date("2025-12-20") },
+      { orgId, userId: user.id, dealId: deal1.id, type: "note_added", description: "Inspection completed - no major structural issues found", metadata: { inspector: "BuildTest CC", date: "2026-01-08" }, timestamp: new Date("2026-01-08") },
+      { orgId, userId: user.id, dealId: deal1.id, type: "task_completed", description: "Demolition phase completed on schedule", metadata: { phase: "Demolition & Strip-out", daysAhead: 1 }, timestamp: new Date("2026-01-07") },
+      { orgId, userId: user.id, dealId: deal1.id, type: "contractor_added", description: "Assigned Mokoena Builders for primary construction work", metadata: { contractor: "Thabo Mokoena" }, timestamp: new Date("2026-01-08") },
+      { orgId, userId: user.id, dealId: deal1.id, type: "contractor_added", description: "Assigned Ndlovu Plumbing Services for plumbing works", metadata: { contractor: "Sipho Ndlovu" }, timestamp: new Date("2026-01-12") },
+      { orgId, userId: user.id, dealId: deal1.id, type: "expense_logged", description: "Completed expenses: R45,000 (demolition & labour)", metadata: { total: 45000, category: "completed" }, timestamp: new Date("2026-01-15") },
+      { orgId, userId: user.id, dealId: deal1.id, type: "milestone_started", description: "Structural repairs and treatment started", metadata: { milestone: "Structural Repairs & Treatment" }, timestamp: new Date("2026-01-08") },
+      { orgId, userId: user.id, dealId: deal1.id, type: "note_added", description: "Electrical contractor (Sparks CC) on standby for final sign-off", metadata: { contractor: "Johan van der Merwe" }, timestamp: new Date("2026-02-01") },
+    ],
+  });
+
+  console.log("Deal 1 (Rosebank): renovating stage - 40% complete (2 of 8 phases done)");
 
   // ─── Deal 2: Camps Bay (listed) ───
   const deal2 = await prisma.deal.create({
