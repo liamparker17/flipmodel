@@ -93,6 +93,16 @@ Browser request
       -> hasPermission(member, permission) [check RBAC matrix]
 ```
 
+### Password Hashing
+
+Passwords use **Node.js built-in `crypto.scrypt`** (NOT bcryptjs). The module is `app/lib/password.ts`.
+
+- **Hash format:** `scrypt:<salt>:<hash>` (salt = 16 random bytes hex, hash = 64-byte scrypt key hex)
+- **`hashPassword(password)`** — returns a new scrypt hash string
+- **`verifyPassword(password, stored)`** — verifies against scrypt hashes, with legacy bcrypt (`$2b$`) fallback
+- **Do NOT use `bcryptjs` directly.** It fails silently inside Turbopack's bundle. Always use the `password.ts` module.
+- **Demo password:** All seeded demo accounts use `demo1234` (see `TEST_LOGINS.txt`)
+
 ---
 
 ## Key Patterns
@@ -434,6 +444,7 @@ apiError(message, status?)  // -> NextResponse.json({ error: message }, { status
 | What | Path |
 |------|------|
 | Auth config (NextAuth) | `app/lib/auth.ts` |
+| Password hashing (scrypt) | `app/lib/password.ts` |
 | DB client (Prisma) | `app/lib/db.ts` |
 | API helpers (auth, response, errors) | `app/lib/api-helpers.ts` |
 | Financial transaction wrapper | `app/lib/financial-transaction.ts` |
@@ -543,8 +554,8 @@ apiError(message, status?)  // -> NextResponse.json({ error: message }, { status
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `NEXTAUTH_URL` | App base URL (e.g., `http://localhost:3000`) |
-| `NEXTAUTH_SECRET` | NextAuth JWT secret (auto-set by NextAuth in dev) |
+| `AUTH_SECRET` | NextAuth v5 JWT secret (aliased as `NEXTAUTH_SECRET`) |
+| `NEXTAUTH_URL` | App base URL — `http://localhost:3000` locally, `https://flipmodel.vercel.app` on Vercel (set in Vercel dashboard, NOT in `.env.local`) |
 
 ### Optional
 
@@ -612,6 +623,10 @@ apiError(message, status?)  // -> NextResponse.json({ error: message }, { status
 - **DB client** uses `@prisma/adapter-pg` (native PostgreSQL pool) instead of Prisma's default connection handling. The singleton pattern prevents multiple instances in development.
 
 - **Env vars are in `.env.local`** (not `.env`). The `prisma.config.ts` loads env via `dotenv/config`. For interactive migrations use `source .env.local && npx prisma migrate dev`. For deploy: `source .env.local && npx prisma migrate deploy`.
+
+- **Password hashing uses `app/lib/password.ts`** (Node.js `crypto.scrypt`), NOT `bcryptjs`. The `bcryptjs` package fails silently inside Turbopack's bundle. The `verifyPassword()` function includes a legacy bcrypt fallback for any old `$2b$` hashes still in the database.
+
+- **Deployment:** Auto-deploys from `main` to Vercel. `NEXTAUTH_URL` must be set to `https://flipmodel.vercel.app` in Vercel dashboard env vars. The `.env.local` file is gitignored and used only for local dev (`http://localhost:3000`).
 
 ---
 
