@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { updateReceivableSchema } from "@/lib/validations/receivables";
 import { writeAuditLog, diffChanges } from "@/lib/audit";
+import { checkOptimisticLock } from "@/lib/optimistic-lock";
 
 type Params = { params: Promise<{ receivableId: string }> };
 
@@ -36,6 +37,25 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     });
     if (!existing) return apiError("Receivable not found", 404);
 
+    const lockError = checkOptimisticLock(body, existing.version);
+    if (lockError) return lockError;
+
+    // Guard: block totalAmount edits when payments exist or status has progressed
+    if (data.totalAmount !== undefined && data.totalAmount !== existing.totalAmount) {
+      if (existing.amountPaid > 0) {
+        return apiError(
+          "Cannot modify totalAmount after payments have been recorded. Delete payments first.",
+          400,
+        );
+      }
+      if (existing.status !== "outstanding") {
+        return apiError(
+          `Cannot modify totalAmount when status is "${existing.status}". Only outstanding receivables can be edited.`,
+          400,
+        );
+      }
+    }
+
     const updateData: Record<string, unknown> = {};
     if (data.invoiceId !== undefined) updateData.invoiceId = data.invoiceId;
     if (data.contactId !== undefined) updateData.contactId = data.contactId;
@@ -47,7 +67,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     const receivable = await prisma.customerReceivable.update({
       where: { id: receivableId },
-      data: updateData,
+      data: { ...updateData, version: { increment: 1 } },
     });
 
     const changes = diffChanges(

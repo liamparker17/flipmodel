@@ -17,6 +17,8 @@ const mockPrisma = {
   },
   deal: { findFirst: vi.fn() },
   orgMember: { findFirst: vi.fn() },
+  auditLog: { create: vi.fn().mockResolvedValue({}) },
+  $transaction: vi.fn(),
 };
 
 vi.mock("@/lib/db", () => ({ default: mockPrisma }));
@@ -55,6 +57,13 @@ const ORG_MEMBER = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockPrisma.orgMember.findFirst.mockResolvedValue(ORG_MEMBER);
+  // Interactive transaction: pass callback through to mockPrisma
+  mockPrisma.$transaction.mockImplementation(async (fn: Function, _opts?: unknown) => {
+    if (typeof fn === "function") {
+      return fn(mockPrisma);
+    }
+    return fn;
+  });
 });
 
 function makeRequest(body?: unknown, url = "http://localhost/api/expenses") {
@@ -109,11 +118,10 @@ describe("createExpenseSchema", () => {
     ).toBe(false);
   });
 
-  it("accepts negative amount (credit adjustments)", () => {
-    // The schema uses z.number() without min(0) so negatives are allowed
+  it("rejects negative amount (enforced positive for financial integrity)", () => {
     expect(
       createExpenseSchema.safeParse({ ...validExpense, amount: -200 }).success
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("accepts optional fields (vendor, paymentMethod, etc.)", () => {
@@ -239,6 +247,50 @@ describe("POST /api/expenses - create expense", () => {
     const { category: _, ...noCategory } = body;
     const res = await POST(makeRequest(noCategory));
     expect(res.status).toBe(400);
+  });
+
+  it("uses serializable transaction for concurrency safety", async () => {
+    const { POST } = await import("@/api/expenses/route");
+
+    mockPrisma.deal.findFirst.mockResolvedValue({
+      id: "deal-1",
+      orgId: "org-1",
+      data: { quickRenoEstimate: 500000 },
+    });
+    mockPrisma.expense.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
+    mockPrisma.expense.create.mockResolvedValue({ id: "exp-3", ...body });
+
+    await POST(makeRequest(body));
+
+    expect(mockPrisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ isolationLevel: "Serializable" })
+    );
+  });
+
+  it("writes audit log atomically inside the transaction", async () => {
+    const { POST } = await import("@/api/expenses/route");
+
+    mockPrisma.deal.findFirst.mockResolvedValue({
+      id: "deal-1",
+      orgId: "org-1",
+      data: { quickRenoEstimate: 500000 },
+    });
+    mockPrisma.expense.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
+    mockPrisma.expense.create.mockResolvedValue({ id: "exp-4", ...body });
+
+    await POST(makeRequest(body));
+
+    // Audit log is created inside the transaction (via mockPrisma passed to callback)
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "create",
+          entityType: "Expense",
+          entityId: "exp-4",
+        }),
+      })
+    );
   });
 });
 

@@ -7,7 +7,7 @@ import { writeAuditLog } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = await requireOrgMember();
+    const ctx = await requirePermission("payables:read");
     const pagination = parsePagination(req);
     const status = req.nextUrl.searchParams.get("status");
     const contactId = req.nextUrl.searchParams.get("contactId");

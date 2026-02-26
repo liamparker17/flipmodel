@@ -19,7 +19,11 @@ const mockPrisma = {
     delete: vi.fn(),
   },
   journalLine: { deleteMany: vi.fn() },
+  journalEntrySequence: { upsert: vi.fn().mockResolvedValue({ lastSeq: 6 }) },
+  chartOfAccount: { findMany: vi.fn().mockResolvedValue([]) },
+  financialPeriod: { findFirst: vi.fn().mockResolvedValue(null) },
   orgMember: { findFirst: vi.fn() },
+  auditLog: { create: vi.fn().mockResolvedValue({}) },
   $transaction: vi.fn(),
 };
 
@@ -60,6 +64,15 @@ vi.mock("@/lib/permissions", () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mockPrisma.orgMember.findFirst.mockResolvedValue(ORG_MEMBER);
+  mockPrisma.chartOfAccount.findMany.mockResolvedValue([]);
+  mockPrisma.financialPeriod.findFirst.mockResolvedValue(null);
+  // Interactive transaction: pass callback through to mockPrisma
+  mockPrisma.$transaction.mockImplementation(async (fn: Function, _opts?: unknown) => {
+    if (typeof fn === "function") {
+      return fn(mockPrisma);
+    }
+    return fn;
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -251,14 +264,23 @@ describe("POST /api/gl/[entryId]/post - post journal entry", () => {
   it("changes status from draft to posted", async () => {
     const { POST } = await import("@/api/gl/[entryId]/post/route");
 
-    const existing = { id: "je-1", orgId: "org-1", status: "draft", entryNumber: "JE-000001" };
+    const lines = [
+      { accountCode: "1000", accountName: "Cash", debit: 500, credit: 0 },
+      { accountCode: "4000", accountName: "Revenue", debit: 0, credit: 500 },
+    ];
+    const existing = {
+      id: "je-1", orgId: "org-1", status: "draft", entryNumber: "JE-000001",
+      date: new Date("2026-01-15"), lines,
+    };
     mockPrisma.journalEntry.findFirst.mockResolvedValue(existing);
+    mockPrisma.chartOfAccount.findMany.mockResolvedValue([
+      { code: "1000" }, { code: "4000" },
+    ]);
     mockPrisma.journalEntry.update.mockResolvedValue({
       ...existing,
       status: "posted",
       postedAt: new Date(),
       postedBy: "user-1",
-      lines: [],
     });
 
     const req = makeRequest({}, "http://localhost/api/gl/je-1/post");
@@ -277,6 +299,7 @@ describe("POST /api/gl/[entryId]/post - post journal entry", () => {
       id: "je-1",
       orgId: "org-1",
       status: "posted",
+      lines: [],
     });
 
     const req = makeRequest({}, "http://localhost/api/gl/je-1/post");

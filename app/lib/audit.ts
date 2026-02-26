@@ -4,7 +4,7 @@ import { logger } from "./logger";
 export interface AuditEntry {
   orgId: string;
   userId: string;
-  action: "create" | "update" | "delete" | "approve" | "reject" | "login" | "logout" | "post" | "reverse" | "reconcile" | "payment";
+  action: "create" | "update" | "delete" | "delete_payment" | "approve" | "reject" | "login" | "logout" | "post" | "reverse" | "reconcile" | "payment";
   entityType: string;
   entityId?: string;
   changes?: Record<string, { old: unknown; new: unknown }>;

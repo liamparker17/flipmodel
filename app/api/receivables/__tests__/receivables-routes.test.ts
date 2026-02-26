@@ -16,10 +16,12 @@ const mockPrisma = {
     count: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
     delete: vi.fn(),
   },
-  receivablePayment: { create: vi.fn() },
+  receivablePayment: { create: vi.fn(), findFirst: vi.fn().mockResolvedValue(null) },
   orgMember: { findFirst: vi.fn() },
+  auditLog: { create: vi.fn().mockResolvedValue({}) },
   $transaction: vi.fn(),
 };
 
@@ -59,6 +61,14 @@ const ORG_MEMBER = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockPrisma.orgMember.findFirst.mockResolvedValue(ORG_MEMBER);
+  mockPrisma.receivablePayment.findFirst.mockResolvedValue(null);
+  // Interactive transaction: pass callback through to mockPrisma
+  mockPrisma.$transaction.mockImplementation(async (fn: Function, _opts?: unknown) => {
+    if (typeof fn === "function") {
+      return fn(mockPrisma);
+    }
+    return fn;
+  });
 });
 
 function makeRequest(body?: unknown, url = "http://localhost/api/receivables") {
@@ -164,13 +174,6 @@ describe("POST /api/receivables/[receivableId]/pay - payment logic", () => {
   it("accepts payment that exactly fills the remaining balance", async () => {
     const { POST } = await import("@/api/receivables/[receivableId]/pay/route");
 
-    mockPrisma.customerReceivable.findFirst.mockResolvedValue({
-      id: "recv-1",
-      orgId: "org-1",
-      totalAmount: 1000,
-      amountPaid: 700,
-    });
-
     const payment = { id: "pay-1", amount: 300 };
     const updatedReceivable = {
       id: "recv-1",
@@ -178,12 +181,11 @@ describe("POST /api/receivables/[receivableId]/pay - payment logic", () => {
       status: "paid",
       payments: [payment],
     };
-    mockPrisma.$transaction.mockImplementation(async (fn: Function) =>
-      fn({
-        receivablePayment: { create: vi.fn().mockResolvedValue(payment) },
-        customerReceivable: { update: vi.fn().mockResolvedValue(updatedReceivable) },
-      })
-    );
+    mockPrisma.customerReceivable.findFirst
+      .mockResolvedValueOnce({ id: "recv-1", orgId: "org-1", totalAmount: 1000, amountPaid: 700 })
+      .mockResolvedValueOnce(updatedReceivable);
+    mockPrisma.receivablePayment.create.mockResolvedValue(payment);
+    mockPrisma.customerReceivable.updateMany.mockResolvedValue({ count: 1 });
 
     const req = makeRequest(
       { amount: 300, paymentDate: "2026-03-10" },
@@ -198,13 +200,6 @@ describe("POST /api/receivables/[receivableId]/pay - payment logic", () => {
   it("sets status to partially_paid for partial payment", async () => {
     const { POST } = await import("@/api/receivables/[receivableId]/pay/route");
 
-    mockPrisma.customerReceivable.findFirst.mockResolvedValue({
-      id: "recv-1",
-      orgId: "org-1",
-      totalAmount: 1000,
-      amountPaid: 0,
-    });
-
     const payment = { id: "pay-1", amount: 400 };
     const updatedReceivable = {
       id: "recv-1",
@@ -212,12 +207,11 @@ describe("POST /api/receivables/[receivableId]/pay - payment logic", () => {
       status: "partially_paid",
       payments: [payment],
     };
-    mockPrisma.$transaction.mockImplementation(async (fn: Function) =>
-      fn({
-        receivablePayment: { create: vi.fn().mockResolvedValue(payment) },
-        customerReceivable: { update: vi.fn().mockResolvedValue(updatedReceivable) },
-      })
-    );
+    mockPrisma.customerReceivable.findFirst
+      .mockResolvedValueOnce({ id: "recv-1", orgId: "org-1", totalAmount: 1000, amountPaid: 0 })
+      .mockResolvedValueOnce(updatedReceivable);
+    mockPrisma.receivablePayment.create.mockResolvedValue(payment);
+    mockPrisma.customerReceivable.updateMany.mockResolvedValue({ count: 1 });
 
     const req = makeRequest(
       { amount: 400, paymentDate: "2026-03-10" },

@@ -16,11 +16,13 @@ const mockPrisma = {
     count: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
     delete: vi.fn(),
   },
   vendorBillLine: { deleteMany: vi.fn() },
   billPayment: { create: vi.fn() },
   orgMember: { findFirst: vi.fn() },
+  auditLog: { create: vi.fn().mockResolvedValue({}) },
   $transaction: vi.fn(),
 };
 
@@ -60,6 +62,13 @@ const ORG_MEMBER = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockPrisma.orgMember.findFirst.mockResolvedValue(ORG_MEMBER);
+  // Interactive transaction: pass callback through to mockPrisma
+  mockPrisma.$transaction.mockImplementation(async (fn: Function, _opts?: unknown) => {
+    if (typeof fn === "function") {
+      return fn(mockPrisma);
+    }
+    return fn;
+  });
 });
 
 function makeRequest(body?: unknown, url = "http://localhost/api/payables") {
@@ -108,12 +117,13 @@ describe("createVendorBillSchema", () => {
     expect(createVendorBillSchema.safeParse({ ...validBill, total: -1 }).success).toBe(false);
   });
 
-  it("accepts zero subtotal / tax / total", () => {
+  it("accepts zero subtotal / tax / total with matching lines", () => {
     const result = createVendorBillSchema.safeParse({
       ...validBill,
       subtotal: 0,
       tax: 0,
       total: 0,
+      lines: [{ description: "Credit memo", quantity: 1, unitPrice: 0, amount: 0 }],
     });
     expect(result.success).toBe(true);
   });
@@ -184,7 +194,7 @@ describe("createBillPaymentSchema", () => {
 });
 
 // ===========================================================================
-// 3 - Route handler: payment exceeds total
+// 3 - Route handler: payment logic (interactive transaction)
 // ===========================================================================
 
 describe("POST /api/payables/[billId]/pay - payment logic", () => {
@@ -194,8 +204,10 @@ describe("POST /api/payables/[billId]/pay - payment logic", () => {
     mockPrisma.vendorBill.findFirst.mockResolvedValue({
       id: "bill-1",
       orgId: "org-1",
+      status: "approved",
       total: 1000,
       amountPaid: 800,
+      issueDate: new Date("2026-01-01"),
     });
 
     const req = makeRequest(
@@ -217,10 +229,13 @@ describe("POST /api/payables/[billId]/pay - payment logic", () => {
     mockPrisma.vendorBill.findFirst.mockResolvedValue({
       id: "bill-1",
       orgId: "org-1",
+      status: "approved",
       total: 1000,
       amountPaid: 800,
+      issueDate: new Date("2026-01-01"),
     });
-    mockPrisma.$transaction.mockResolvedValue([payment, {}]);
+    mockPrisma.billPayment.create.mockResolvedValue(payment);
+    mockPrisma.vendorBill.updateMany.mockResolvedValue({ count: 1 });
 
     const req = makeRequest(
       { amount: 200, paymentDate: "2026-02-20" },
@@ -232,16 +247,55 @@ describe("POST /api/payables/[billId]/pay - payment logic", () => {
     expect(res.status).toBe(201);
   });
 
-  it("sets status to partially_paid when payment < remaining", async () => {
+  it("uses conditional atomic update via updateMany", async () => {
     const { POST } = await import("@/api/payables/[billId]/pay/route");
 
     mockPrisma.vendorBill.findFirst.mockResolvedValue({
       id: "bill-1",
       orgId: "org-1",
+      status: "approved",
       total: 1000,
       amountPaid: 0,
+      issueDate: new Date("2026-01-01"),
     });
-    mockPrisma.$transaction.mockResolvedValue([{ id: "pay-1" }, {}]);
+    mockPrisma.billPayment.create.mockResolvedValue({ id: "pay-1" });
+    mockPrisma.vendorBill.updateMany.mockResolvedValue({ count: 1 });
+
+    const req = makeRequest(
+      { amount: 400, paymentDate: "2026-02-20" },
+      "http://localhost/api/payables/bill-1/pay"
+    );
+    const params = { params: Promise.resolve({ billId: "bill-1" }) };
+    await POST(req, params);
+
+    // Verify atomic conditional update was used
+    expect(mockPrisma.vendorBill.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: "bill-1",
+          amountPaid: { lte: 600 }, // total(1000) - payment(400)
+        }),
+        data: expect.objectContaining({
+          amountPaid: { increment: 400 },
+        }),
+      })
+    );
+  });
+
+  it("rejects concurrent payment conflict (updateMany count=0)", async () => {
+    const { POST } = await import("@/api/payables/[billId]/pay/route");
+
+    mockPrisma.vendorBill.findFirst.mockResolvedValue({
+      id: "bill-1",
+      orgId: "org-1",
+      status: "approved",
+      total: 1000,
+      amountPaid: 0,
+      issueDate: new Date("2026-01-01"),
+    });
+    mockPrisma.billPayment.create.mockResolvedValue({ id: "pay-1" });
+    // Simulate: another payment landed between read and update
+    mockPrisma.vendorBill.updateMany.mockResolvedValue({ count: 0 });
 
     const req = makeRequest(
       { amount: 400, paymentDate: "2026-02-20" },
@@ -249,13 +303,34 @@ describe("POST /api/payables/[billId]/pay - payment logic", () => {
     );
     const params = { params: Promise.resolve({ billId: "bill-1" }) };
     const res = await POST(req, params);
-    expect(res.status).toBe(201);
 
-    // Verify the transaction was called with the right status
-    const txCall = mockPrisma.$transaction.mock.calls[0][0];
-    // The route uses prisma.$transaction([...]) array form
-    // We verify the call happened; the status logic is tested via the update args
-    expect(mockPrisma.$transaction).toHaveBeenCalled();
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toContain("concurrently");
+  });
+
+  it("rejects payment date before bill issue date", async () => {
+    const { POST } = await import("@/api/payables/[billId]/pay/route");
+
+    mockPrisma.vendorBill.findFirst.mockResolvedValue({
+      id: "bill-1",
+      orgId: "org-1",
+      status: "approved",
+      total: 1000,
+      amountPaid: 0,
+      issueDate: new Date("2026-03-01"),
+    });
+
+    const req = makeRequest(
+      { amount: 100, paymentDate: "2026-02-15" },
+      "http://localhost/api/payables/bill-1/pay"
+    );
+    const params = { params: Promise.resolve({ billId: "bill-1" }) };
+    const res = await POST(req, params);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toContain("before bill issue date");
   });
 
   it("returns 404 for non-existent bill", async () => {
@@ -271,6 +346,33 @@ describe("POST /api/payables/[billId]/pay - payment logic", () => {
     const res = await POST(req, params);
 
     expect(res.status).toBe(404);
+  });
+
+  it("uses serializable isolation level", async () => {
+    const { POST } = await import("@/api/payables/[billId]/pay/route");
+
+    mockPrisma.vendorBill.findFirst.mockResolvedValue({
+      id: "bill-1",
+      orgId: "org-1",
+      status: "approved",
+      total: 1000,
+      amountPaid: 0,
+      issueDate: new Date("2026-01-01"),
+    });
+    mockPrisma.billPayment.create.mockResolvedValue({ id: "pay-1" });
+    mockPrisma.vendorBill.updateMany.mockResolvedValue({ count: 1 });
+
+    const req = makeRequest(
+      { amount: 100, paymentDate: "2026-02-20" },
+      "http://localhost/api/payables/bill-1/pay"
+    );
+    const params = { params: Promise.resolve({ billId: "bill-1" }) };
+    await POST(req, params);
+
+    expect(mockPrisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ isolationLevel: "Serializable" })
+    );
   });
 });
 

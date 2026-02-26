@@ -3,12 +3,13 @@ import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { updateJournalEntrySchema } from "@/lib/validations/gl";
 import { writeAuditLog, diffChanges } from "@/lib/audit";
+import { checkOptimisticLock } from "@/lib/optimistic-lock";
 
 type Params = { params: Promise<{ entryId: string }> };
 
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
-    const ctx = await requireOrgMember();
+    const ctx = await requirePermission("accounting:read");
     const { entryId } = await params;
 
     const entry = await prisma.journalEntry.findFirst({
@@ -38,6 +39,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (!existing) return apiError("Journal entry not found", 404);
     if (existing.status !== "draft") return apiError("Only draft entries can be updated", 400);
 
+    const lockError = checkOptimisticLock(body, existing.version);
+    if (lockError) return lockError;
+
     const updateData: Record<string, unknown> = {};
     if (data.date !== undefined) updateData.date = new Date(data.date);
     if (data.description !== undefined) updateData.description = data.description;
@@ -56,6 +60,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           where: { id: entryId },
           data: {
             ...updateData,
+            version: { increment: 1 },
             lines: {
               create: data.lines!.map((line) => ({
                 accountCode: line.accountCode,
@@ -74,7 +79,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     } else {
       entry = await prisma.journalEntry.update({
         where: { id: entryId },
-        data: updateData,
+        data: { ...updateData, version: { increment: 1 } },
         include: { lines: true },
       });
     }

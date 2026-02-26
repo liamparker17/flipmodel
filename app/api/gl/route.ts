@@ -3,11 +3,11 @@ import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 import { parsePagination, paginatedResult } from "@/lib/pagination";
 import { createJournalEntrySchema } from "@/lib/validations/gl";
-import { writeAuditLog } from "@/lib/audit";
+import { withFinancialTransaction } from "@/lib/financial-transaction";
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = await requireOrgMember();
+    const ctx = await requirePermission("accounting:read");
     const pagination = parsePagination(req);
     const status = req.nextUrl.searchParams.get("status");
     const startDate = req.nextUrl.searchParams.get("startDate");
@@ -45,44 +45,54 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createJournalEntrySchema.parse(body);
 
-    // Auto-generate entry number
-    const count = await prisma.journalEntry.count({ where: { orgId: ctx.orgId } });
-    const entryNumber = `JE-${String(count + 1).padStart(6, "0")}`;
+    // Atomic sequence + create inside a single serializable transaction
+    const entry = await withFinancialTransaction({
+      tx: async (tx) => {
+        // Atomic increment via upsert — no COUNT, no scanning, constant-time
+        const seq = await tx.journalEntrySequence.upsert({
+          where: { orgId: ctx.orgId },
+          create: { orgId: ctx.orgId, lastSeq: 1 },
+          update: { lastSeq: { increment: 1 } },
+        });
 
-    const entry = await prisma.journalEntry.create({
-      data: {
+        const entryNumber = `JE-${String(seq.lastSeq).padStart(6, "0")}`;
+
+        return tx.journalEntry.create({
+          data: {
+            orgId: ctx.orgId,
+            userId: ctx.userId,
+            entryNumber,
+            date: new Date(data.date),
+            description: data.description,
+            reference: data.reference,
+            sourceType: data.sourceType,
+            sourceId: data.sourceId,
+            notes: data.notes,
+            status: "draft",
+            lines: {
+              create: data.lines.map((line) => ({
+                accountCode: line.accountCode,
+                accountName: line.accountName,
+                description: line.description,
+                debit: line.debit ?? 0,
+                credit: line.credit ?? 0,
+                dealId: line.dealId,
+                contactId: line.contactId,
+              })),
+            },
+          },
+          include: { lines: true },
+        });
+      },
+      audit: (entry) => ({
         orgId: ctx.orgId,
         userId: ctx.userId,
-        entryNumber,
-        date: new Date(data.date),
-        description: data.description,
-        reference: data.reference,
-        sourceType: data.sourceType,
-        sourceId: data.sourceId,
-        notes: data.notes,
-        status: "draft",
-        lines: {
-          create: data.lines.map((line) => ({
-            accountCode: line.accountCode,
-            accountName: line.accountName,
-            description: line.description,
-            debit: line.debit ?? 0,
-            credit: line.credit ?? 0,
-            dealId: line.dealId,
-            contactId: line.contactId,
-          })),
-        },
-      },
-      include: { lines: true },
-    });
-
-    await writeAuditLog({
-      orgId: ctx.orgId,
-      userId: ctx.userId,
-      action: "create",
-      entityType: "JournalEntry",
-      entityId: entry.id,
-      metadata: { entryNumber },
+        action: "create",
+        entityType: "JournalEntry",
+        entityId: entry.id,
+        metadata: { entryNumber: entry.entryNumber },
+      }),
+      isolationLevel: "Serializable",
     });
 
     return apiSuccess(entry, 201);

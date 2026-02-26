@@ -107,6 +107,34 @@ export class ForbiddenError extends Error {
   }
 }
 
+export class NotFoundError extends Error {
+  constructor(message = "Resource not found") {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}
+
+export class ValidationError extends Error {
+  public code: string;
+  constructor(code: string, message?: string) {
+    super(message || code);
+    this.name = "ValidationError";
+    this.code = code;
+  }
+}
+
+export class BudgetExceededError extends Error {
+  public totalExpenses: number;
+  public budget: number;
+  constructor(totalExpenses: number, budget: number) {
+    const pct = (((totalExpenses / budget) - 1) * 100).toFixed(1);
+    super(`Budget exceeded by ${pct}%. Total: ${totalExpenses.toFixed(2)}, Budget: ${budget.toFixed(2)}`);
+    this.name = "BudgetExceededError";
+    this.totalExpenses = totalExpenses;
+    this.budget = budget;
+  }
+}
+
 // ─── Route Handler Wrappers ───
 
 type ApiHandler = (req: NextRequest, ctx: OrgContext) => Promise<NextResponse>;
@@ -166,8 +194,49 @@ export function handleApiError(error: unknown) {
     logger.warn("Forbidden access attempt", { detail: error.message });
     return apiError("Forbidden", 403);
   }
+  if (error instanceof NotFoundError) {
+    return apiError(error.message, 404);
+  }
+  if (error instanceof BudgetExceededError) {
+    return NextResponse.json(
+      {
+        error: error.message,
+        code: "BUDGET_LIMIT_EXCEEDED",
+        canOverride: true,
+        totalExpenses: error.totalExpenses,
+        budget: error.budget,
+      },
+      { status: 400 },
+    );
+  }
+  if (error instanceof ValidationError) {
+    return apiError(error.message, 400);
+  }
   if (error instanceof ZodError) {
     return apiError((error as ZodError).issues.map((e) => e.message).join(", "), 400);
+  }
+  // Prisma unique constraint violation → 409 Conflict
+  if (
+    error instanceof Error &&
+    "code" in error &&
+    (error as { code: string }).code === "P2002"
+  ) {
+    const meta = (error as { meta?: { target?: string[] } }).meta;
+    const fields = meta?.target?.join(", ") || "unknown field";
+    logger.warn("Unique constraint violation", { error: error.message, fields });
+    return NextResponse.json(
+      { error: `Duplicate record — a conflicting entry already exists on: ${fields}`, code: "DUPLICATE_RECORD" },
+      { status: 409 },
+    );
+  }
+  // Prisma record not found (e.g. concurrent delete or stale ID)
+  if (
+    error instanceof Error &&
+    "code" in error &&
+    (error as { code: string }).code === "P2025"
+  ) {
+    logger.warn("Record not found during update", { error: error.message });
+    return apiError("Record not found or was deleted by another user", 404);
   }
   Sentry.captureException(error);
   logger.error("Unhandled API error", { error: error instanceof Error ? error.message : "Unknown", stack: error instanceof Error ? error.stack : undefined });

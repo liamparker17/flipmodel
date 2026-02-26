@@ -134,6 +134,7 @@ model Organisation {
   employees            Employee[]
   leaveRecords         LeaveRecord[]
   payslips             Payslip[]
+  journalEntrySequence JournalEntrySequence?
 
   @@index([slug])
 }
@@ -871,6 +872,15 @@ model FinancialPeriod {
   @@index([orgId, status])
 }
 
+// ─── Sequences ───
+
+model JournalEntrySequence {
+  orgId   String @id
+  lastSeq Int    @default(0)
+
+  org Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
 // ─── General Ledger ───
 
 model JournalEntry {
@@ -889,6 +899,7 @@ model JournalEntry {
   notes         String?
   postedAt      DateTime?
   postedBy      String?
+  version       Int       @default(1) // Optimistic locking
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -941,6 +952,7 @@ model VendorBill {
   notes           String?
   documentUrl     String?
   journalEntryId  String?   // Link to GL posting
+  version         Int       @default(1) // Optimistic locking
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -982,12 +994,14 @@ model BillPayment {
   reference       String?   // Payment reference number
   bankAccountId   String?
   journalEntryId  String?
+  idempotencyKey  String?   // Client-provided key to prevent duplicate payments
   notes           String?
   createdAt       DateTime  @default(now())
 
   org             Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   vendorBill      VendorBill @relation(fields: [vendorBillId], references: [id], onDelete: Cascade)
 
+  @@unique([orgId, idempotencyKey])
   @@index([orgId])
   @@index([vendorBillId])
   @@index([bankAccountId])
@@ -1009,6 +1023,7 @@ model CustomerReceivable {
   currency        String    @default("ZAR")
   journalEntryId  String?
   notes           String?
+  version         Int       @default(1) // Optimistic locking
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -1032,12 +1047,14 @@ model ReceivablePayment {
   reference           String?
   bankAccountId       String?
   journalEntryId      String?
+  idempotencyKey      String?   // Client-provided key to prevent duplicate payments
   notes               String?
   createdAt           DateTime  @default(now())
 
   org                 Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   customerReceivable  CustomerReceivable @relation(fields: [customerReceivableId], references: [id], onDelete: Cascade)
 
+  @@unique([orgId, idempotencyKey])
   @@index([orgId])
   @@index([customerReceivableId])
   @@index([bankAccountId])
