@@ -37,6 +37,10 @@ yarn-error.log*
 # Google OAuth credentials
 client_secret_*.json
 
+# Playwright
+playwright-report/
+test-results/
+
 # vercel
 .vercel
 
