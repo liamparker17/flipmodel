@@ -94,7 +94,7 @@ export default function useApiTools() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const data = await api("/api/tools");
+      const data = await api<any>("/api/tools");
       setTools((data.data ?? data.tools ?? []).map(dbToTool));
       setCheckouts(data.checkouts.map(dbToCheckout));
       setMaintenance(data.maintenance.map(dbToMaintenance));
@@ -109,7 +109,7 @@ export default function useApiTools() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const addTool = useCallback(async (tool: Omit<Tool, "id" | "createdAt" | "updatedAt">): Promise<Tool> => {
-    const raw = await api("/api/tools", {
+    const raw = await api<any>("/api/tools", {
       method: "POST",
       body: JSON.stringify(tool),
     });
@@ -119,7 +119,7 @@ export default function useApiTools() {
   }, []);
 
   const updateTool = useCallback(async (id: string, changes: Partial<Tool>) => {
-    const raw = await api(`/api/tools/${id}`, {
+    const raw = await api<any>(`/api/tools/${id}`, {
       method: "PATCH",
       body: JSON.stringify(changes),
     });
@@ -128,7 +128,7 @@ export default function useApiTools() {
   }, []);
 
   const deleteTool = useCallback(async (id: string) => {
-    await api(`/api/tools/${id}`, { method: "DELETE" });
+    await api<any>(`/api/tools/${id}`, { method: "DELETE" });
     setTools((prev) => prev.filter((t) => t.id !== id));
     setCheckouts((prev) => prev.filter((c) => c.toolId !== id));
     setMaintenance((prev) => prev.filter((m) => m.toolId !== id));
@@ -144,7 +144,7 @@ export default function useApiTools() {
     expectedReturnDate?: string;
     notes?: string;
   }) => {
-    await api(`/api/tools/${toolId}`, {
+    await api<any>(`/api/tools/${toolId}`, {
       method: "PATCH",
       body: JSON.stringify({ _action: "checkout", ...details }),
     });
@@ -157,7 +157,7 @@ export default function useApiTools() {
   }) => {
     const checkout = checkouts.find((c) => c.id === checkoutId);
     if (!checkout) return;
-    await api(`/api/tools/${checkout.toolId}`, {
+    await api<any>(`/api/tools/${checkout.toolId}`, {
       method: "PATCH",
       body: JSON.stringify({ _action: "return", checkoutId, ...details }),
     });
@@ -165,7 +165,7 @@ export default function useApiTools() {
   }, [checkouts, fetchAll]);
 
   const addMaintenanceEntry = useCallback(async (toolId: string, entry: Omit<ToolMaintenanceEntry, "id" | "toolId">) => {
-    await api(`/api/tools/${toolId}`, {
+    await api<any>(`/api/tools/${toolId}`, {
       method: "PATCH",
       body: JSON.stringify({ _action: "maintenance", ...entry }),
     });
@@ -173,7 +173,7 @@ export default function useApiTools() {
   }, [fetchAll]);
 
   const reportIncident = useCallback(async (toolId: string, incident: Omit<ToolIncident, "id" | "toolId">) => {
-    await api(`/api/tools/${toolId}`, {
+    await api<any>(`/api/tools/${toolId}`, {
       method: "PATCH",
       body: JSON.stringify({ _action: "incident", ...incident }),
     });
@@ -187,7 +187,7 @@ export default function useApiTools() {
   }) => {
     const incident = incidents.find((i) => i.id === incidentId);
     if (!incident) return;
-    await api(`/api/tools/${incident.toolId}`, {
+    await api<any>(`/api/tools/${incident.toolId}`, {
       method: "PATCH",
       body: JSON.stringify({ _action: "resolveIncident", incidentId, ...resolution }),
     });
