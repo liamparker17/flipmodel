@@ -22,9 +22,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   useEffect(() => {
     if (!orgLoading && !hasOrg) {
-      router.replace("/onboarding");
+      window.location.href = "/onboarding";
     }
-  }, [orgLoading, hasOrg, router]);
+  }, [orgLoading, hasOrg]);
 
   useEffect(() => {
     if (!hasOrg) return;

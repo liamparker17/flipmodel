@@ -46,6 +46,21 @@ function OnboardingContent() {
   const searchParams = useSearchParams();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [checkingOrg, setCheckingOrg] = useState(true);
+
+  // On mount, check if user already has an org (e.g. seeded accounts)
+  useEffect(() => {
+    fetch("/api/org")
+      .then((res) => {
+        if (res.ok) {
+          // User already has an org — skip onboarding
+          window.location.href = "/dashboard";
+          return;
+        }
+        setCheckingOrg(false);
+      })
+      .catch(() => setCheckingOrg(false));
+  }, []);
 
   // Step 1 - Company Profile
   const [companyName, setCompanyName] = useState("");
@@ -136,9 +151,10 @@ function OnboardingContent() {
         }),
       });
 
-      router.push("/dashboard");
+      // Full page reload to refresh JWT session with new org data
+      window.location.href = "/dashboard";
     } catch {
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     }
   };
 
@@ -610,6 +626,14 @@ function OnboardingContent() {
 
   const showNav = step !== 4 && step !== 5;
 
+  if (checkingOrg) {
+    return (
+      <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 12, padding: 32, textAlign: "center", color: theme.textDim, fontSize: 13 }}>
+        Checking account...
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -619,7 +643,7 @@ function OnboardingContent() {
         padding: 32,
       }}
     >
-      {/* Logo */}
+      {/* Logo + Sign out link */}
       <div style={{ textAlign: "center", marginBottom: 20 }}>
         <div
           style={{
@@ -637,6 +661,11 @@ function OnboardingContent() {
           }}
         >
           JH
+        </div>
+        <div>
+          <button onClick={() => { window.location.href = "/api/auth/signout"; }} style={{ background: "none", border: "none", color: theme.textDim, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>
+            Sign in as a different user
+          </button>
         </div>
       </div>
 
