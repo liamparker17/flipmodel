@@ -4,7 +4,7 @@ import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from 
 import { parsePagination, paginatedResult } from "@/lib/pagination";
 import { createDealSchema } from "@/lib/validations/deal";
 
-import { seed } from "../../prisma/seed";
+import { seed } from "../../../prisma/seed";
 
 export async function GET(req: NextRequest) {
   try {
