@@ -2137,7 +2137,7 @@ Global search across deals, contacts, and tools.
 
 ```json
 {
-  "deals": [{ "id": "...", "name": "123 Main St", "address": "...", "stage": "renovation" }],
+  "deals": [{ "id": "...", "name": "123 Main St", "address": "...", "stage": "renovating" }],
   "contacts": [{ "id": "...", "name": "Bob Builder", "role": "contractor", "company": "BuildCo" }],
   "tools": [{ "id": "...", "name": "DeWalt Drill", "category": "power_tools", "status": "available" }]
 }

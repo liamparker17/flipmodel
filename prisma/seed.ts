@@ -214,7 +214,11 @@ export async function seed() {
   const orgId = org.id;
   // wipe any existing deals for this org so demo dataset is deterministically rebuilt
   await prisma.deal.deleteMany({ where: { orgId } });
-  console.log("Existing deals deleted (demo refresh)");
+  await prisma.contact.deleteMany({ where: { orgId } });
+  await prisma.tool.deleteMany({ where: { orgId } });
+  await prisma.employee.deleteMany({ where: { orgId } });
+  await prisma.invoice.deleteMany({ where: { orgId } });
+  console.log("Existing demo data wiped for clean reseed");
 
   // ─── Contacts ───
   const plumber = await prisma.contact.create({
@@ -299,7 +303,7 @@ export async function seed() {
       address: "12 Oak Lane, Rosebank, Johannesburg, 2196",
       purchasePrice: 1200000,
       expectedSalePrice: 1850000,
-      stage: "renovation",
+      stage: "renovating",
       priority: "high",
       notes: "3-bed, 2-bath. Full kitchen and bathroom renovation needed.",
       tags: JSON.stringify(["jhb", "reno", "3bed"]),
