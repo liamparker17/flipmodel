@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const publicPaths = ["/login", "/signup", "/onboarding", "/api/auth", "/api/accounting/webhooks", "/api/health"];
+const publicPaths = ["/login", "/signup", "/onboarding", "/api/auth", "/api/accounting/webhooks", "/api/health", "/api/dev"];
 
 // CSRF double-submit cookie protection
 function generateCsrfToken(): string {
