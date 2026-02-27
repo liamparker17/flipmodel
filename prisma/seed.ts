@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { scrypt, randomBytes } from "crypto";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
@@ -213,6 +213,30 @@ export async function seed() {
 
   const orgId = org.id;
   // wipe any existing deals for this org so demo dataset is deterministically rebuilt
+  // Delete in dependency order (children before parents)
+  await prisma.receivablePayment.deleteMany({ where: { orgId } });
+  await prisma.customerReceivable.deleteMany({ where: { orgId } });
+  await prisma.billPayment.deleteMany({ where: { orgId } });
+  await prisma.vendorBill.deleteMany({ where: { orgId } });
+  await prisma.journalEntry.deleteMany({ where: { orgId } });
+  await prisma.journalEntrySequence.deleteMany({ where: { orgId } });
+  await prisma.goodsReceipt.deleteMany({ where: { orgId } });
+  await prisma.purchaseOrder.deleteMany({ where: { orgId } });
+  await prisma.inventoryTransaction.deleteMany({ where: { orgId } });
+  await prisma.inventoryItem.deleteMany({ where: { orgId } });
+  await prisma.bankTransaction.deleteMany({ where: { orgId } });
+  await prisma.bankAccount.deleteMany({ where: { orgId } });
+  await prisma.chartOfAccount.deleteMany({ where: { orgId } });
+  await prisma.financialPeriod.deleteMany({ where: { orgId } });
+  await prisma.inspection.deleteMany({ where: { orgId } });
+  await prisma.permit.deleteMany({ where: { orgId } });
+  await prisma.comparableSale.deleteMany({ where: { orgId } });
+  await prisma.insurancePolicy.deleteMany({ where: { orgId } });
+  await prisma.contractorRating.deleteMany({ where: { orgId } });
+  await prisma.leaveRecord.deleteMany({ where: { orgId } });
+  await prisma.payslip.deleteMany({ where: { orgId } });
+  await prisma.notification.deleteMany({ where: { orgId } });
+  await prisma.shoppingListItem.deleteMany({ where: { orgId } });
   await prisma.deal.deleteMany({ where: { orgId } });
   await prisma.contact.deleteMany({ where: { orgId } });
   await prisma.tool.deleteMany({ where: { orgId } });
@@ -1542,6 +1566,798 @@ export async function seed() {
   });
 
   console.log("Invoices created: 2");
+
+  // ─── Chart of Accounts ───
+  const accounts = [
+    { orgId, code: "1000", name: "FNB Business Cheque", type: "asset", subtype: "bank", isSystemAccount: true },
+    { orgId, code: "1100", name: "Accounts Receivable", type: "asset", subtype: "accounts_receivable", isSystemAccount: true },
+    { orgId, code: "1200", name: "Inventory", type: "asset", subtype: "inventory" },
+    { orgId, code: "1300", name: "Fixed Assets - Tools & Equipment", type: "asset", subtype: "fixed_asset" },
+    { orgId, code: "1400", name: "VAT Input (Receivable)", type: "asset", subtype: "other_current_asset" },
+    { orgId, code: "2000", name: "Accounts Payable", type: "liability", subtype: "accounts_payable", isSystemAccount: true },
+    { orgId, code: "2100", name: "VAT Output (Payable)", type: "liability", subtype: "other_current_liability" },
+    { orgId, code: "2200", name: "Salaries Payable", type: "liability", subtype: "other_current_liability" },
+    { orgId, code: "3000", name: "Owner's Equity", type: "equity", subtype: "owners_equity" },
+    { orgId, code: "3100", name: "Retained Earnings", type: "equity", subtype: "retained_earnings" },
+    { orgId, code: "4000", name: "Property Sale Revenue", type: "revenue", subtype: "sales" },
+    { orgId, code: "4100", name: "Other Income", type: "revenue", subtype: "other_income" },
+    { orgId, code: "5000", name: "Cost of Sales - Materials", type: "expense", subtype: "cost_of_sales" },
+    { orgId, code: "5100", name: "Cost of Sales - Labour", type: "expense", subtype: "cost_of_sales" },
+    { orgId, code: "5200", name: "Plumbing Expenses", type: "expense", subtype: "cost_of_sales" },
+    { orgId, code: "5300", name: "Electrical Expenses", type: "expense", subtype: "cost_of_sales" },
+    { orgId, code: "6000", name: "Professional Fees", type: "expense", subtype: "operating_expense" },
+    { orgId, code: "6100", name: "Insurance", type: "expense", subtype: "operating_expense" },
+    { orgId, code: "6200", name: "Rates & Taxes", type: "expense", subtype: "operating_expense" },
+    { orgId, code: "6300", name: "Salaries & Wages", type: "expense", subtype: "operating_expense" },
+  ];
+  for (const acct of accounts) {
+    await prisma.chartOfAccount.upsert({
+      where: { orgId_code: { orgId, code: acct.code } },
+      update: {},
+      create: acct,
+    });
+  }
+  console.log(`Chart of Accounts created: ${accounts.length}`);
+
+  // ─── Financial Periods ───
+  await prisma.financialPeriod.upsert({
+    where: { orgId_name: { orgId, name: "2026-01" } },
+    update: {},
+    create: { orgId, name: "2026-01", startDate: new Date("2026-01-01"), endDate: new Date("2026-01-31"), status: "closed", closedBy: user.id, closedAt: new Date("2026-02-05") },
+  });
+  await prisma.financialPeriod.upsert({
+    where: { orgId_name: { orgId, name: "2026-02" } },
+    update: {},
+    create: { orgId, name: "2026-02", startDate: new Date("2026-02-01"), endDate: new Date("2026-02-28"), status: "open" },
+  });
+  await prisma.financialPeriod.upsert({
+    where: { orgId_name: { orgId, name: "2026-03" } },
+    update: {},
+    create: { orgId, name: "2026-03", startDate: new Date("2026-03-01"), endDate: new Date("2026-03-31"), status: "open" },
+  });
+  console.log("Financial Periods created: 3");
+
+  // ─── Bank Account (get reference for transactions) ───
+  const bankAccount = await prisma.bankAccount.findFirst({ where: { orgId } });
+
+  // ─── Bank Transactions ───
+  if (bankAccount) {
+    await prisma.bankTransaction.createMany({
+      data: [
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2025-12-28"), description: "EFT - Waste Removal SA", amount: -8500, type: "withdrawal", reference: "WR-DEC-001", category: "materials", isReconciled: true, reconciledAt: new Date("2026-01-05") },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-01-05"), description: "EFT - Mokoena Builders (demolition)", amount: -12000, type: "withdrawal", reference: "MB-JAN-001", category: "labour", isReconciled: true, reconciledAt: new Date("2026-01-10") },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-01-08"), description: "CARD - BuildTest CC", amount: -6500, type: "withdrawal", reference: "BT-JAN-001", category: "labour", isReconciled: true, reconciledAt: new Date("2026-01-15") },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-01-15"), description: "EFT - Ndlovu Plumbing Services", amount: -16800, type: "withdrawal", reference: "NP-JAN-001", category: "plumbing", isReconciled: true, reconciledAt: new Date("2026-01-20") },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-01-20"), description: "EFT - Sparks Electrical CC", amount: -24500, type: "withdrawal", reference: "SE-JAN-001", category: "electrical", isReconciled: true, reconciledAt: new Date("2026-01-25") },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-01-22"), description: "CARD - Builders Warehouse (geyser)", amount: -8200, type: "withdrawal", reference: "BW-JAN-001", category: "materials", isReconciled: true, reconciledAt: new Date("2026-01-28") },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-01-25"), description: "EFT - Plasterboard SA", amount: -12500, type: "withdrawal", reference: "PS-JAN-001", category: "materials", isReconciled: true, reconciledAt: new Date("2026-02-01") },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-02-02"), description: "EFT - Mokoena Builders (plastering)", amount: -14400, type: "withdrawal", reference: "MB-FEB-001", category: "labour", isReconciled: false },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-02-05"), description: "EFT - Builders Warehouse (kitchen)", amount: -45000, type: "withdrawal", reference: "BW-FEB-001", category: "materials", isReconciled: false },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-02-05"), description: "CARD - CTM (floor tiles)", amount: -15500, type: "withdrawal", reference: "CTM-FEB-001", category: "materials", isReconciled: false },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-02-08"), description: "CARD - CTM (bathroom tiles)", amount: -8900, type: "withdrawal", reference: "CTM-FEB-002", category: "materials", isReconciled: false },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-02-10"), description: "EFT - Mokoena Builders (kitchen install)", amount: -18000, type: "withdrawal", reference: "MB-FEB-002", category: "labour", isReconciled: false },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-02-01"), description: "FNB - Monthly account fee", amount: -249, type: "fee", reference: "FNB-FEB-FEE", isReconciled: false },
+        { orgId, bankAccountId: bankAccount.id, date: new Date("2026-01-01"), description: "Deposit - Investment capital", amount: 500000, type: "deposit", reference: "DEP-JAN-001", isReconciled: true, reconciledAt: new Date("2026-01-05") },
+      ],
+    });
+    console.log("Bank Transactions created: 14");
+  }
+
+  // ─── Vendor Bills + Lines + Payments ───
+  const bill1 = await prisma.vendorBill.create({
+    data: {
+      orgId, userId: user.id,
+      billNumber: "BILL-001", contactId: contractor.id, dealId: deal1.id,
+      status: "paid", issueDate: new Date("2026-01-10"), dueDate: new Date("2026-01-24"),
+      subtotal: 26400, tax: 3960, total: 30360, amountPaid: 30360,
+      currency: "ZAR", notes: "Demolition and initial plastering work",
+      lines: {
+        create: [
+          { description: "Demolition labour (5 days @ R1500)", quantity: 5, unitPrice: 1500, amount: 7500, accountCode: "5100", dealId: deal1.id, order: 1 },
+          { description: "Plastering labour (6 days @ R1500)", quantity: 6, unitPrice: 1500, amount: 9000, accountCode: "5100", dealId: deal1.id, order: 2 },
+          { description: "Waste removal and rubble disposal", quantity: 1, unitPrice: 4500, amount: 4500, accountCode: "5000", dealId: deal1.id, order: 3 },
+          { description: "Plasterboard materials supply", quantity: 1, unitPrice: 5400, amount: 5400, accountCode: "5000", dealId: deal1.id, order: 4 },
+        ],
+      },
+    },
+  });
+
+  await prisma.billPayment.create({
+    data: {
+      orgId, vendorBillId: bill1.id, amount: 30360,
+      paymentDate: new Date("2026-01-24"), paymentMethod: "eft",
+      reference: "EFT-MB-001", idempotencyKey: "pay-bill1-full",
+      bankAccountId: bankAccount?.id,
+    },
+  });
+
+  const bill2 = await prisma.vendorBill.create({
+    data: {
+      orgId, userId: user.id,
+      billNumber: "BILL-002", contactId: plumber.id, dealId: deal1.id,
+      status: "partially_paid", issueDate: new Date("2026-01-28"), dueDate: new Date("2026-02-11"),
+      subtotal: 48800, tax: 7320, total: 56120, amountPaid: 30000,
+      currency: "ZAR", notes: "Plumbing rough-in and bathroom fixtures",
+      lines: {
+        create: [
+          { description: "Rough-in plumbing labour (8 days @ R1800)", quantity: 8, unitPrice: 1800, amount: 14400, accountCode: "5200", dealId: deal1.id, order: 1 },
+          { description: "Copper piping and fittings", quantity: 1, unitPrice: 12000, amount: 12000, accountCode: "5200", dealId: deal1.id, order: 2 },
+          { description: "Bathroom fixture supply (taps, mixers, shower)", quantity: 1, unitPrice: 14200, amount: 14200, accountCode: "5200", dealId: deal1.id, order: 3 },
+          { description: "Geyser and hot water connections", quantity: 1, unitPrice: 8200, amount: 8200, accountCode: "5200", dealId: deal1.id, order: 4 },
+        ],
+      },
+    },
+  });
+
+  await prisma.billPayment.create({
+    data: {
+      orgId, vendorBillId: bill2.id, amount: 30000,
+      paymentDate: new Date("2026-02-01"), paymentMethod: "eft",
+      reference: "EFT-NP-001", idempotencyKey: "pay-bill2-partial",
+      bankAccountId: bankAccount?.id,
+    },
+  });
+
+  const bill3 = await prisma.vendorBill.create({
+    data: {
+      orgId, userId: user.id,
+      billNumber: "BILL-003", contactId: electrician.id, dealId: deal1.id,
+      status: "approved", issueDate: new Date("2026-02-05"), dueDate: new Date("2026-02-19"),
+      subtotal: 28000, tax: 4200, total: 32200, amountPaid: 0,
+      currency: "ZAR", notes: "Electrical rewiring, DB board, and downlights",
+      lines: {
+        create: [
+          { description: "Electrical rewiring labour (6 days @ R2200)", quantity: 6, unitPrice: 2200, amount: 13200, accountCode: "5300", dealId: deal1.id, order: 1 },
+          { description: "DB board and breakers", quantity: 1, unitPrice: 6800, amount: 6800, accountCode: "5300", dealId: deal1.id, order: 2 },
+          { description: "Wiring, conduit and accessories", quantity: 1, unitPrice: 5500, amount: 5500, accountCode: "5300", dealId: deal1.id, order: 3 },
+          { description: "LED downlights (12 units)", quantity: 12, unitPrice: 210, amount: 2520, accountCode: "5300", dealId: deal1.id, order: 4 },
+        ],
+      },
+    },
+  });
+
+  await prisma.vendorBill.create({
+    data: {
+      orgId, userId: user.id,
+      billNumber: "BILL-004", contactId: contractor.id, dealId: deal1.id,
+      status: "draft", issueDate: new Date("2026-02-15"), dueDate: new Date("2026-03-01"),
+      subtotal: 18000, tax: 2700, total: 20700, amountPaid: 0,
+      currency: "ZAR", notes: "Kitchen installation labour - draft pending approval",
+      lines: {
+        create: [
+          { description: "Kitchen cabinet installation (5 days @ R1500)", quantity: 5, unitPrice: 1500, amount: 7500, accountCode: "5100", dealId: deal1.id, order: 1 },
+          { description: "Countertop fitting and splashback tiling", quantity: 1, unitPrice: 6500, amount: 6500, accountCode: "5100", dealId: deal1.id, order: 2 },
+          { description: "Kitchen sink and appliance hookups", quantity: 1, unitPrice: 4000, amount: 4000, accountCode: "5100", dealId: deal1.id, order: 3 },
+        ],
+      },
+    },
+  });
+
+  console.log("Vendor Bills created: 4 (with payments: 2)");
+
+  // ─── Purchase Orders + Lines + Goods Receipts ───
+  const po1 = await prisma.purchaseOrder.create({
+    data: {
+      orgId, userId: user.id,
+      poNumber: "PO-000001", dealId: deal1.id,
+      status: "received", orderDate: new Date("2026-02-01"), expectedDate: new Date("2026-02-05"),
+      subtotal: 24400, tax: 3660, total: 28060, shippingCost: 0,
+      deliveryAddress: "12 Oak Lane, Rosebank, Johannesburg, 2196",
+      notes: "Floor and bathroom tiles for Rosebank renovation",
+      approvedBy: user.id, approvedAt: new Date("2026-02-01"),
+      lines: {
+        create: [
+          { description: "Porcelain floor tiles 60x60 (30 sqm)", quantity: 30, unitPrice: 480, amount: 14400, accountCode: "5000", order: 1 },
+          { description: "Bathroom wall tiles (20 sqm)", quantity: 20, unitPrice: 350, amount: 7000, accountCode: "5000", order: 2 },
+          { description: "Tile grout (20kg bags)", quantity: 6, unitPrice: 250, amount: 1500, accountCode: "5000", order: 3 },
+          { description: "Tile adhesive (25kg bags)", quantity: 6, unitPrice: 250, amount: 1500, accountCode: "5000", order: 4 },
+        ],
+      },
+    },
+  });
+
+  await prisma.goodsReceipt.create({
+    data: {
+      orgId, purchaseOrderId: po1.id, receivedDate: new Date("2026-02-04"), receivedBy: supervisorUser.name!,
+      notes: "All items received in good condition. Tiles stored on site.",
+      items: [
+        { lineId: "line-1", quantityReceived: 30, condition: "good" },
+        { lineId: "line-2", quantityReceived: 20, condition: "good" },
+        { lineId: "line-3", quantityReceived: 6, condition: "good" },
+        { lineId: "line-4", quantityReceived: 6, condition: "good" },
+      ],
+    },
+  });
+
+  const po2 = await prisma.purchaseOrder.create({
+    data: {
+      orgId, userId: user.id,
+      poNumber: "PO-000002", dealId: deal1.id,
+      status: "partially_received", orderDate: new Date("2026-02-05"), expectedDate: new Date("2026-02-12"),
+      subtotal: 45000, tax: 6750, total: 51750, shippingCost: 1500,
+      deliveryAddress: "12 Oak Lane, Rosebank, Johannesburg, 2196",
+      notes: "Kitchen cabinets and countertops from Builders Warehouse",
+      approvedBy: user.id, approvedAt: new Date("2026-02-05"),
+      lines: {
+        create: [
+          { description: "Kitchen base cabinets (4 units)", quantity: 4, unitPrice: 4500, amount: 18000, accountCode: "5000", order: 1 },
+          { description: "Kitchen wall cabinets (3 units)", quantity: 3, unitPrice: 3500, amount: 10500, accountCode: "5000", order: 2 },
+          { description: "Granite countertop (4 linear metres)", quantity: 4, unitPrice: 3800, amount: 15200, accountCode: "5000", order: 3 },
+          { description: "Undermount sink", quantity: 1, unitPrice: 1300, amount: 1300, accountCode: "5000", order: 4 },
+        ],
+      },
+    },
+  });
+
+  await prisma.goodsReceipt.create({
+    data: {
+      orgId, purchaseOrderId: po2.id, receivedDate: new Date("2026-02-10"), receivedBy: supervisorUser.name!,
+      notes: "Cabinets received. Countertops on backorder — expected next week.",
+      items: [
+        { lineId: "line-1", quantityReceived: 4, condition: "good" },
+        { lineId: "line-2", quantityReceived: 3, condition: "good" },
+        { lineId: "line-3", quantityReceived: 0, condition: "pending" },
+        { lineId: "line-4", quantityReceived: 1, condition: "good" },
+      ],
+    },
+  });
+
+  await prisma.purchaseOrder.create({
+    data: {
+      orgId, userId: user.id,
+      poNumber: "PO-000003", dealId: deal1.id,
+      status: "approved", orderDate: new Date("2026-02-15"), expectedDate: new Date("2026-02-25"),
+      subtotal: 11200, tax: 1680, total: 12880, shippingCost: 0,
+      deliveryAddress: "12 Oak Lane, Rosebank, Johannesburg, 2196",
+      notes: "Electrical supplies for final fitout",
+      approvedBy: user.id, approvedAt: new Date("2026-02-16"),
+      lines: {
+        create: [
+          { description: "LED downlight fittings (15 units)", quantity: 15, unitPrice: 280, amount: 4200, accountCode: "5300", order: 1 },
+          { description: "Light switches and sockets (20 units)", quantity: 20, unitPrice: 120, amount: 2400, accountCode: "5300", order: 2 },
+          { description: "Electrical cable (100m roll)", quantity: 2, unitPrice: 1800, amount: 3600, accountCode: "5300", order: 3 },
+          { description: "DB board isolators", quantity: 4, unitPrice: 250, amount: 1000, accountCode: "5300", order: 4 },
+        ],
+      },
+    },
+  });
+
+  console.log("Purchase Orders created: 3 (with receipts: 2)");
+
+  // ─── Inventory Items + Transactions ───
+  const inventoryItems = [
+    { orgId, sku: "MAT-CEM-50", name: "Cement (50kg bags)", category: "materials", unit: "each", quantityOnHand: 12, reorderPoint: 5, reorderQuantity: 20, costPrice: 95, lastPurchasePrice: 95, location: "Rosebank Site" },
+    { orgId, sku: "MAT-TILE-P60", name: "Porcelain Tiles 60x60", category: "materials", unit: "m2", quantityOnHand: 8, reorderPoint: 10, reorderQuantity: 30, costPrice: 480, lastPurchasePrice: 480, location: "Rosebank Site" },
+    { orgId, sku: "MAT-PAINT-DV", name: "Plascon Double Velvet (5L)", category: "materials", unit: "each", quantityOnHand: 0, reorderPoint: 4, reorderQuantity: 12, costPrice: 650, lastPurchasePrice: 650, location: "Warehouse" },
+    { orgId, sku: "MAT-PIPE-CU15", name: "Copper Piping 15mm (3m lengths)", category: "materials", unit: "each", quantityOnHand: 6, reorderPoint: 3, reorderQuantity: 10, costPrice: 185, lastPurchasePrice: 185, location: "Warehouse" },
+    { orgId, sku: "MAT-CABLE-25", name: "Electrical Cable 2.5mm (100m)", category: "materials", unit: "each", quantityOnHand: 1, reorderPoint: 1, reorderQuantity: 3, costPrice: 1800, lastPurchasePrice: 1800, location: "Warehouse" },
+    { orgId, sku: "MAT-PBOARD", name: "Plasterboard Sheets (2.4x1.2m)", category: "materials", unit: "each", quantityOnHand: 4, reorderPoint: 5, reorderQuantity: 15, costPrice: 165, lastPurchasePrice: 165, location: "Rosebank Site" },
+    { orgId, sku: "MAT-GROUT-W", name: "Tile Grout White (20kg)", category: "consumables", unit: "each", quantityOnHand: 3, reorderPoint: 2, reorderQuantity: 6, costPrice: 250, lastPurchasePrice: 250, location: "Rosebank Site" },
+    { orgId, sku: "MAT-SCREW-MX", name: "Mixed Screws & Fixings Box", category: "consumables", unit: "box", quantityOnHand: 5, reorderPoint: 2, reorderQuantity: 5, costPrice: 120, lastPurchasePrice: 120, location: "Rosebank Site" },
+  ];
+
+  const createdInventory: Record<string, string> = {};
+  for (const item of inventoryItems) {
+    const inv = await prisma.inventoryItem.upsert({
+      where: { orgId_sku: { orgId, sku: item.sku } },
+      update: {},
+      create: item,
+    });
+    createdInventory[item.sku] = inv.id;
+  }
+
+  // Inventory transactions
+  const invTransactions = [
+    { orgId, inventoryItemId: createdInventory["MAT-CEM-50"], type: "purchase", quantity: 20, unitCost: 95, totalCost: 1900, reference: "PO-BW-Jan", referenceType: "purchase_order", performedBy: supervisorUser.name!, notes: "Initial stock for Rosebank site" },
+    { orgId, inventoryItemId: createdInventory["MAT-CEM-50"], type: "usage", quantity: -8, unitCost: 95, totalCost: -760, reference: "12 Oak Lane, Rosebank", referenceType: "deal", dealId: deal1.id, performedBy: fieldUser.name!, notes: "Used for plastering and tiling prep" },
+    { orgId, inventoryItemId: createdInventory["MAT-TILE-P60"], type: "purchase", quantity: 30, unitCost: 480, totalCost: 14400, reference: "PO-000001", referenceType: "purchase_order", performedBy: supervisorUser.name!, notes: "CTM order for Rosebank" },
+    { orgId, inventoryItemId: createdInventory["MAT-TILE-P60"], type: "usage", quantity: -22, unitCost: 480, totalCost: -10560, reference: "12 Oak Lane, Rosebank", referenceType: "deal", dealId: deal1.id, performedBy: fieldUser.name!, notes: "Installed in kitchen and passage" },
+    { orgId, inventoryItemId: createdInventory["MAT-PAINT-DV"], type: "purchase", quantity: 8, unitCost: 650, totalCost: 5200, reference: "Mica Hardware", referenceType: "purchase_order", performedBy: supervisorUser.name!, notes: "Stellenbosch property" },
+    { orgId, inventoryItemId: createdInventory["MAT-PAINT-DV"], type: "usage", quantity: -8, unitCost: 650, totalCost: -5200, reference: "22 Protea Ave, Stellenbosch", referenceType: "deal", dealId: deal4.id, performedBy: fieldUser.name!, notes: "Full interior paint" },
+    { orgId, inventoryItemId: createdInventory["MAT-PBOARD"], type: "purchase", quantity: 15, unitCost: 165, totalCost: 2475, reference: "Plasterboard SA", referenceType: "purchase_order", performedBy: supervisorUser.name! },
+    { orgId, inventoryItemId: createdInventory["MAT-PBOARD"], type: "usage", quantity: -11, unitCost: 165, totalCost: -1815, reference: "12 Oak Lane, Rosebank", referenceType: "deal", dealId: deal1.id, performedBy: fieldUser.name!, notes: "Kitchen and bathroom walls" },
+  ];
+  await prisma.inventoryTransaction.createMany({ data: invTransactions });
+  console.log(`Inventory Items created: ${inventoryItems.length} (with ${invTransactions.length} transactions)`);
+
+  // ─── Journal Entry Sequence ───
+  await prisma.journalEntrySequence.upsert({
+    where: { orgId },
+    update: { lastSeq: 4 },
+    create: { orgId, lastSeq: 4 },
+  });
+
+  // ─── Journal Entries + Lines ───
+  const je1 = await prisma.journalEntry.create({
+    data: {
+      orgId, userId: user.id,
+      entryNumber: "JE-000001", date: new Date("2026-01-24"),
+      description: "Record vendor payment - Mokoena Builders (demolition & plastering)",
+      reference: "BILL-001", sourceType: "vendor_bill", sourceId: bill1.id,
+      status: "posted", periodName: "2026-01", postedAt: new Date("2026-01-24"), postedBy: user.id,
+      lines: {
+        create: [
+          { accountCode: "5100", accountName: "Cost of Sales - Labour", description: "Demolition and plastering labour", debit: 16500, credit: 0, dealId: deal1.id, order: 1 },
+          { accountCode: "5000", accountName: "Cost of Sales - Materials", description: "Waste removal and plasterboard", debit: 9900, credit: 0, dealId: deal1.id, order: 2 },
+          { accountCode: "1400", accountName: "VAT Input (Receivable)", description: "VAT @ 15%", debit: 3960, credit: 0, order: 3 },
+          { accountCode: "1000", accountName: "FNB Business Cheque", description: "EFT payment", debit: 0, credit: 30360, order: 4 },
+        ],
+      },
+    },
+  });
+
+  const je2 = await prisma.journalEntry.create({
+    data: {
+      orgId, userId: user.id,
+      entryNumber: "JE-000002", date: new Date("2026-02-01"),
+      description: "Record partial payment - Ndlovu Plumbing Services",
+      reference: "BILL-002", sourceType: "vendor_bill", sourceId: bill2.id,
+      status: "posted", periodName: "2026-02", postedAt: new Date("2026-02-01"), postedBy: user.id,
+      lines: {
+        create: [
+          { accountCode: "2000", accountName: "Accounts Payable", description: "Partial payment on plumbing bill", debit: 30000, credit: 0, order: 1 },
+          { accountCode: "1000", accountName: "FNB Business Cheque", description: "EFT payment", debit: 0, credit: 30000, order: 2 },
+        ],
+      },
+    },
+  });
+
+  await prisma.journalEntry.create({
+    data: {
+      orgId, userId: user.id,
+      entryNumber: "JE-000003", date: new Date("2026-02-10"),
+      description: "Record Rosebank renovation expenses - February batch",
+      sourceType: "expense",
+      status: "draft",
+      lines: {
+        create: [
+          { accountCode: "5000", accountName: "Cost of Sales - Materials", description: "Kitchen cabinets, tiles, grout", debit: 69400, credit: 0, dealId: deal1.id, order: 1 },
+          { accountCode: "5100", accountName: "Cost of Sales - Labour", description: "Kitchen installation", debit: 18000, credit: 0, dealId: deal1.id, order: 2 },
+          { accountCode: "1400", accountName: "VAT Input (Receivable)", description: "VAT @ 15%", debit: 13110, credit: 0, order: 3 },
+          { accountCode: "1000", accountName: "FNB Business Cheque", description: "Various payments", debit: 0, credit: 100510, order: 4 },
+        ],
+      },
+    },
+  });
+
+  await prisma.journalEntry.create({
+    data: {
+      orgId, userId: user.id,
+      entryNumber: "JE-000004", date: new Date("2026-02-15"),
+      description: "Record Stellenbosch property sale",
+      reference: "SALE-STELL-001", sourceType: "manual",
+      status: "draft",
+      lines: {
+        create: [
+          { accountCode: "1000", accountName: "FNB Business Cheque", description: "Sale proceeds received", debit: 2450000, credit: 0, order: 1 },
+          { accountCode: "4000", accountName: "Property Sale Revenue", description: "Sale of 22 Protea Ave, Stellenbosch", debit: 0, credit: 2450000, dealId: deal4.id, order: 2 },
+        ],
+      },
+    },
+  });
+
+  console.log("Journal Entries created: 4 (2 posted, 2 draft)");
+
+  // ─── Customer Receivables + Payments ───
+  await prisma.customerReceivable.create({
+    data: {
+      orgId, userId: user.id,
+      contactId: agent.id, dealId: deal2.id,
+      status: "outstanding", totalAmount: 260000, amountPaid: 0,
+      dueDate: new Date("2026-04-30"),
+      notes: "Expected deposit from buyer on Camps Bay property (5% of R5.2M asking price)",
+    },
+  });
+
+  const stellReceivable = await prisma.customerReceivable.create({
+    data: {
+      orgId, userId: user.id,
+      dealId: deal4.id,
+      status: "paid", totalAmount: 2450000, amountPaid: 2450000,
+      dueDate: new Date("2025-11-30"),
+      notes: "Sale proceeds from Stellenbosch property",
+    },
+  });
+
+  await prisma.receivablePayment.create({
+    data: {
+      orgId, customerReceivableId: stellReceivable.id,
+      amount: 2450000, paymentDate: new Date("2025-10-30"),
+      paymentMethod: "eft", reference: "CONV-ATT-STELL",
+      idempotencyKey: "recv-stell-full",
+      bankAccountId: bankAccount?.id,
+      notes: "Transfer from conveyancing attorney",
+    },
+  });
+
+  console.log("Customer Receivables created: 2 (with 1 payment)");
+
+  // ─── Tool Checkouts ───
+  const tools = await prisma.tool.findMany({ where: { orgId } });
+  const angleGrinder = tools.find(t => t.name === "Angle Grinder");
+  const cordlessDrill = tools.find(t => t.name === "Cordless Drill");
+  const circularSaw = tools.find(t => t.name === "Circular Saw");
+  const rotaryHammer = tools.find(t => t.name === "Rotary Hammer Drill");
+
+  if (angleGrinder) {
+    await prisma.toolCheckout.create({
+      data: {
+        orgId, userId: user.id, toolId: angleGrinder.id,
+        contractorName: "Thabo Mokoena", contractorId: contractor.id,
+        dealId: deal1.id, dealName: "12 Oak Lane, Rosebank",
+        propertyAddress: "12 Oak Lane, Rosebank, Johannesburg, 2196",
+        checkedOutAt: new Date("2026-01-10"), expectedReturnDate: new Date("2026-03-20"),
+        conditionOut: "good", notes: "For tile cutting and general grinding on Rosebank project",
+      },
+    });
+  }
+
+  if (cordlessDrill) {
+    await prisma.toolCheckout.create({
+      data: {
+        orgId, userId: user.id, toolId: cordlessDrill.id,
+        contractorName: "Pieter Botha", contractorId: pmUser.id,
+        dealId: deal5.id, dealName: "7 Loader Street, Green Point",
+        propertyAddress: "7 Loader Street, Green Point, Cape Town, 8005",
+        checkedOutAt: new Date("2026-02-22"), expectedReturnDate: new Date("2026-02-28"),
+        conditionOut: "good", notes: "Quick assessment drilling at Green Point property",
+      },
+    });
+
+    // Update tool status
+    await prisma.tool.update({
+      where: { id: cordlessDrill.id },
+      data: {
+        status: "checked_out", currentHolderName: "Pieter Botha",
+        currentDealId: deal5.id, currentDealName: "7 Loader Street, Green Point",
+      },
+    });
+  }
+
+  if (circularSaw) {
+    // A returned checkout for history
+    await prisma.toolCheckout.create({
+      data: {
+        orgId, userId: user.id, toolId: circularSaw.id,
+        contractorName: "Thabo Mokoena", contractorId: contractor.id,
+        dealId: deal4.id, dealName: "22 Protea Avenue, Stellenbosch",
+        propertyAddress: "22 Protea Avenue, Stellenbosch, Western Cape, 7600",
+        checkedOutAt: new Date("2025-05-15"), expectedReturnDate: new Date("2025-07-15"),
+        returnedAt: new Date("2025-07-10"), conditionOut: "good", conditionIn: "good",
+        notes: "Used for skirting and trim cutting at Stellenbosch property",
+      },
+    });
+  }
+
+  console.log("Tool Checkouts created: 3");
+
+  // ─── Tool Maintenance ───
+  if (rotaryHammer) {
+    await prisma.toolMaintenance.create({
+      data: {
+        orgId, userId: user.id, toolId: rotaryHammer.id,
+        date: new Date("2026-02-15"), type: "repair",
+        description: "Chuck mechanism seized — sent to Hilti service centre for replacement",
+        cost: 1200, performedBy: "Hilti Service Centre, Randburg",
+        notes: "Expected return by 2026-03-01. Under extended warranty.",
+      },
+    });
+  }
+
+  if (angleGrinder) {
+    await prisma.toolMaintenance.create({
+      data: {
+        orgId, userId: user.id, toolId: angleGrinder.id,
+        date: new Date("2026-01-08"), type: "blade_change",
+        description: "Replaced grinding disc with diamond tile cutting blade",
+        cost: 350, performedBy: "Bongani Zulu (on-site)",
+        notes: "Switched to tile cutting disc for Rosebank bathroom tiling work",
+      },
+    });
+  }
+
+  console.log("Tool Maintenance records created: 2");
+
+  // ─── Tool Incident ───
+  if (circularSaw) {
+    await prisma.toolIncident.create({
+      data: {
+        orgId, userId: user.id, toolId: circularSaw.id,
+        date: new Date("2026-02-12"), type: "damaged",
+        contractorName: "Mandla Khumalo", contractorId: fieldUser.id,
+        dealId: deal1.id, dealName: "12 Oak Lane, Rosebank",
+        description: "Blade guard spring broke during cutting. Tool still functional but safety guard doesn't retract properly.",
+        estimatedCost: 450, recoveryStatus: "pending",
+        notes: "Ordered replacement part from DeWalt. Mandla to use hand saw in the interim.",
+      },
+    });
+  }
+
+  console.log("Tool Incidents created: 1");
+
+  // ─── Shopping List Items ───
+  await prisma.shoppingListItem.createMany({
+    skipDuplicates: true,
+    data: [
+      { orgId, userId: user.id, dealId: deal1.id, materialKey: "paint-interior-white", category: "materials", label: "Interior paint - white (Plascon Double Velvet 5L)", qty: 8, unit: "each", unitPrice: 650, purchased: false, notes: "For bedrooms and passage — need 8 tins minimum" },
+      { orgId, userId: user.id, dealId: deal1.id, materialKey: "light-fittings-led", category: "fixtures", label: "LED downlight fittings", qty: 15, unit: "each", unitPrice: 280, purchased: false, notes: "Warm white 3000K, IP44 for bathrooms" },
+      { orgId, userId: user.id, dealId: deal1.id, materialKey: "skirting-pine-90mm", category: "materials", label: "Pine skirting 90mm (3m lengths)", qty: 20, unit: "each", unitPrice: 85, purchased: false, notes: "For all bedrooms, passage and lounge" },
+      { orgId, userId: user.id, dealId: deal1.id, materialKey: "grout-white-20kg", category: "consumables", label: "Tile grout white (20kg bag)", qty: 4, unit: "each", unitPrice: 250, purchased: true, actualPrice: 230, actualQty: 4, vendor: "CTM", purchasedDate: new Date("2026-02-08"), notes: "Got 8% discount for bulk" },
+      { orgId, userId: user.id, dealId: deal1.id, materialKey: "silicone-clear", category: "consumables", label: "Silicone sealant clear (280ml)", qty: 6, unit: "each", unitPrice: 85, purchased: false, notes: "For bathroom shower screens and basin sealing" },
+      { orgId, userId: user.id, dealId: deal1.id, materialKey: "shower-screen-glass", category: "fixtures", label: "Frameless glass shower screen (900mm)", qty: 2, unit: "each", unitPrice: 4500, purchased: false, notes: "Main bathroom and ensuite — get quotes from Glass Guru" },
+      { orgId, userId: user.id, dealId: deal1.id, materialKey: "door-handles-chrome", category: "fixtures", label: "Door handles - chrome lever (sets)", qty: 6, unit: "each", unitPrice: 320, purchased: false, notes: "All interior doors — matching chrome finish" },
+    ],
+  });
+  console.log("Shopping List Items created: 7");
+
+  // ─── Inspections + Defects ───
+  const inspection1 = await prisma.inspection.create({
+    data: {
+      orgId, dealId: deal1.id,
+      type: "structural", inspector: "BuildTest CC",
+      inspectionDate: new Date("2026-01-08"), status: "passed",
+      findings: "Property structurally sound overall. Minor cracks in north-facing bedroom wall (cosmetic, settling). Damp patch in main bathroom floor area — damp proofing recommended before tiling. No evidence of subsidence or major structural concerns.",
+      estimatedRepairCost: 8500,
+      defects: {
+        create: [
+          {
+            location: "Bedroom 3 - North wall",
+            description: "Hairline crack along ceiling cornice, approximately 1.5m long. Typical settling crack, non-structural.",
+            severity: "minor", estimatedCost: 1500, status: "remediated",
+            remediatedAt: new Date("2026-01-14"), notes: "Filled with flexible filler during plastering phase",
+          },
+          {
+            location: "Main Bathroom - Floor",
+            description: "Damp rising from floor slab in south-west corner. Approximately 1 sqm affected area. Likely failed or absent DPC.",
+            severity: "moderate", estimatedCost: 5000, status: "remediated",
+            remediatedAt: new Date("2026-01-12"), notes: "Applied bitumen-based damp proof course and waterproofing membrane before tiling",
+          },
+          {
+            location: "Kitchen - Window frame",
+            description: "Wooden window frame showing early signs of rot at bottom rail. Water ingress from outside.",
+            severity: "minor", estimatedCost: 2000, status: "remediated",
+            remediatedAt: new Date("2026-01-15"), notes: "Frame treated with wood hardener and sealed. External flashing corrected.",
+          },
+        ],
+      },
+    },
+  });
+
+  await prisma.inspection.create({
+    data: {
+      orgId, dealId: deal1.id,
+      type: "electrical", inspector: "Johan van der Merwe (Sparks Electrical CC)",
+      inspectionDate: new Date("2026-03-15"), status: "scheduled",
+      findings: "",
+      estimatedRepairCost: 0,
+    },
+  });
+
+  console.log("Inspections created: 2 (with 3 defects)");
+
+  // ─── Permits ───
+  await prisma.permit.create({
+    data: {
+      orgId, dealId: deal1.id,
+      permitType: "building", permitNumber: "BP/2025/JHB/4521",
+      status: "approved", appliedDate: new Date("2025-11-20"), approvedDate: new Date("2025-12-15"),
+      expiryDate: new Date("2026-12-15"), issuingAuthority: "City of Johannesburg",
+      cost: 3500, notes: "Building plan approval for kitchen and bathroom renovation. Covers internal structural changes.",
+    },
+  });
+
+  await prisma.permit.create({
+    data: {
+      orgId, dealId: deal1.id,
+      permitType: "electrical", permitNumber: "",
+      status: "applied", appliedDate: new Date("2026-02-20"),
+      issuingAuthority: "City of Johannesburg",
+      cost: 1200, notes: "Electrical Certificate of Compliance — application submitted, pending inspection after rewiring completion.",
+    },
+  });
+
+  console.log("Permits created: 2");
+
+  // ─── Comparable Sales ───
+  await prisma.comparableSale.createMany({
+    data: [
+      {
+        orgId, dealId: deal1.id,
+        address: "8 Keyes Avenue, Rosebank, Johannesburg",
+        salePrice: 1950000, saleDate: new Date("2025-10-15"),
+        sqm: 160, pricePerSqm: 12187, bedrooms: 3, bathrooms: 2,
+        condition: "good", source: "property24",
+        notes: "Fully renovated 3-bed, sold quickly. Similar spec to our target.",
+      },
+      {
+        orgId, dealId: deal1.id,
+        address: "15 Bath Avenue, Rosebank, Johannesburg",
+        salePrice: 2100000, saleDate: new Date("2025-09-20"),
+        sqm: 180, pricePerSqm: 11667, bedrooms: 3, bathrooms: 2,
+        condition: "excellent", source: "agent",
+        notes: "Premium renovation with pool. Higher end market. Agent: Lerato Moloi.",
+      },
+      {
+        orgId, dealId: deal1.id,
+        address: "22 Jellicoe Avenue, Rosebank, Johannesburg",
+        salePrice: 1720000, saleDate: new Date("2025-11-05"),
+        sqm: 145, pricePerSqm: 11862, bedrooms: 3, bathrooms: 1,
+        condition: "average", source: "lightstone",
+        notes: "Only 1 bathroom — our property will command premium with 2 full baths + ensuite.",
+      },
+      {
+        orgId, dealId: deal1.id,
+        address: "3 Cradock Avenue, Parktown, Johannesburg",
+        salePrice: 1850000, saleDate: new Date("2025-08-30"),
+        sqm: 170, pricePerSqm: 10882, bedrooms: 4, bathrooms: 2,
+        condition: "good", source: "lightstone",
+        notes: "Adjacent suburb. 4-bed but older finishes. Supports our R1.85M pricing.",
+      },
+    ],
+  });
+  console.log("Comparable Sales created: 4");
+
+  // ─── Insurance Policies ───
+  await prisma.insurancePolicy.create({
+    data: {
+      orgId, dealId: deal1.id,
+      policyType: "builders_risk", provider: "Santam",
+      policyNumber: "SAN-BR-2025-7821",
+      coverAmount: 1500000, monthlyPremium: 950,
+      startDate: new Date("2025-12-20"), endDate: new Date("2026-06-20"),
+      status: "active",
+      notes: "Covers fire, storm, theft, and accidental damage during renovation. Excess: R5,000.",
+    },
+  });
+
+  await prisma.insurancePolicy.create({
+    data: {
+      orgId,
+      policyType: "liability", provider: "Old Mutual iWyze",
+      policyNumber: "OM-PL-2024-1234",
+      coverAmount: 5000000, monthlyPremium: 1200,
+      startDate: new Date("2024-06-01"), endDate: new Date("2026-06-01"),
+      status: "active",
+      notes: "Public liability for all sites. Covers injury to third parties and property damage. R10,000 excess.",
+    },
+  });
+
+  console.log("Insurance Policies created: 2");
+
+  // ─── Contractor Ratings ───
+  await prisma.contractorRating.create({
+    data: {
+      orgId, contactId: contractor.id, dealId: deal4.id,
+      qualityScore: 4, timelinessScore: 5, communicationScore: 4, valueScore: 4,
+      overallScore: 4.25, wouldRehire: true,
+      review: "Thabo and his team delivered the Stellenbosch cosmetic reno ahead of schedule. Clean work, minimal punch-list items. Fair pricing. Would use again for similar scope.",
+    },
+  });
+
+  await prisma.contractorRating.create({
+    data: {
+      orgId, contactId: plumber.id, dealId: deal4.id,
+      qualityScore: 5, timelinessScore: 4, communicationScore: 5, valueScore: 3,
+      overallScore: 4.25, wouldRehire: true,
+      review: "Sipho's plumbing work is top quality — no callbacks. COC issued first time. Slightly pricier than alternatives but worth it for the reliability and compliance.",
+    },
+  });
+
+  console.log("Contractor Ratings created: 2");
+
+  // ─── Leave Records ───
+  const employees = await prisma.employee.findMany({ where: { orgId } });
+  const empBongani = employees.find(e => e.firstName === "Bongani");
+  const empMandla = employees.find(e => e.firstName === "Mandla");
+  const empNomsa = employees.find(e => e.firstName === "Nomsa");
+
+  if (empBongani) {
+    await prisma.leaveRecord.create({
+      data: {
+        orgId, employeeId: empBongani.id,
+        leaveType: "sick", startDate: new Date("2026-02-03"), endDate: new Date("2026-02-04"),
+        days: 2, status: "approved", reason: "Flu — doctor's note provided",
+        approvedBy: user.id, approvedAt: new Date("2026-02-03"),
+      },
+    });
+  }
+
+  if (empMandla) {
+    await prisma.leaveRecord.create({
+      data: {
+        orgId, employeeId: empMandla.id,
+        leaveType: "annual", startDate: new Date("2026-03-10"), endDate: new Date("2026-03-14"),
+        days: 5, status: "approved", reason: "Family event in Durban",
+        approvedBy: pmUser.id, approvedAt: new Date("2026-02-20"),
+      },
+    });
+  }
+
+  if (empNomsa) {
+    await prisma.leaveRecord.create({
+      data: {
+        orgId, employeeId: empNomsa.id,
+        leaveType: "annual", startDate: new Date("2026-04-01"), endDate: new Date("2026-04-04"),
+        days: 4, status: "pending", reason: "Easter break",
+      },
+    });
+  }
+
+  console.log("Leave Records created: 3");
+
+  // ─── Payslips ───
+  if (empBongani) {
+    await prisma.payslip.create({
+      data: {
+        orgId, employeeId: empBongani.id,
+        periodStart: new Date("2026-01-01"), periodEnd: new Date("2026-01-31"),
+        basePay: 28000, grossPay: 28000, paye: 3920, uif: 280, medicalAid: 1400,
+        totalDeductions: 5600, netPay: 22400,
+        status: "paid", paymentDate: new Date("2026-01-25"), paymentRef: "SAL-JAN-001",
+        notes: "January 2026 salary. Deductions: PAYE R3,920 + UIF R280 + medical aid R1,400.",
+      },
+    });
+    await prisma.payslip.create({
+      data: {
+        orgId, employeeId: empBongani.id,
+        periodStart: new Date("2026-02-01"), periodEnd: new Date("2026-02-28"),
+        basePay: 28000, grossPay: 28000, paye: 3920, uif: 280, medicalAid: 1400,
+        totalDeductions: 5600, netPay: 22400,
+        status: "paid", paymentDate: new Date("2026-02-25"), paymentRef: "SAL-FEB-001",
+        notes: "February 2026 salary. 2 sick days taken (paid).",
+      },
+    });
+  }
+
+  if (empMandla) {
+    await prisma.payslip.create({
+      data: {
+        orgId, employeeId: empMandla.id,
+        periodStart: new Date("2026-01-01"), periodEnd: new Date("2026-01-31"),
+        basePay: 12000, grossPay: 12000, paye: 1200, uif: 120, otherDeductions: 360,
+        totalDeductions: 1680, netPay: 10320,
+        status: "paid", paymentDate: new Date("2026-01-25"), paymentRef: "SAL-JAN-002",
+        notes: "January 2026 salary.",
+      },
+    });
+    await prisma.payslip.create({
+      data: {
+        orgId, employeeId: empMandla.id,
+        periodStart: new Date("2026-02-01"), periodEnd: new Date("2026-02-28"),
+        basePay: 12000, grossPay: 12000, paye: 1200, uif: 120, otherDeductions: 360,
+        totalDeductions: 1680, netPay: 10320,
+        status: "draft",
+        notes: "February 2026 salary — pending approval.",
+      },
+    });
+  }
+
+  if (empNomsa) {
+    await prisma.payslip.create({
+      data: {
+        orgId, employeeId: empNomsa.id,
+        periodStart: new Date("2026-01-01"), periodEnd: new Date("2026-01-31"),
+        basePay: 45000, grossPay: 45000, paye: 10125, uif: 450, medicalAid: 2025,
+        totalDeductions: 12600, netPay: 32400,
+        status: "paid", paymentDate: new Date("2026-01-25"), paymentRef: "SAL-JAN-003",
+        notes: "January 2026 salary. Higher PAYE bracket.",
+      },
+    });
+  }
+
+  console.log("Payslips created: 5");
+
+  // ─── Additional Notifications ───
+  await prisma.notification.createMany({
+    skipDuplicates: true,
+    data: [
+      { orgId, userId: user.id, type: "budget_alert", title: "Rosebank renovation at 78% of budget", message: "12 Oak Lane renovation spend has reached R234,800 of R300,000 budget (78%). Approaching 80% alert threshold.", read: false },
+      { orgId, userId: user.id, type: "tool_overdue", title: "Tool return overdue: Cordless Drill", message: "The Makita DHP482 cordless drill checked out to Pieter Botha was expected back by 28 Feb.", read: false },
+      { orgId, userId: pmUser.id, type: "deadline_warning", title: "Milestone approaching: Flooring Installation", message: "Flooring Installation at 12 Oak Lane is due on 25 Feb 2026 — 3 days away.", read: false },
+    ],
+  });
+
+  console.log("Additional Notifications created: 3");
 
   console.log("\nSeed completed successfully!");
 }
