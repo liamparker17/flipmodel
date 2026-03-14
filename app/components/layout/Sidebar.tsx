@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { theme } from "../theme";
 import type { ModuleKey, OrgRole } from "@/types/org";
 import useOrgContext from "@/hooks/useOrgContext";
@@ -365,14 +366,37 @@ function SidebarContent({ collapsed, isActive, onNav, onPrimaryAction, primaryAc
       </nav>
 
       {/* Footer */}
-      {!collapsed && (
-        <div style={{
-          padding: "10px 16px", borderTop: `1px solid ${theme.cardBorder}`,
-          fontSize: 10, color: theme.textDim, letterSpacing: 0.5,
-        }}>
-          JustHouses ERP v1.0
-        </div>
-      )}
+      <div style={{
+        padding: collapsed ? "10px 8px" : "10px 16px",
+        borderTop: `1px solid ${theme.cardBorder}`,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start",
+            gap: 8, padding: "8px 10px", borderRadius: 6,
+            border: "none", background: "transparent", color: theme.textDim,
+            cursor: "pointer", fontSize: 13, width: "100%",
+            transition: "background 0.15s, color 0.15s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = theme.cardBorder; e.currentTarget.style.color = "#e74c3c"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.textDim; }}
+          title="Sign out"
+        >
+          <span style={{ width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
+            ↪
+          </span>
+          {!collapsed && "Sign out"}
+        </button>
+        {!collapsed && (
+          <div style={{ fontSize: 10, color: theme.textDim, letterSpacing: 0.5, paddingLeft: 2 }}>
+            JustHouses ERP v1.0
+          </div>
+        )}
+      </div>
     </>
   );
 }
