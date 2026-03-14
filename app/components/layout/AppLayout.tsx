@@ -3,8 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { theme } from "../theme";
 import Sidebar from "./Sidebar";
-import SpotlightTour from "../SpotlightTour";
-import { getStepsForRole } from "../../lib/tourSteps";
+import TutorialProvider from "../TutorialProvider";
 import useDeals from "../../hooks/api/useApiDeals";
 import useOrgContext from "../../hooks/useOrgContext";
 import type { ReactNode } from "react";
@@ -17,8 +16,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const { createDeal } = useDeals();
   const { role, hasOrg, loading: orgLoading } = useOrgContext();
-  const [showTour, setShowTour] = useState(false);
-  const [userPrefs, setUserPrefs] = useState<Record<string, unknown> | null>(null);
+  const [tutorialInit, setTutorialInit] = useState<{ active: boolean; step: number } | null>(null);
 
   useEffect(() => {
     if (!orgLoading && !hasOrg) {
@@ -28,40 +26,33 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   useEffect(() => {
     if (!hasOrg) return;
-    fetch("/api/user/profile")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!data) return;
-        const prefs = (data.preferences as Record<string, unknown>) || {};
-        setUserPrefs(prefs);
-        if (!prefs.tutorialCompleted) {
-          setShowTour(true);
-        }
-      })
-      .catch(() => {});
-  }, [hasOrg]);
+    Promise.all([
+      fetch("/api/user/profile").then((r) => r.ok ? r.json() : null),
+      fetch("/api/deals?limit=1").then((r) => r.ok ? r.json() : null),
+    ]).then(([profileData, dealsData]) => {
+      if (!profileData) { setTutorialInit({ active: false, step: 0 }); return; }
+      const prefs = (profileData.preferences as Record<string, unknown>) || {};
+      const dealCount = dealsData?.pagination?.total ?? dealsData?.data?.length ?? 0;
 
-  const markComplete = async () => {
-    const updated = { ...userPrefs, tutorialCompleted: true };
-    setShowTour(false);
-    try {
-      await fetch("/api/user/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ preferences: updated }),
-      });
-      setUserPrefs(updated);
-    } catch {
-      // silent — tour dismissed regardless
-    }
-  };
+      if (prefs.tutorialCompleted) {
+        setTutorialInit({ active: false, step: 0 });
+      } else if (dealCount > 0) {
+        fetch("/api/user/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ preferences: { tutorialCompleted: true } }),
+        }).catch(() => {});
+        setTutorialInit({ active: false, step: 0 });
+      } else {
+        setTutorialInit({ active: true, step: (prefs.tutorialStep as number) || 1 });
+      }
+    }).catch(() => { setTutorialInit({ active: false, step: 0 }); });
+  }, [hasOrg]);
 
   const handleNewDeal = async () => {
     const deal = await createDeal("New Property");
     router.push(`/pipeline/${deal.id}`);
   };
-
-  const tourSteps = role ? getStepsForRole(role) : [];
 
   if (orgLoading) {
     return (
@@ -121,15 +112,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <Sidebar onNewDeal={handleNewDeal} />
       </nav>
       <main id="main-content" style={{ flex: 1, minWidth: 0, overflow: "auto" }}>
-        {children}
+        {tutorialInit ? (
+          <TutorialProvider initialActive={tutorialInit.active} initialStep={tutorialInit.step}>
+            {children}
+          </TutorialProvider>
+        ) : (
+          children
+        )}
       </main>
-      {showTour && tourSteps.length > 0 && (
-        <SpotlightTour
-          steps={tourSteps}
-          onComplete={markComplete}
-          onSkip={markComplete}
-        />
-      )}
     </div>
   );
 }
