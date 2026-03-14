@@ -7,6 +7,7 @@ import useDeals from "../../../hooks/api/useApiDeals";
 import { DEAL_STAGES, getStageColor, getStageLabel, computeDealMetrics, PRIORITY_CONFIG, getExpensesByCategory, getDealProgress, EXPENSE_CATEGORIES } from "../../../utils/dealHelpers";
 import type { Deal, DealData, DealStage, DealPriority, Expense, ExpenseCategory, PaymentMethod, Milestone, MilestoneStatus, DealContact, ContactRole, Activity } from "../../../types/deal";
 import { BUDGET_ALERT_THRESHOLD } from "@/lib/constants";
+import TutorialCard from "../../../components/TutorialCard";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -206,6 +207,7 @@ export default function DealDetailPage() {
       {activeTab === "activity" && (
         <ActivityTab deal={deal} isMobile={isMobile} />
       )}
+      <TutorialCard page="deal-detail" />
     </div>
   );
 }
