@@ -43,9 +43,8 @@ export const DEFAULT_COSTS: CostDatabase = {
   },
   finishes: {
     flooring: { label: "Flooring", unit: "sqm", cost: 550 },
-    skirting: { label: "Skirting", unit: "lm", cost: 85 },
+    skirtingCornices: { label: "Skirting & Cornices", unit: "lm", cost: 180 },
     painting: { label: "Painting (walls + ceilings)", unit: "sqm", cost: 120 },
-    cornices: { label: "Cornices", unit: "lm", cost: 95 },
     internalDoors: { label: "Internal doors", unit: "unit", cost: 4500 },
     frames: { label: "Door frames", unit: "unit", cost: 2800 },
     ironmongery: { label: "Ironmongery", unit: "unit", cost: 1200 },

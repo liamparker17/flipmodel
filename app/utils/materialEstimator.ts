@@ -159,7 +159,7 @@ export function estimateMaterials(rooms: Record<string, unknown>[], prop: Record
     }
 
     if (!["bathroom"].includes(type)) {
-      totalPaintArea += sqm + wallArea;
+      totalPaintArea += wallArea;
     }
 
     if (["bedroom", "lounge", "entrance"].includes(type)) {

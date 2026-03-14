@@ -52,9 +52,8 @@ export const ROOM_TEMPLATES: Record<string, RoomTemplate> = {
     label: "Bedroom",
     items: [
       { key: "flooring", label: "Flooring", unit: "sqm", defaultCost: 550, autoQty: "sqm" },
-      { key: "painting", label: "Painting", unit: "sqm", defaultCost: 120, autoQty: "sqm" },
-      { key: "skirting", label: "Skirting", unit: "lm", defaultCost: 85, autoQty: "lm" },
-      { key: "cornices", label: "Cornices", unit: "lm", defaultCost: 95, autoQty: "lm" },
+      { key: "painting", label: "Painting (walls)", unit: "sqm", defaultCost: 120, autoQty: "wallArea" },
+      { key: "skirtingCornices", label: "Skirting & Cornices", unit: "lm", defaultCost: 180, autoQty: "lm" },
       { key: "curtainRails", label: "Curtain rails", unit: "unit", defaultCost: 1200, autoQty: 1 },
       { key: "builtInCupboards", label: "Built-in cupboards", unit: "lm", defaultCost: 3200, autoQty: 2 },
       { key: "lightFittings", label: "Light fittings", unit: "unit", defaultCost: 1500, autoQty: 2 },
@@ -65,9 +64,8 @@ export const ROOM_TEMPLATES: Record<string, RoomTemplate> = {
     label: "Lounge / Dining",
     items: [
       { key: "flooring", label: "Flooring", unit: "sqm", defaultCost: 550, autoQty: "sqm" },
-      { key: "painting", label: "Painting", unit: "sqm", defaultCost: 120, autoQty: "sqm" },
-      { key: "skirting", label: "Skirting", unit: "lm", defaultCost: 85, autoQty: "lm" },
-      { key: "cornices", label: "Cornices", unit: "lm", defaultCost: 95, autoQty: "lm" },
+      { key: "painting", label: "Painting (walls)", unit: "sqm", defaultCost: 120, autoQty: "wallArea" },
+      { key: "skirtingCornices", label: "Skirting & Cornices", unit: "lm", defaultCost: 180, autoQty: "lm" },
       { key: "lightFittings", label: "Light fittings", unit: "unit", defaultCost: 1500, autoQty: 2 },
       { key: "electrical", label: "Electrical points", unit: "point", defaultCost: 850, autoQty: 6 },
       { key: "featureWall", label: "Feature wall allowance", unit: "fixed", defaultCost: 8000, autoQty: 1 },
@@ -77,9 +75,8 @@ export const ROOM_TEMPLATES: Record<string, RoomTemplate> = {
     label: "Entrance / Passage",
     items: [
       { key: "flooring", label: "Flooring", unit: "sqm", defaultCost: 550, autoQty: "sqm" },
-      { key: "painting", label: "Painting", unit: "sqm", defaultCost: 120, autoQty: "sqm" },
-      { key: "skirting", label: "Skirting", unit: "lm", defaultCost: 85, autoQty: "lm" },
-      { key: "cornices", label: "Cornices", unit: "lm", defaultCost: 95, autoQty: "lm" },
+      { key: "painting", label: "Painting (walls)", unit: "sqm", defaultCost: 120, autoQty: "wallArea" },
+      { key: "skirtingCornices", label: "Skirting & Cornices", unit: "lm", defaultCost: 180, autoQty: "lm" },
       { key: "lightFittings", label: "Light fittings", unit: "unit", defaultCost: 1500, autoQty: 2 },
     ],
   },
@@ -87,7 +84,7 @@ export const ROOM_TEMPLATES: Record<string, RoomTemplate> = {
     label: "Garage",
     items: [
       { key: "floorCoating", label: "Floor coating / Epoxy", unit: "sqm", defaultCost: 280, autoQty: "sqm" },
-      { key: "painting", label: "Painting", unit: "sqm", defaultCost: 120, autoQty: "sqm" },
+      { key: "painting", label: "Painting (walls)", unit: "sqm", defaultCost: 120, autoQty: "wallArea" },
       { key: "electrical", label: "Electrical", unit: "room", defaultCost: 6000, autoQty: 1 },
       { key: "garageDoor", label: "Garage door", unit: "unit", defaultCost: 18000, autoQty: 1 },
       { key: "lighting", label: "Lighting", unit: "unit", defaultCost: 1500, autoQty: 2 },
@@ -111,7 +108,7 @@ export const ROOM_TEMPLATES: Record<string, RoomTemplate> = {
       { key: "plumbing", label: "Plumbing", unit: "room", defaultCost: 6000, autoQty: 1 },
       { key: "cabinetry", label: "Cabinetry", unit: "lm", defaultCost: 3500, autoQty: 2 },
       { key: "countertop", label: "Countertop", unit: "lm", defaultCost: 3000, autoQty: 2 },
-      { key: "painting", label: "Painting", unit: "sqm", defaultCost: 120, autoQty: "sqm" },
+      { key: "painting", label: "Painting (walls)", unit: "sqm", defaultCost: 120, autoQty: "wallArea" },
     ],
   },
 };
