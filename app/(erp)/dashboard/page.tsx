@@ -1,6 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { theme, fmt, pct, styles } from "../../components/theme";
+import TutorialCard from "../../components/TutorialCard";
+import { useTutorial } from "../../components/TutorialProvider";
 import useDeals from "../../hooks/api/useApiDeals";
 import useIsMobile from "../../hooks/useIsMobile";
 import useOrgContext from "../../hooks/useOrgContext";
@@ -29,9 +31,10 @@ function KPICard({ label, value, sub, color }: { label: string; value: string; s
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { deals, loaded, createDeal } = useDeals();
+  const { deals, loaded, createDeal, toggleTask } = useDeals();
   const isMobile = useIsMobile();
   const { role } = useOrgContext();
+  const { tutorialActive, tutorialStep, advanceStep, setTutorialError } = useTutorial();
 
   if (!loaded) return <div style={{ padding: 40, color: theme.textDim }} role="status" aria-live="polite">Loading...</div>;
 
@@ -111,8 +114,17 @@ export default function DashboardPage() {
   };
 
   const handleNewDeal = async () => {
-    const deal = await createDeal("New Property");
-    router.push(`/pipeline/${deal.id}`);
+    try {
+      const deal = await createDeal("New Property");
+      if (tutorialActive && tutorialStep === 2) {
+        advanceStep();
+      }
+      router.push(`/pipeline/${deal.id}`);
+    } catch (err) {
+      if (tutorialActive) {
+        setTutorialError("Something went wrong creating the deal. Try again or skip the tutorial.");
+      }
+    }
   };
 
   // ─── Finance-specific computations ───
@@ -281,6 +293,7 @@ export default function DashboardPage() {
         <RecentActivitySection />
         <ActionItems actionItems={actionItems} router={router} />
         <ActivityTimeline timelineDeals={timelineDeals} timeAgo={timeAgo} router={router} />
+        <TutorialCard page="dashboard" />
       </div>
     );
   }
@@ -349,6 +362,7 @@ export default function DashboardPage() {
 
         {/* Recent Activity */}
         <RecentActivitySection />
+        <TutorialCard page="dashboard" />
       </div>
     );
   }
@@ -419,6 +433,7 @@ export default function DashboardPage() {
 
         {/* Activity Timeline */}
         <ActivityTimeline timelineDeals={timelineDeals} timeAgo={timeAgo} router={router} />
+        <TutorialCard page="dashboard" />
       </div>
     );
   }
@@ -501,6 +516,7 @@ export default function DashboardPage() {
 
         {/* Action Items */}
         <ActionItems actionItems={actionItems} router={router} />
+        <TutorialCard page="dashboard" />
       </div>
     );
   }
@@ -510,7 +526,7 @@ export default function DashboardPage() {
   // ═══════════════════════════════════════════════════════════
   if (effectiveRole === "field_worker") {
     // Collect all incomplete tasks across active projects
-    const allTasks: { id: string; title: string; completed: boolean; dealName: string; dealId: string; dueDate?: string; milestoneName: string; address?: string }[] = [];
+    const allTasks: { id: string; title: string; completed: boolean; dealName: string; dealId: string; dueDate?: string; milestoneId: string; milestoneName: string; address?: string }[] = [];
     for (const deal of activeProjects) {
       const address = deal.address || deal.name;
       for (const ms of (deal.milestones || [])) {
@@ -524,6 +540,7 @@ export default function DashboardPage() {
               dealName: deal.name,
               dealId: deal.id,
               dueDate: t.dueDate,
+              milestoneId: ms.id,
               milestoneName: ms.title,
               address: typeof address === "string" ? address : deal.name,
             });
@@ -592,17 +609,36 @@ export default function DashboardPage() {
                   gap: 12,
                 }}
               >
-                {/* Checkbox visual */}
-                <div style={{
-                  width: isMobile ? 28 : 22,
-                  height: isMobile ? 28 : 22,
-                  borderRadius: 4,
-                  border: `2px solid ${theme.accent}`,
-                  flexShrink: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }} />
+                {/* Checkbox — completes task on click */}
+                <div
+                  role="checkbox"
+                  aria-checked={false}
+                  aria-label={`Mark "${task.title}" as complete`}
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleTask(task.dealId, task.milestoneId, task.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      toggleTask(task.dealId, task.milestoneId, task.id);
+                    }
+                  }}
+                  style={{
+                    width: isMobile ? 28 : 22,
+                    height: isMobile ? 28 : 22,
+                    borderRadius: 4,
+                    border: `2px solid ${theme.accent}`,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    transition: "background 0.15s",
+                  }}
+                />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: isMobile ? 14 : 13, fontWeight: 600, color: theme.text, marginBottom: 2 }}>{task.title}</div>
                   <div style={{ fontSize: isMobile ? 12 : 11, color: theme.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -651,6 +687,7 @@ export default function DashboardPage() {
           </div>
           <span style={{ marginLeft: "auto", color: theme.textDim, fontSize: 14 }}>&rarr;</span>
         </div>
+        <TutorialCard page="dashboard" />
       </div>
     );
   }
@@ -709,6 +746,7 @@ export default function DashboardPage() {
 
         {/* Active Projects (read-only, simplified) */}
         <ActiveProjects activeProjects={activeProjects} router={router} />
+        <TutorialCard page="dashboard" />
       </div>
     );
   }
@@ -751,6 +789,7 @@ export default function DashboardPage() {
       <RecentActivitySection />
       <ActionItems actionItems={actionItems} router={router} />
       <ActivityTimeline timelineDeals={timelineDeals} timeAgo={timeAgo} router={router} />
+      <TutorialCard page="dashboard" />
     </div>
   );
 }
