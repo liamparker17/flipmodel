@@ -9,6 +9,7 @@ import { DEAL_STAGES, groupDealsByStage, computeDealMetrics, PRIORITY_CONFIG, ge
 import { generateSuggestions } from "../../lib/automation";
 import type { AutoSuggestion } from "../../lib/automation";
 import type { Deal, DealStage } from "../../types/deal";
+import EmptyState from "../../components/EmptyState";
 
 function DealPipelineCard({ deal, onMove, canMove = true }: { deal: Deal; onMove: (id: string, stage: DealStage) => void; canMove?: boolean }) {
   const router = useRouter();
@@ -391,10 +392,18 @@ export default function PipelinePage() {
             );
           })}
           {filteredDeals.length === 0 && (
-            <div style={{ textAlign: "center", padding: 40, color: theme.textDim }}>
-              <p style={{ marginBottom: 12, fontSize: 13 }}>{searchQuery ? "No properties match your search." : "No properties in your pipeline yet."}</p>
-              {!searchQuery && canWriteDeals && <button onClick={handleNewDeal} style={{ background: theme.accent, color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Add Your First Property</button>}
-            </div>
+            searchQuery ? (
+              <div style={{ textAlign: "center", padding: 40, color: theme.textDim }}>
+                <p style={{ fontSize: 13 }}>No properties match your search.</p>
+              </div>
+            ) : (
+              <EmptyState
+                heading="No properties yet"
+                description="Your deal pipeline tracks properties from lead to sold. Start by adding your first property."
+                actionLabel={canWriteDeals ? "Add Your First Property" : undefined}
+                onAction={canWriteDeals ? handleNewDeal : undefined}
+              />
+            )
           )}
         </div>
       )}

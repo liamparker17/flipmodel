@@ -6,6 +6,7 @@ import useDeals from "../../hooks/api/useApiDeals";
 import useIsMobile from "../../hooks/useIsMobile";
 import useOrgContext from "../../hooks/useOrgContext";
 import type { Tool, ToolCheckout, ToolMaintenanceEntry, ToolIncident, ToolCategoryKey, ToolStatus, ToolCondition } from "../../types/tool";
+import EmptyState from "../../components/EmptyState";
 import { TOOL_CATEGORY_DEFAULTS } from "../../types/tool";
 
 export default function ToolsPage() {
@@ -422,9 +423,18 @@ function ToolsPageInner() {
       </div>
 
       {filtered.length === 0 && (
-        <div style={{ padding: 60, textAlign: "center", color: theme.textDim, fontSize: 14 }}>
-          {searchTerm || statusFilter !== "all" || categoryFilter !== "all" ? "No tools match your filters." : "No tools yet. Add your first tool."}
-        </div>
+        searchTerm || statusFilter !== "all" || categoryFilter !== "all" ? (
+          <div style={{ padding: 60, textAlign: "center", color: theme.textDim, fontSize: 14 }}>
+            No tools match your filters.
+          </div>
+        ) : (
+          <EmptyState
+            heading="No tools tracked"
+            description="Track equipment checkout, returns, and maintenance across your sites."
+            actionLabel={canWrite ? "Add Tool" : undefined}
+            onAction={canWrite ? () => setShowAddTool(true) : undefined}
+          />
+        )
       )}
 
       {/* Tool Cards Grid */}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { theme, fmt, styles } from "../../components/theme";
 import useOrgContext from "../../hooks/useOrgContext";
+import EmptyState from "../../components/EmptyState";
 
 interface Invoice {
   id: string; invoiceNumber: string; status: string; issueDate: string;
@@ -113,13 +114,12 @@ export default function InvoicesPage() {
       )}
 
       {invoices.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 60, color: theme.textDim }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>&#128203;</div>
-          <div style={{ fontSize: 15, fontWeight: 500 }}>No invoices yet</div>
-          <div style={{ fontSize: 13, marginTop: 6 }}>
-            {role === "finance_manager" ? "Issue invoices to clients and track receivables" : "Create invoices to track payments"}
-          </div>
-        </div>
+        <EmptyState
+          heading="No invoices yet"
+          description="Create and send invoices, track payment status."
+          actionLabel={canWrite ? "New Invoice" : undefined}
+          onAction={canWrite ? () => setShowForm(true) : undefined}
+        />
       ) : (
         <div style={{ background: theme.card, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }} aria-label="Invoices list">

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { theme, fmt, styles } from "../../components/theme";
 import useOrgContext from "../../hooks/useOrgContext";
+import EmptyState from "../../components/EmptyState";
 
 interface Doc {
   id: string; name: string; type: string; url?: string; notes?: string;
@@ -124,11 +125,18 @@ export default function DocumentsPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 60, color: theme.textDim }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>&#128196;</div>
-          <div style={{ fontSize: 15, fontWeight: 500 }}>No documents yet</div>
-          <div style={{ fontSize: 13, marginTop: 6 }}>Upload documents to keep everything in one place</div>
-        </div>
+        filter || typeFilter ? (
+          <div style={{ textAlign: "center", padding: 60, color: theme.textDim, fontSize: 14 }}>
+            No documents match your filters.
+          </div>
+        ) : (
+          <EmptyState
+            heading="No documents yet"
+            description="Upload and organise documents per deal."
+            actionLabel={canWrite ? "Upload Document" : undefined}
+            onAction={canWrite ? () => setShowAdd(true) : undefined}
+          />
+        )
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
           {filtered.map((doc) => (

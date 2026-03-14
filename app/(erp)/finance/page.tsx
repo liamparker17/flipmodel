@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { theme, fmt } from "../../components/theme";
 import { styles } from "../../components/theme";
 import useDeals from "../../hooks/api/useApiDeals";
 import useIsMobile from "../../hooks/useIsMobile";
 import useOrgContext from "../../hooks/useOrgContext";
 import { computeDealMetrics, getPortfolioMetrics, getCashFlowProjection, getExpensesByCategory, getMonthlyExpenses } from "../../utils/dealHelpers";
+import EmptyState from "../../components/EmptyState";
 import FinanceOverview from "../../components/finance/FinanceOverview";
 import ExpenseTable from "../../components/finance/ExpenseTable";
 import CashFlowTab from "../../components/finance/CashFlowTab";
@@ -13,6 +15,7 @@ import PnLTab from "../../components/finance/PnLTab";
 import BudgetTab from "../../components/finance/BudgetTab";
 
 export default function FinancePage() {
+  const router = useRouter();
   const { deals, loaded } = useDeals();
   const isMobile = useIsMobile();
   const { role } = useOrgContext();
@@ -23,6 +26,19 @@ export default function FinancePage() {
   const [view, setView] = useState<"overview" | "expenses" | "cashflow" | "pnl" | "budget">(defaultTab as "overview" | "expenses" | "cashflow" | "pnl" | "budget");
 
   if (!loaded) return <div style={{ padding: 40, color: theme.textDim }}>Loading...</div>;
+
+  if (deals.length === 0) {
+    return (
+      <div style={{ padding: isMobile ? 16 : 28, maxWidth: 1200, margin: "0 auto" }}>
+        <EmptyState
+          heading="No financial data yet"
+          description="Track expenses and budgets for each property. Expenses are added from a deal's project page."
+          actionLabel="View Pipeline"
+          onAction={() => router.push("/pipeline")}
+        />
+      </div>
+    );
+  }
 
   const metrics = getPortfolioMetrics(deals);
   const cashFlow = getCashFlowProjection(deals);

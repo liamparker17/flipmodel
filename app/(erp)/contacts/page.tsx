@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { theme, fmt } from "../../components/theme";
 import useOrgContext from "../../hooks/useOrgContext";
+import EmptyState from "../../components/EmptyState";
 
 type ContactRole =
   | "agent"
@@ -604,18 +605,25 @@ export default function ContactsPage() {
 
       {/* Empty State */}
       {filtered.length === 0 && (
-        <div
-          style={{
-            padding: 60,
-            textAlign: "center",
-            color: theme.textDim,
-            fontSize: 14,
-          }}
-        >
-          {search || roleFilter !== "all"
-            ? "No contacts match your filters."
-            : "No contacts yet. Add your first contact above."}
-        </div>
+        search || roleFilter !== "all" ? (
+          <div
+            style={{
+              padding: 60,
+              textAlign: "center",
+              color: theme.textDim,
+              fontSize: 14,
+            }}
+          >
+            No contacts match your filters.
+          </div>
+        ) : (
+          <EmptyState
+            heading="No contacts yet"
+            description="Keep your agents, attorneys, and contractors in one place."
+            actionLabel={canWriteContacts ? "Add Contact" : undefined}
+            onAction={canWriteContacts ? () => setShowAddForm(true) : undefined}
+          />
+        )
       )}
 
       {/* Contact Cards Grid */}
