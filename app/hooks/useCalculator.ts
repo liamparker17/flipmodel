@@ -35,6 +35,7 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
   const [mode, setMode] = useState((initialData?.mode as string) || "quick");
   const [acq, setAcq] = useState(initialData?.acq || DEFAULT_ACQ);
   const [prop, setProp] = useState(initialData?.prop || DEFAULT_PROP);
+  const [propAfter, setPropAfter] = useState(initialData?.propAfter || null);
   const [rooms, setRooms] = useState<Record<string, unknown>[]>((initialData?.rooms as Record<string, unknown>[]) || DEFAULT_ROOMS);
   const [nextRoomId, setNextRoomId] = useState((initialData?.nextRoomId as number) || PRESET_ROOMS.length);
   const [contractors, setContractors] = useState<Record<string, unknown>[]>((initialData?.contractors as Record<string, unknown>[]) || []);
@@ -192,6 +193,7 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
   // --- HELPERS ---
   const updateAcq = useCallback((k: string, v: unknown) => setAcq((p) => ({ ...(p as Record<string, unknown>), [k]: v })), []);
   const updateProp = useCallback((k: string, v: unknown) => setProp((p) => ({ ...(p as Record<string, unknown>), [k]: v })), []);
+  const updatePropAfter = useCallback((k: string, v: unknown) => setPropAfter((p: unknown) => ({ ...((p || prop) as Record<string, unknown>), [k]: v })), [prop]);
   const updateHolding = useCallback((k: string, v: unknown) => setHolding((p) => ({ ...(p as Record<string, unknown>), [k]: v })), []);
   const updateResale = useCallback((k: string, v: unknown) => setResale((p) => ({ ...(p as Record<string, unknown>), [k]: v })), []);
   const updateRoom = useCallback((id: number, k: string, v: unknown) => setRooms((prev) => prev.map((r) => (r.id === id ? { ...r, [k]: v } : r))), []);
@@ -215,6 +217,7 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
   const resetAll = useCallback(() => {
     setAcq(DEFAULT_ACQ);
     setProp(DEFAULT_PROP);
+    setPropAfter(null);
     setRooms(DEFAULT_ROOMS);
     setNextRoomId(PRESET_ROOMS.length);
     setContractors([]);
@@ -231,6 +234,7 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
   const loadFromData = useCallback((data: Record<string, unknown>) => {
     if (data.acq) setAcq(data.acq);
     if (data.prop) setProp(data.prop);
+    if (data.propAfter !== undefined) setPropAfter(data.propAfter);
     if (data.rooms) setRooms(data.rooms as Record<string, unknown>[]);
     if (data.nextRoomId != null) setNextRoomId(data.nextRoomId as number);
     if (data.contractors) setContractors(data.contractors as Record<string, unknown>[]);
@@ -245,15 +249,16 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
   }, []);
 
   const getSnapshot = useCallback(() => ({
-    mode, acq, prop, rooms, nextRoomId, contractors, costDb,
+    mode, acq, prop, propAfter, rooms, nextRoomId, contractors, costDb,
     contingencyPct, pmPct, holding, resale, quickRenoEstimate,
-  }), [mode, acq, prop, rooms, nextRoomId, contractors, costDb, contingencyPct, pmPct, holding, resale, quickRenoEstimate]);
+  }), [mode, acq, prop, propAfter, rooms, nextRoomId, contractors, costDb, contingencyPct, pmPct, holding, resale, quickRenoEstimate]);
 
   return {
     // State
     mode, setMode,
     acq, setAcq, updateAcq,
     prop, setProp, updateProp,
+    propAfter, setPropAfter, updatePropAfter,
     rooms, setRooms, updateRoom, removeRoom, addRoom,
     nextRoomId,
     contractors, setContractors,

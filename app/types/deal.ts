@@ -42,6 +42,7 @@ export interface DealData {
   mode: "quick" | "advanced";
   acq: AcquisitionData;
   prop: PropertyData;
+  propAfter?: PropertyData;
   rooms: RoomData[];
   nextRoomId: number;
   contractors: ContractorData[];
