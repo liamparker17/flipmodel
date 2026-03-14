@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { theme } from "../theme";
 import Sidebar from "./Sidebar";
@@ -17,6 +17,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { createDeal } = useDeals();
   const { role, hasOrg, loading: orgLoading } = useOrgContext();
   const [tutorialInit, setTutorialInit] = useState<{ active: boolean; step: number } | null>(null);
+  const tutorialChecked = useRef(false);
 
   useEffect(() => {
     if (!orgLoading && !hasOrg) {
@@ -25,7 +26,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }, [orgLoading, hasOrg]);
 
   useEffect(() => {
-    if (!hasOrg) return;
+    if (!hasOrg || tutorialChecked.current) return;
+    tutorialChecked.current = true;
     Promise.all([
       fetch("/api/user/profile").then((r) => r.ok ? r.json() : null),
       fetch("/api/deals?limit=1").then((r) => r.ok ? r.json() : null),
@@ -33,10 +35,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
       if (!profileData) { setTutorialInit({ active: false, step: 0 }); return; }
       const prefs = (profileData.preferences as Record<string, unknown>) || {};
       const dealCount = dealsData?.pagination?.total ?? dealsData?.data?.length ?? 0;
+      const savedStep = (prefs.tutorialStep as number) || 0;
 
       if (prefs.tutorialCompleted) {
+        // Tutorial already finished
         setTutorialInit({ active: false, step: 0 });
+      } else if (savedStep >= 2) {
+        // Tutorial is in progress (user already started) — resume regardless of deal count
+        setTutorialInit({ active: true, step: savedStep });
       } else if (dealCount > 0) {
+        // Org has deals but tutorial never started — silently complete it
         fetch("/api/user/profile", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -44,7 +52,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         }).catch(() => {});
         setTutorialInit({ active: false, step: 0 });
       } else {
-        setTutorialInit({ active: true, step: (prefs.tutorialStep as number) || 1 });
+        // No deals, tutorial not started — launch it
+        setTutorialInit({ active: true, step: 1 });
       }
     }).catch(() => { setTutorialInit({ active: false, step: 0 }); });
   }, [hasOrg]);

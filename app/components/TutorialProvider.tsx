@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback } from "react";
 import type { ReactNode } from "react";
+import { api } from "@/lib/client-fetch";
 
 interface TutorialContextValue {
   tutorialActive: boolean;
@@ -40,9 +41,8 @@ export default function TutorialProvider({ children, initialStep, initialActive 
   const persistStep = useCallback((step: number, completed: boolean) => {
     const prefs: Record<string, unknown> = { tutorialStep: step };
     if (completed) prefs.tutorialCompleted = true;
-    fetch("/api/user/profile", {
+    api("/api/user/profile", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ preferences: prefs }),
     }).catch(() => {});
   }, []);
