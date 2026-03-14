@@ -4,14 +4,9 @@ import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from 
 import { parsePagination, paginatedResult } from "@/lib/pagination";
 import { createDealSchema } from "@/lib/validations/deal";
 
-import { seed } from "../../../prisma/seed";
-
 export async function GET(req: NextRequest) {
   try {
     const ctx = await requireOrgMember();
-    // ensure demo data is up to date (runs on every call, including production)
-    // seed() handles idempotency by upserting known demo records
-    seed().catch((e) => console.warn("demo seed failed", e));
     const pagination = parsePagination(req);
     const total = await prisma.deal.count({ where: { orgId: ctx.orgId } });
     const deals = await prisma.deal.findMany({
