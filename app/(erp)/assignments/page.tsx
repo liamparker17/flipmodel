@@ -40,9 +40,14 @@ interface AssignmentMilestone {
   }[];
 }
 
+interface PaginatedList<T> {
+  data: T[];
+  pagination: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean };
+}
+
 interface Assignments {
-  milestones: AssignmentMilestone[];
-  tasks: AssignmentTask[];
+  milestones: PaginatedList<AssignmentMilestone>;
+  tasks: PaginatedList<AssignmentTask>;
 }
 
 export default function AssignmentsPage() {
@@ -104,8 +109,8 @@ export default function AssignmentsPage() {
     );
   }
 
-  const milestones = data?.milestones || [];
-  const standaloneTasks = data?.tasks || [];
+  const milestones = data?.milestones?.data || [];
+  const standaloneTasks = data?.tasks?.data || [];
 
   // Group milestones by project
   const byProject: Record<string, { deal: AssignmentDeal; milestones: AssignmentMilestone[]; tasks: AssignmentTask[] }> = {};

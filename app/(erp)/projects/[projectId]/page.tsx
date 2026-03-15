@@ -214,7 +214,10 @@ function MilestonesSection({ deal, milestones, progress, contractors, onAddMiles
   useEffect(() => {
     fetch("/api/org/members")
       .then((r) => r.ok ? r.json() : [])
-      .then((data) => setMembers(Array.isArray(data) ? data : []))
+      .then((data) => {
+        const list = data?.data ?? data;
+        setMembers(Array.isArray(list) ? list : []);
+      })
       .catch((e) => { console.error("Failed to load org members:", e); });
   }, []);
 

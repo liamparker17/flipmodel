@@ -109,8 +109,14 @@ export default function TeamPage() {
         fetch("/api/org/members"),
         fetch("/api/org/departments"),
       ]);
-      if (membersRes.ok) setMembers(await membersRes.json());
-      if (deptsRes.ok) setDepartments(await deptsRes.json());
+      if (membersRes.ok) {
+        const membersJson = await membersRes.json();
+        setMembers(membersJson.data ?? membersJson);
+      }
+      if (deptsRes.ok) {
+        const deptsJson = await deptsRes.json();
+        setDepartments(deptsJson.data ?? deptsJson);
+      }
     } catch (e) { console.error("Failed to load team data:", e); }
     setLoading(false);
   }, []);

@@ -4,6 +4,7 @@ import { hashPassword } from "@/lib/password";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { canManageRole } from "@/lib/permissions";
+import { parsePagination, paginatedResult } from "@/lib/pagination";
 import { z } from "zod";
 import type { OrgRole } from "@/types/org";
 import { GENERATED_PASSWORD_LENGTH } from "@/lib/constants";
@@ -50,20 +51,28 @@ const updateMemberSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const ctx = await requireOrgMember();
+    const pagination = parsePagination(req);
 
-    const members = await prisma.orgMember.findMany({
-      where: { orgId: ctx.orgId },
-      include: {
-        user: { select: { id: true, name: true, email: true, image: true } },
-        department: true,
-      },
-      orderBy: { joinedAt: "asc" },
-    });
+    const where = { orgId: ctx.orgId };
 
-    return apiSuccess(members);
+    const [total, members] = await Promise.all([
+      prisma.orgMember.count({ where }),
+      prisma.orgMember.findMany({
+        where,
+        include: {
+          user: { select: { id: true, name: true, email: true, image: true } },
+          department: true,
+        },
+        orderBy: { joinedAt: "asc" },
+        take: pagination.limit,
+        skip: pagination.skip,
+      }),
+    ]);
+
+    return apiSuccess(paginatedResult(members, total, pagination));
   } catch (error) {
     return handleApiError(error);
   }

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { parsePagination, paginatedResult } from "@/lib/pagination";
 import { z } from "zod";
 
 const createDepartmentSchema = z.object({
@@ -14,17 +15,25 @@ const updateDepartmentSchema = z.object({
   parentId: z.string().nullable().optional(),
 });
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const ctx = await requireOrgMember();
+    const pagination = parsePagination(req);
 
-    const departments = await prisma.department.findMany({
-      where: { orgId: ctx.orgId },
-      include: { members: { include: { user: { select: { id: true, name: true } } } } },
-      orderBy: { name: "asc" },
-    });
+    const where = { orgId: ctx.orgId };
 
-    return apiSuccess(departments);
+    const [total, departments] = await Promise.all([
+      prisma.department.count({ where }),
+      prisma.department.findMany({
+        where,
+        include: { members: { include: { user: { select: { id: true, name: true } } } } },
+        orderBy: { name: "asc" },
+        take: pagination.limit,
+        skip: pagination.skip,
+      }),
+    ]);
+
+    return apiSuccess(paginatedResult(departments, total, pagination));
   } catch (error) {
     return handleApiError(error);
   }
