@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { updateExpenseSchema } from "@/lib/validations/expense";
+import { writeAuditLog } from "@/lib/audit";
 import { ORG_ROLE_LEVELS } from "@/types/org";
 import type { OrgRole } from "@/types/org";
 
@@ -45,6 +46,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         data: updateData,
       });
 
+      await writeAuditLog({ orgId: ctx.orgId, userId: ctx.userId, action: action === "approve" ? "approve" : "reject", entityType: "Expense", entityId: expenseId });
+
       return apiSuccess(updated);
     }
 
@@ -74,6 +77,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       data: updateData,
     });
 
+    await writeAuditLog({ orgId: ctx.orgId, userId: ctx.userId, action: "update", entityType: "Expense", entityId: expenseId });
+
     return apiSuccess(expense);
   } catch (error) {
     return handleApiError(error);
@@ -89,6 +94,9 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     if (!existing) return apiError("Expense not found", 404);
 
     await prisma.expense.delete({ where: { id: expenseId } });
+
+    await writeAuditLog({ orgId: ctx.orgId, userId: ctx.userId, action: "delete", entityType: "Expense", entityId: expenseId });
+
     return apiSuccess({ deleted: true });
   } catch (error) {
     return handleApiError(error);

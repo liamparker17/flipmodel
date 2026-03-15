@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { updateDealSchema } from "@/lib/validations/deal";
+import { writeAuditLog } from "@/lib/audit";
 import { validateStageTransition } from "@/utils/stageValidation";
 
 type Params = { params: Promise<{ dealId: string }> };
@@ -156,6 +157,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       },
     });
 
+    await writeAuditLog({ orgId: ctx.orgId, userId: ctx.userId, action: "update", entityType: "Deal", entityId: dealId });
+
     return apiSuccess(deal);
   } catch (error) {
     return handleApiError(error);
@@ -171,6 +174,9 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     if (!existing) return apiError("Deal not found", 404);
 
     await prisma.deal.delete({ where: { id: dealId } });
+
+    await writeAuditLog({ orgId: ctx.orgId, userId: ctx.userId, action: "delete", entityType: "Deal", entityId: dealId });
+
     return apiSuccess({ deleted: true });
   } catch (error) {
     return handleApiError(error);

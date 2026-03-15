@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
+import { writeAuditLog } from "@/lib/audit";
 import { z } from "zod";
 
 type Params = { params: Promise<{ taskId: string }> };
@@ -64,6 +65,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       data: updateData,
     });
 
+    await writeAuditLog({ orgId: ctx.orgId, userId: ctx.userId, action: "update", entityType: "Task", entityId: taskId });
+
     return apiSuccess(task);
   } catch (error) {
     return handleApiError(error);
@@ -81,6 +84,8 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     if (!ownership.authorized) return apiError("Task not found", 404);
 
     await prisma.task.delete({ where: { id: taskId } });
+
+    await writeAuditLog({ orgId: ctx.orgId, userId: ctx.userId, action: "delete", entityType: "Task", entityId: taskId });
 
     return apiSuccess({ deleted: true });
   } catch (error) {
