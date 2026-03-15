@@ -6,7 +6,7 @@ import { writeAuditLog } from "@/lib/audit";
 
 const approveLeaveSchema = z.object({
   action: z.enum(["approve", "reject"], {
-    errorMap: () => ({ message: "Action must be 'approve' or 'reject'" }),
+    error: "Action must be 'approve' or 'reject'",
   }),
 });
 
