@@ -1,7 +1,14 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { writeAuditLog } from "@/lib/audit";
+
+const approveLeaveSchema = z.object({
+  action: z.enum(["approve", "reject"], {
+    errorMap: () => ({ message: "Action must be 'approve' or 'reject'" }),
+  }),
+});
 
 type Params = { params: Promise<{ leaveId: string }> };
 
@@ -10,11 +17,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const ctx = await requirePermission("team:manage");
     const { leaveId } = await params;
     const body = await req.json();
-    const { action } = body as { action: "approve" | "reject" };
-
-    if (action !== "approve" && action !== "reject") {
-      return apiError("Action must be 'approve' or 'reject'", 400);
-    }
+    const { action } = approveLeaveSchema.parse(body);
 
     const existing = await prisma.leaveRecord.findFirst({
       where: { id: leaveId, orgId: ctx.orgId },

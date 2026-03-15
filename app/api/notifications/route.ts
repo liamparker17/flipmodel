@@ -1,7 +1,22 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/db";
 import { requireOrgMember, apiSuccess, handleApiError } from "@/lib/api-helpers";
 import { parsePagination, paginatedResult } from "@/lib/pagination";
+
+const markReadSchema = z.object({
+  action: z.literal("markRead"),
+  ids: z.array(z.string().min(1)).min(1, "At least one notification ID is required"),
+});
+
+const markAllReadSchema = z.object({
+  action: z.literal("markAllRead"),
+});
+
+const notificationActionSchema = z.discriminatedUnion("action", [
+  markReadSchema,
+  markAllReadSchema,
+]);
 
 export async function GET(req: NextRequest) {
   try {
@@ -30,17 +45,17 @@ export async function POST(req: NextRequest) {
   try {
     const ctx = await requireOrgMember();
     const body = await req.json();
+    const parsed = notificationActionSchema.parse(body);
 
-    if (body.action === "markRead") {
-      const ids = body.ids as string[];
+    if (parsed.action === "markRead") {
       await prisma.notification.updateMany({
-        where: { id: { in: ids }, userId: ctx.userId, orgId: ctx.orgId },
+        where: { id: { in: parsed.ids }, userId: ctx.userId, orgId: ctx.orgId },
         data: { read: true },
       });
-      return apiSuccess({ updated: ids.length });
+      return apiSuccess({ updated: parsed.ids.length });
     }
 
-    if (body.action === "markAllRead") {
+    if (parsed.action === "markAllRead") {
       const result = await prisma.notification.updateMany({
         where: { userId: ctx.userId, orgId: ctx.orgId, read: false },
         data: { read: true },

@@ -1,8 +1,22 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { DEFAULT_CHART_OF_ACCOUNTS } from "@/types/accounting";
+
+const seedDefaultsSchema = z.object({
+  action: z.literal("seedDefaults"),
+});
+
+const createAccountSchema = z.object({
+  action: z.undefined().or(z.string().max(0)).optional(),
+  code: z.string().min(1, "Account code is required").max(20),
+  name: z.string().min(1, "Account name is required").max(200),
+  type: z.enum(["asset", "liability", "equity", "revenue", "expense"]),
+  subtype: z.string().min(1, "Subtype is required").max(100),
+  parentId: z.string().optional(),
+});
 
 export async function GET() {
   try {
@@ -27,7 +41,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     // Seed defaults
-    if (body.action === "seedDefaults") {
+    if ((body as { action?: string }).action === "seedDefaults") {
+      seedDefaultsSchema.parse(body);
       const existing = await prisma.chartOfAccount.count({ where: { orgId: ctx.orgId } });
       if (existing > 0) {
         return apiError("Chart of accounts already has entries. Clear them first.", 400);
@@ -54,14 +69,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Create single account
+    const data = createAccountSchema.parse(body);
     const account = await prisma.chartOfAccount.create({
       data: {
         orgId: ctx.orgId,
-        code: body.code,
-        name: body.name,
-        type: body.type,
-        subtype: body.subtype,
-        parentId: body.parentId || null,
+        code: data.code,
+        name: data.name,
+        type: data.type,
+        subtype: data.subtype,
+        parentId: data.parentId || null,
         isActive: true,
         isSystemAccount: false,
       },

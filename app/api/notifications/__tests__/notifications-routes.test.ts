@@ -148,14 +148,14 @@ describe("POST /api/notifications - markAllRead", () => {
 // ===========================================================================
 
 describe("POST /api/notifications - unknown action", () => {
-  it("returns ok for unrecognised action", async () => {
+  it("returns 400 for unrecognised action", async () => {
     const { POST } = await import("@/api/notifications/route");
 
     const res = await POST(makeRequest({ action: "something_else" }));
     const json = await res.json();
 
-    expect(res.status).toBe(200);
-    expect(json.ok).toBe(true);
+    expect(res.status).toBe(400);
+    expect(json.error).toBeDefined();
   });
 });
 

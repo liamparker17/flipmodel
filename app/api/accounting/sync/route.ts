@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { getValidTokens } from "@/lib/accounting/token-manager";
@@ -7,6 +8,10 @@ import { quickbooksProvider } from "@/lib/accounting/quickbooks";
 import type { AccountingProvider } from "@/lib/accounting/providers";
 import { rateLimit } from "@/lib/rate-limit";
 import { SYNC_RATE_LIMIT_MAX, SYNC_RATE_LIMIT_WINDOW_MS } from "@/lib/constants";
+
+const syncSchema = z.object({
+  type: z.enum(["accounts", "contacts", "invoices", "all"]).default("accounts"),
+});
 
 function getProvider(name: string): AccountingProvider {
   if (name === "xero") return xeroProvider;
@@ -23,8 +28,8 @@ export async function POST(req: NextRequest) {
     const { success: rlOk } = rateLimit(`sync:${ctx.orgId}`, SYNC_RATE_LIMIT_MAX, SYNC_RATE_LIMIT_WINDOW_MS);
     if (!rlOk) return apiError("Please wait before syncing again", 429);
 
-    const body = await req.json();
-    const syncType = body.type || "accounts"; // accounts | contacts | invoices | all
+    const body = await req.json().catch(() => ({}));
+    const { type: syncType } = syncSchema.parse(body);
 
     const connection = await prisma.accountingConnection.findFirst({
       where: { orgId: ctx.orgId },

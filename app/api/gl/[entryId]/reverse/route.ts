@@ -1,6 +1,11 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { requirePermission, apiSuccess, handleApiError, ValidationError, NotFoundError } from "@/lib/api-helpers";
 import { withFinancialTransaction } from "@/lib/financial-transaction";
+
+const reverseEntrySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional(),
+});
 
 type Params = { params: Promise<{ entryId: string }> };
 
@@ -9,7 +14,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const ctx = await requirePermission("accounting:write");
     const { entryId } = await params;
     const body = await req.json().catch(() => ({}));
-    const reversalDate = (body as { date?: string }).date;
+    const { date: reversalDate } = reverseEntrySchema.parse(body);
 
     const result = await withFinancialTransaction({
       tx: async (tx) => {
