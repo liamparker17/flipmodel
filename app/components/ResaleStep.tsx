@@ -88,14 +88,54 @@ export default function ResaleStep({
     </Card>
   );
 
+  const saleMethod = (resale.saleMethod as string) ?? "agent";
+  const isAgent = saleMethod === "agent";
+
   return (
     <div>
       <Card title="Your Resale Projections" subtitle="Estimate your expected selling price and agent costs to calculate projected profit.">
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 20px" }}>
           <NumInput label="Your Expected Resale Price (R)" value={resale.expectedPrice} onChange={(v: number) => updateResale("expectedPrice", v)} tooltip={TOOLTIPS.expectedPrice} isMobile={isMobile} />
           <NumInput label="Area Benchmark (R/sqm)" value={resale.areaBenchmarkPsqm} onChange={(v: number) => updateResale("areaBenchmarkPsqm", v)} suffix="/sqm" tooltip={TOOLTIPS.areaBenchmarkPsqm} isMobile={isMobile} />
-          <NumInput label="Agent Commission" value={resale.agentCommission} onChange={(v: number) => updateResale("agentCommission", v)} prefix="" suffix="%" tooltip={TOOLTIPS.agentCommission} isMobile={isMobile} />
         </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "12px 0 8px" }}>
+          <input
+            type="checkbox"
+            id="using-agent"
+            checked={isAgent}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateResale("saleMethod", e.target.checked ? "agent" : "private")}
+            style={{ cursor: "pointer", width: 20, height: 20 }}
+          />
+          <label htmlFor="using-agent" style={{ fontSize: 14, color: theme.text, cursor: "pointer" }}>Using estate agent?</label>
+        </div>
+
+        {!isAgent && (
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 1 }}>Reason for no agent</label>
+            <select
+              value={saleMethod}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateResale("saleMethod", e.target.value)}
+              style={{
+                background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 8,
+                padding: "10px 12px", color: theme.text, fontSize: 16, width: "100%", outline: "none",
+                minHeight: 44,
+              }}
+            >
+              <option value="private">Private Sale</option>
+              <option value="auction">Auction</option>
+              <option value="own_listing">Own Listing</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        )}
+
+        {isAgent && (
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 20px" }}>
+            <NumInput label="Agent Commission" value={resale.agentCommission} onChange={(v: number) => updateResale("agentCommission", v)} prefix="" suffix="%" tooltip={TOOLTIPS.agentCommission} isMobile={isMobile} />
+          </div>
+        )}
+
         <div style={{ fontSize: 12, color: theme.textDim, marginTop: 8 }}>
           Benchmark resale value: {fmt((resale.areaBenchmarkPsqm as number) * (prop.totalSqm as number))} ({prop.totalSqm as number} sqm x {fmt(resale.areaBenchmarkPsqm as number)}/sqm)
         </div>
@@ -131,7 +171,11 @@ export default function ResaleStep({
         <div style={{ fontSize: 11, color: theme.textDim, fontFamily: "'JetBrains Mono', monospace", lineHeight: 2, overflowX: "auto" }}>
           <div>All-In = Acquisition({fmt(totalAcquisition)}) + Renovation({fmt(totalRenovation)}) + Holding({fmt(totalHoldingCost)})</div>
           <div>Gross Profit = Resale - All-In = {fmt(resale.expectedPrice as number)} - {fmt(allInCost)} = {fmt(grossProfit)}</div>
-          <div>Net Profit = Gross - Agent = {fmt(grossProfit)} - {fmt(agentComm)} = {fmt(netProfit)}</div>
+          {isAgent ? (
+            <div>Net Profit = Gross - Agent = {fmt(grossProfit)} - {fmt(agentComm)} = {fmt(netProfit)}</div>
+          ) : (
+            <div>Net Profit = Gross (no agent commission) = {fmt(netProfit)}</div>
+          )}
           <div>ROI = Net / All-In = {pct(roi)}</div>
           <div>Annualized ROI = ROI x (12 / {holding.renovationMonths as number}mo) = {pct(annualizedRoi)}</div>
           <div>Return on Cash = Net / Cash Invested = {fmt(netProfit)} / {fmt(cashInvested)} = {pct(returnOnCash)}</div>

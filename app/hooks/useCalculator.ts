@@ -132,8 +132,9 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
   const totalHoldingCost = useMemo(() => monthlyHoldingTotal * ((holding as Record<string, number>).renovationMonths), [monthlyHoldingTotal, (holding as Record<string, unknown>).renovationMonths]);
   const allInCost = useMemo(() => totalAcquisition + totalRenovation + totalHoldingCost, [totalAcquisition, totalRenovation, totalHoldingCost]);
   const agentComm = useMemo(() => {
-    const r = resale as Record<string, number>;
-    return r.expectedPrice * (r.agentCommission / 100);
+    const r = resale as Record<string, unknown>;
+    const saleMethod = (r.saleMethod as string) ?? "agent";
+    return saleMethod === "agent" ? (r.expectedPrice as number) * ((r.agentCommission as number) / 100) : 0;
   }, [resale]);
   const grossProfit = useMemo(() => (resale as Record<string, number>).expectedPrice - allInCost, [(resale as Record<string, unknown>).expectedPrice, allInCost]);
   const netProfit = useMemo(() => grossProfit - agentComm, [grossProfit, agentComm]);
@@ -188,7 +189,8 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
     const adjHold = monthlyHoldingTotal * adjHoldMonths;
     const adjAllIn = totalAcquisition + adjReno + adjHold;
     const adjResale = r.expectedPrice * (1 + sensResaleAdj / 100);
-    const adjComm = adjResale * (r.agentCommission / 100);
+    const sensSaleMethod = (r.saleMethod as string | undefined) ?? "agent";
+    const adjComm = sensSaleMethod === "agent" ? adjResale * (r.agentCommission / 100) : 0;
     const adjNet = adjResale - adjAllIn - adjComm;
     const adjRoi = adjAllIn > 0 ? adjNet / adjAllIn : 0;
     const adjAnnRoi = adjHoldMonths > 0 && adjAllIn > 0 ? (adjNet / adjAllIn) * (12 / adjHoldMonths) : 0;

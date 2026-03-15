@@ -142,10 +142,13 @@ export interface HoldingData {
   levies: number;
 }
 
+export type SaleMethod = "agent" | "private" | "auction" | "own_listing" | "other";
+
 export interface ResaleData {
   expectedPrice: number;
   areaBenchmarkPsqm: number;
   agentCommission: number;
+  saleMethod?: SaleMethod;
 }
 
 // ─── Expense Tracking ───

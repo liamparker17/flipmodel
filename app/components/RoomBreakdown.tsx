@@ -3,6 +3,7 @@
 import { theme, fmt } from "./theme";
 import { ROOM_TEMPLATES, generateRoomItems, calcAutoQty, detectRoomType } from "../data/roomTemplates";
 import { UNIT_TYPES } from "../data/constants";
+import type { MaterialPalette } from "@/types/deal";
 
 interface DetailedItem {
   key: string;
@@ -11,6 +12,7 @@ interface DetailedItem {
   qty: number;
   unitCost: number;
   unit: string;
+  paletteRef?: string | null;
 }
 
 interface Room {
@@ -32,9 +34,10 @@ interface RoomBreakdownProps {
   onUpdateRoom: (id: number, key: string, value: unknown) => void;
   isMobile: boolean;
   defaultCeilingHeight: number;
+  palette: MaterialPalette;
 }
 
-export default function RoomBreakdown({ room, onUpdateRoom, isMobile, defaultCeilingHeight }: RoomBreakdownProps) {
+export default function RoomBreakdown({ room, onUpdateRoom, isMobile, defaultCeilingHeight, palette }: RoomBreakdownProps) {
   const roomType = room.roomType || detectRoomType(room.name);
   const template = (ROOM_TEMPLATES as Record<string, unknown>)[roomType];
   const isDetailed = room.breakdownMode === "detailed";
@@ -61,8 +64,17 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile, defaultCei
     onUpdateRoom(room.id, "detailedItems", newItems);
   };
 
+  const getEffectiveUnitCost = (item: DetailedItem) => {
+    if (!item.paletteRef) return item.unitCost;
+    const tile = palette.tiles.find(t => t.id === item.paletteRef);
+    if (tile) return tile.pricePerSqm;
+    const color = palette.colors.find(c => c.id === item.paletteRef);
+    if (color) return color.pricePerLitre;
+    return item.unitCost;
+  };
+
   const detailedTotal = isDetailed && room.detailedItems
-    ? room.detailedItems.filter((i) => i.included).reduce((s, i) => s + i.qty * i.unitCost, 0)
+    ? room.detailedItems.filter((i) => i.included).reduce((s, i) => s + i.qty * getEffectiveUnitCost(i), 0)
     : 0;
 
   const roomTypeOptions = Object.entries(ROOM_TEMPLATES as Record<string, { label: string }>).map(([key, t]) => ({ value: key, label: t.label }));
@@ -176,7 +188,8 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile, defaultCei
           {isMobile ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {room.detailedItems.map((item, idx) => {
-                const lineTotal = item.included ? item.qty * item.unitCost : 0;
+                const effectiveUnitCost = getEffectiveUnitCost(item);
+                const lineTotal = item.included ? item.qty * effectiveUnitCost : 0;
                 return (
                   <div key={item.key} style={{
                     background: theme.input, borderRadius: 8, padding: 12,
@@ -192,6 +205,34 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile, defaultCei
                       </div>
                       <span style={{ fontSize: 10, color: theme.textDim }}>{(UNIT_TYPES as Record<string, { suffix: string }>)[item.unit]?.suffix || item.unit}</span>
                     </div>
+                    {item.key.toLowerCase().includes("tile") && palette.tiles.length > 0 && (
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ fontSize: 10, color: theme.textDim }}>Tile (from palette)</label>
+                        <select value={item.paletteRef || ""} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                          const ref = e.target.value || null;
+                          const tile = palette.tiles.find(t => t.id === ref);
+                          updateItem(idx, "paletteRef", ref);
+                          if (tile) updateItem(idx, "unitCost", tile.pricePerSqm);
+                        }} style={{ ...inputSmall, width: "100%", textAlign: "left" }}>
+                          <option value="">Manual price</option>
+                          {palette.tiles.map(t => <option key={t.id} value={t.id}>{t.label} (R{t.pricePerSqm}/sqm)</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {item.key.toLowerCase().includes("paint") && palette.colors.length > 0 && (
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ fontSize: 10, color: theme.textDim }}>Paint (from palette)</label>
+                        <select value={item.paletteRef || ""} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                          const ref = e.target.value || null;
+                          const color = palette.colors.find(c => c.id === ref);
+                          updateItem(idx, "paletteRef", ref);
+                          if (color) updateItem(idx, "unitCost", color.pricePerLitre);
+                        }} style={{ ...inputSmall, width: "100%", textAlign: "left" }}>
+                          <option value="">Manual price</option>
+                          {palette.colors.map(c => <option key={c.id} value={c.id}>{c.name} (R{c.pricePerLitre}/L)</option>)}
+                        </select>
+                      </div>
+                    )}
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                       <div>
                         <label style={{ fontSize: 10, color: theme.textDim }}>Qty</label>
@@ -201,7 +242,10 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile, defaultCei
                       </div>
                       <div>
                         <label style={{ fontSize: 10, color: theme.textDim }}>Unit Cost</label>
-                        <input type="number" value={item.unitCost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem(idx, "unitCost", Number(e.target.value))}
+                        <input type="number" value={effectiveUnitCost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          updateItem(idx, "unitCost", Number(e.target.value));
+                          updateItem(idx, "paletteRef", null);
+                        }}
                           style={{ ...inputSmall, width: "100%" }}
                         />
                       </div>
@@ -240,13 +284,38 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile, defaultCei
                 </thead>
                 <tbody>
                   {room.detailedItems.map((item, idx) => {
-                    const lineTotal = item.included ? item.qty * item.unitCost : 0;
+                    const effectiveUnitCost = getEffectiveUnitCost(item);
+                    const lineTotal = item.included ? item.qty * effectiveUnitCost : 0;
                     return (
                       <tr key={item.key} style={{ borderBottom: `1px solid ${theme.cardBorder}15`, opacity: item.included ? 1 : 0.4 }}>
                         <td style={{ padding: "4px 4px", textAlign: "center" }}>
                           <input type="checkbox" checked={item.included} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem(idx, "included", e.target.checked)} style={{ cursor: "pointer", width: 18, height: 18 }} />
                         </td>
-                        <td style={{ padding: "4px 8px", color: theme.text }}>{item.label}</td>
+                        <td style={{ padding: "4px 8px", color: theme.text }}>
+                          <div>{item.label}</div>
+                          {item.key.toLowerCase().includes("tile") && palette.tiles.length > 0 && (
+                            <select value={item.paletteRef || ""} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                              const ref = e.target.value || null;
+                              const tile = palette.tiles.find(t => t.id === ref);
+                              updateItem(idx, "paletteRef", ref);
+                              if (tile) updateItem(idx, "unitCost", tile.pricePerSqm);
+                            }} style={{ ...inputSmall, fontSize: 11, marginTop: 4, textAlign: "left" }}>
+                              <option value="">Manual price</option>
+                              {palette.tiles.map(t => <option key={t.id} value={t.id}>{t.label} (R{t.pricePerSqm}/sqm)</option>)}
+                            </select>
+                          )}
+                          {item.key.toLowerCase().includes("paint") && palette.colors.length > 0 && (
+                            <select value={item.paletteRef || ""} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                              const ref = e.target.value || null;
+                              const color = palette.colors.find(c => c.id === ref);
+                              updateItem(idx, "paletteRef", ref);
+                              if (color) updateItem(idx, "unitCost", color.pricePerLitre);
+                            }} style={{ ...inputSmall, fontSize: 11, marginTop: 4, textAlign: "left" }}>
+                              <option value="">Manual price</option>
+                              {palette.colors.map(c => <option key={c.id} value={c.id}>{c.name} (R{c.pricePerLitre}/L)</option>)}
+                            </select>
+                          )}
+                        </td>
                         <td style={{ padding: "4px 8px", textAlign: "right" }}>
                           <input type="number" value={item.qty} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem(idx, "qty", Number(e.target.value))}
                             style={{ ...inputSmall, width: 60 }}
@@ -256,7 +325,10 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile, defaultCei
                           {(UNIT_TYPES as Record<string, { suffix: string }>)[item.unit]?.suffix || item.unit}
                         </td>
                         <td style={{ padding: "4px 8px", textAlign: "right" }}>
-                          <input type="number" value={item.unitCost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem(idx, "unitCost", Number(e.target.value))}
+                          <input type="number" value={effectiveUnitCost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            updateItem(idx, "unitCost", Number(e.target.value));
+                            updateItem(idx, "paletteRef", null);
+                          }}
                             style={{ ...inputSmall, width: 90 }}
                           />
                         </td>

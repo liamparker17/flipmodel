@@ -3,7 +3,7 @@
 import { theme, NumInput, Card, Select } from "./theme";
 import RoomBreakdown from "./RoomBreakdown";
 import { detectRoomType, generateRoomsFromProperty, PRESET_ROOMS } from "../data/roomTemplates";
-import type { RoomData } from "@/types/deal";
+import type { RoomData, MaterialPalette } from "@/types/deal";
 
 interface Room {
   id: number;
@@ -24,9 +24,10 @@ interface RoomsStepProps {
   defaultCeilingHeight: number;
   prop?: { bedrooms: number; bathrooms: number; garages: number };
   onGenerateRooms?: (rooms: RoomData[]) => void;
+  palette: MaterialPalette;
 }
 
-export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMobile, defaultCeilingHeight, prop, onGenerateRooms }: RoomsStepProps) {
+export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMobile, defaultCeilingHeight, prop, onGenerateRooms, palette }: RoomsStepProps) {
   const handleGenerateFromProperty = () => {
     if (!prop || !onGenerateRooms) return;
     onGenerateRooms(generateRoomsFromProperty(prop));
@@ -140,7 +141,7 @@ export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMo
               </>
             )}
           </div>
-          <RoomBreakdown room={room} onUpdateRoom={updateRoom} isMobile={isMobile} defaultCeilingHeight={defaultCeilingHeight} />
+          <RoomBreakdown room={room} onUpdateRoom={updateRoom} isMobile={isMobile} defaultCeilingHeight={defaultCeilingHeight} palette={palette} />
         </Card>
       ))}
     </div>
