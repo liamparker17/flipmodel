@@ -111,7 +111,7 @@ export default function TeamPage() {
       ]);
       if (membersRes.ok) setMembers(await membersRes.json());
       if (deptsRes.ok) setDepartments(await deptsRes.json());
-    } catch { /* ignore */ }
+    } catch (e) { console.error("Failed to load team data:", e); }
     setLoading(false);
   }, []);
 

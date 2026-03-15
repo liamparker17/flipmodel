@@ -168,14 +168,16 @@ import { api } from "@/lib/client-fetch";
 export default function useApiDeals() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchDeals = useCallback(async () => {
+    setError(null);
     try {
       const raw = await api<any>("/api/deals");
       const items = raw.data ?? raw;
       setDeals(items.map(dbToClientDeal));
-    } catch (err) {
-      // Error is silently caught; loaded state will be set and deals will remain empty
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load deals");
     } finally {
       setLoaded(true);
     }
@@ -357,7 +359,7 @@ export default function useApiDeals() {
   }, [fetchDeals]);
 
   return {
-    deals, loaded,
+    deals, loaded, error,
     createDeal, updateDeal, updateDealData, moveDeal, deleteDeal, getDeal,
     addExpense, updateExpense, deleteExpense,
     addMilestone, updateMilestone, toggleTask,

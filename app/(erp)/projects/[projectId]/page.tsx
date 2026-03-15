@@ -215,7 +215,7 @@ function MilestonesSection({ deal, milestones, progress, contractors, onAddMiles
     fetch("/api/org/members")
       .then((r) => r.ok ? r.json() : [])
       .then((data) => setMembers(Array.isArray(data) ? data : []))
-      .catch(() => {});
+      .catch((e) => { console.error("Failed to load org members:", e); });
   }, []);
 
   const getMemberName = (memberId: string | undefined) => {
@@ -241,7 +241,7 @@ function MilestonesSection({ deal, milestones, progress, contractors, onAddMiles
       });
       // Trigger a refresh by doing a no-op update
       onUpdateMilestone(msId, {});
-    } catch { /* ignore */ }
+    } catch (e) { console.error("Failed to add task:", e); }
     setNewTaskInputs({ ...newTaskInputs, [msId]: "" });
   };
 
@@ -252,7 +252,7 @@ function MilestonesSection({ deal, milestones, progress, contractors, onAddMiles
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
       });
-    } catch { /* ignore */ }
+    } catch (e) { console.error("Failed to update task:", e); }
   };
 
   const tinySelect: React.CSSProperties = {

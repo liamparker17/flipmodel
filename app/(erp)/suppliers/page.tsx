@@ -10,7 +10,7 @@ import { fetchSupplierOffers, getBestPerItem, getBestSingleSupplier } from "../.
 import { getCategoryBudgetTip } from "./lib/priceAlerts";
 import { getRecommendations } from "./lib/recommendations";
 import { buildSearchTerm } from "./lib/buildSearchTerm";
-import type { Deal, ShoppingListItem, StylePreferences } from "../../types/deal";
+import type { Deal, ShoppingListItem, StylePreferences, MaterialPalette } from "../../types/deal";
 import type { SupplierOffer, SortOption, MaterialItem as SupplierMaterialItem } from "../../types/supplier";
 
 // Components
@@ -217,6 +217,33 @@ export default function SuppliersPage() {
     [flatItems, purchaseStats.purchased, customItems.length]
   );
 
+  // Palette aggregation — group shopping list items by paletteRef
+  const paletteGroups = useMemo(() => {
+    if (!selectedDeal) return {};
+    const palette: MaterialPalette | undefined = selectedDeal.data?.materialPalette as MaterialPalette | undefined;
+    const items = selectedDeal.shoppingList || [];
+    const groups = items.filter((item) => item.paletteRef).reduce((acc, item) => {
+      const ref = item.paletteRef!;
+      if (!acc[ref]) acc[ref] = { items: [], totalQty: 0, totalCost: 0 };
+      acc[ref].items.push(item);
+      acc[ref].totalQty += item.qty ?? item.actualQty ?? 0;
+      acc[ref].totalCost += (item.qty ?? 0) * (item.unitPrice ?? 0);
+      return acc;
+    }, {} as Record<string, { items: ShoppingListItem[]; totalQty: number; totalCost: number }>);
+
+    // Enrich groups with palette label
+    return Object.entries(groups).reduce((acc, [ref, group]) => {
+      const tile = palette?.tiles.find((t) => t.id === ref);
+      const color = palette?.colors.find((c) => c.id === ref);
+      const label = tile ? `${tile.label} (${tile.size})` : color ? `${color.name} — ${color.brand}` : ref;
+      const unitPrice = tile ? tile.pricePerSqm : color ? color.pricePerLitre : 0;
+      acc[ref] = { ...group, label, unitPrice };
+      return acc;
+    }, {} as Record<string, { items: ShoppingListItem[]; totalQty: number; totalCost: number; label: string; unitPrice: number }>);
+  }, [selectedDeal]);
+
+  const hasPaletteGroups = Object.keys(paletteGroups).length > 0;
+
   // Style preference handler
   const handleStyleChange = useCallback((dealId: string, materialKey: string, category: string, prefs: StylePreferences) => {
     updateShoppingItem(dealId, materialKey, category, { stylePreferences: prefs });
@@ -399,6 +426,45 @@ export default function SuppliersPage() {
               <span style={{ color: theme.text }}>Buy all {tip.categoryLabel.toLowerCase()} at {tip.bestSupplierLabel} — save {fmt(tip.savings)} vs most expensive</span>
             </div>
           ))}
+
+          {/* Palette Summary — items grouped by palette reference */}
+          {hasPaletteGroups && (
+            <>
+              <SectionHeader label="Palette Summary" count={Object.keys(paletteGroups).length} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+                {Object.entries(paletteGroups).map(([ref, group]) => (
+                  <div key={ref} style={{
+                    background: theme.input, borderRadius: 8, padding: "12px 16px",
+                    border: `1px solid ${theme.inputBorder}`,
+                    display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap",
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: theme.text, marginBottom: 4 }}>{group.label}</div>
+                      <div style={{ fontSize: 11, color: theme.textDim }}>
+                        {group.items.length} item{group.items.length !== 1 ? "s" : ""} linked
+                        {group.totalQty > 0 && ` · ${group.totalQty.toFixed(1)} units total`}
+                      </div>
+                      <div style={{ fontSize: 11, color: theme.textDim, marginTop: 2 }}>
+                        {group.items.map((i) => i.label || i.materialKey).join(", ")}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      {group.unitPrice > 0 && (
+                        <div style={{ fontSize: 12, color: theme.textDim, marginBottom: 2 }}>
+                          R{group.unitPrice.toFixed(2)}/unit
+                        </div>
+                      )}
+                      {group.totalCost > 0 && (
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 14, color: theme.accent }}>
+                          {fmt(group.totalCost)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           {filteredItems.length > 0 && (
             <>

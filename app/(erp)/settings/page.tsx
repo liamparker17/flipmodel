@@ -41,7 +41,7 @@ function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem("justhousesErp_settings");
     if (raw) return { ...SETTING_DEFAULTS, ...JSON.parse(raw) };
-  } catch { /* ignore */ }
+  } catch (e) { console.error("Failed to parse saved settings:", e); }
   return { ...SETTING_DEFAULTS };
 }
 
@@ -113,7 +113,7 @@ export default function SettingsPage() {
         setProfile(data);
         setProfileDraft({});
       }
-    } catch { /* ignore */ }
+    } catch (e) { console.error("Failed to load user profile:", e); }
     setProfileLoading(false);
   }, []);
 
@@ -142,7 +142,7 @@ export default function SettingsPage() {
         const credsData = await credsRes.json();
         setSavedCredentials(credsData);
       }
-    } catch { /* ignore */ }
+    } catch (e) { console.error("Failed to load accounting settings:", e); }
     setAccountingLoading(false);
     setCredentialsLoading(false);
   }, []);

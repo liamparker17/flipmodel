@@ -91,16 +91,18 @@ export default function useApiTools() {
   const [maintenance, setMaintenance] = useState<ToolMaintenanceEntry[]>([]);
   const [incidents, setIncidents] = useState<ToolIncident[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
+    setError(null);
     try {
       const data = await api<any>("/api/tools");
       setTools((data.data ?? data.tools ?? []).map(dbToTool));
       setCheckouts(data.checkouts.map(dbToCheckout));
       setMaintenance(data.maintenance.map(dbToMaintenance));
       setIncidents(data.incidents.map(dbToIncident));
-    } catch (err) {
-      // Error is silently caught; loaded state will be set and collections will remain empty
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load tools");
     } finally {
       setLoaded(true);
     }
@@ -196,7 +198,7 @@ export default function useApiTools() {
 
   return {
     tools, checkouts, maintenance, incidents,
-    loaded,
+    loaded, error,
     addTool, updateTool, deleteTool,
     checkoutTool, returnTool,
     addMaintenanceEntry,
