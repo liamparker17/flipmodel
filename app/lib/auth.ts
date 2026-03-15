@@ -5,6 +5,11 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "./db";
 import { rateLimit } from "./rate-limit";
 import { verifyPassword } from "./password";
+import {
+  LOGIN_MAX_ATTEMPTS,
+  LOGIN_RATE_LIMIT_WINDOW_MS,
+  LOGIN_IP_MAX_ATTEMPTS,
+} from "./constants";
 
 declare module "next-auth" {
   interface Session {
@@ -42,14 +47,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null;
 
         const email = credentials.email as string;
         const password = credentials.password as string;
 
-        // Rate limiting by email to prevent brute-force attacks
-        const { success } = rateLimit(`login:${email}`, 5, 15 * 60 * 1000);
+        // Rate limiting by IP to prevent distributed brute-force attacks
+        const forwarded = request?.headers?.get("x-forwarded-for");
+        const ip =
+          forwarded?.split(",")[0]?.trim() ||
+          request?.headers?.get("x-real-ip") ||
+          "unknown";
+        const { success: ipSuccess } = rateLimit(
+          `login:ip:${ip}`,
+          LOGIN_IP_MAX_ATTEMPTS,
+          LOGIN_RATE_LIMIT_WINDOW_MS
+        );
+        if (!ipSuccess) return null;
+
+        // Rate limiting by email to prevent targeted brute-force attacks
+        const { success } = rateLimit(
+          `login:email:${email}`,
+          LOGIN_MAX_ATTEMPTS,
+          LOGIN_RATE_LIMIT_WINDOW_MS
+        );
         if (!success) return null;
 
         const user = await prisma.user.findUnique({

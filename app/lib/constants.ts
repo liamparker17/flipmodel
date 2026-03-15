@@ -16,14 +16,20 @@ export const SA_VAT_RATE = 0.15;
 export const DEFAULT_CURRENCY = "ZAR";
 
 // ─── Auth / Rate Limiting ───
-/** Maximum login attempts before lockout */
+/** Maximum login attempts per email before lockout (15-minute window) */
 export const LOGIN_MAX_ATTEMPTS = 5;
 
-/** Maximum signup attempts per IP within the rate limit window */
-export const SIGNUP_RATE_LIMIT_MAX = 5;
+/** Login rate limit window in milliseconds (15 minutes) */
+export const LOGIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 
-/** Signup rate limit window in milliseconds (15 minutes) */
-export const SIGNUP_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+/** Maximum login attempts per IP before lockout (15-minute window) */
+export const LOGIN_IP_MAX_ATTEMPTS = 5;
+
+/** Maximum signup attempts per IP within the rate limit window */
+export const SIGNUP_RATE_LIMIT_MAX = 3;
+
+/** Signup rate limit window in milliseconds (60 minutes) */
+export const SIGNUP_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
 /** Maximum sync requests per org within the rate limit window */
 export const SYNC_RATE_LIMIT_MAX = 1;
