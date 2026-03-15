@@ -5,7 +5,7 @@ import { SA_PRIME, SCOPE_MULT } from "../data/constants";
 import { DEFAULT_COSTS } from "../data/costDefaults";
 import { PRESET_ROOMS } from "../data/roomTemplates";
 import { calcTransferDuty } from "../components/theme";
-import type { BeforeRoom } from "@/types/deal";
+import type { BeforeRoom, MaterialPalette } from "@/types/deal";
 
 const DEFAULT_ACQ = {
   purchasePrice: 1200000, deposit: 0, bondRate: SA_PRIME + 1, bondTerm: 240,
@@ -47,6 +47,9 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
   const [resale, setResale] = useState(initialData?.resale || DEFAULT_RESALE);
   const [quickRenoEstimate, setQuickRenoEstimate] = useState((initialData?.quickRenoEstimate as number) ?? 500000);
   const [roomsBefore, setRoomsBefore] = useState<BeforeRoom[]>((initialData?.roomsBefore as BeforeRoom[]) ?? []);
+  const [materialPalette, setMaterialPalette] = useState<MaterialPalette>(
+    (initialData?.materialPalette as MaterialPalette) ?? { colors: [], tiles: [] }
+  );
 
   // --- SENSITIVITY ---
   const [sensResaleAdj, setSensResaleAdj] = useState(0);
@@ -246,14 +249,15 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
     if (data.holding) setHolding(data.holding);
     if (data.resale) setResale(data.resale);
     if (data.quickRenoEstimate != null) setQuickRenoEstimate(data.quickRenoEstimate as number);
+    if (data.materialPalette) setMaterialPalette(data.materialPalette as MaterialPalette);
     if (data.mode) setMode(data.mode as string);
     setSensResaleAdj(0); setSensRenoAdj(0); setSensHoldAdj(0);
   }, []);
 
   const getSnapshot = useCallback(() => ({
     mode, acq, prop, propAfter, rooms, roomsBefore, nextRoomId, contractors, costDb,
-    contingencyPct, pmPct, holding, resale, quickRenoEstimate,
-  }), [mode, acq, prop, propAfter, rooms, roomsBefore, nextRoomId, contractors, costDb, contingencyPct, pmPct, holding, resale, quickRenoEstimate]);
+    contingencyPct, pmPct, holding, resale, quickRenoEstimate, materialPalette,
+  }), [mode, acq, prop, propAfter, rooms, roomsBefore, nextRoomId, contractors, costDb, contingencyPct, pmPct, holding, resale, quickRenoEstimate, materialPalette]);
 
   return {
     // State
@@ -263,6 +267,7 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
     propAfter, setPropAfter, updatePropAfter,
     rooms, setRooms, updateRoom, removeRoom, addRoom,
     roomsBefore, setRoomsBefore,
+    materialPalette, setMaterialPalette,
     nextRoomId,
     contractors, setContractors,
     costDb, setCostDb, updateCostItem,

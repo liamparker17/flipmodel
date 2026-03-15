@@ -120,7 +120,9 @@ export const TOOLTIPS: Record<string, string> = {
 export const STEPS: string[] = [
   "Acquisition",
   "Property",
-  "Rooms",
+  "Existing Rooms",
+  "Materials & Finishes",
+  "Rooms (Planned)",
   "Contractors",
   "Renovation Costs",
   "Holding Costs",
@@ -132,7 +134,7 @@ export const STEPS: string[] = [
 ];
 
 export const STEP_SHORT: string[] = [
-  "Acquire", "Property", "Rooms", "Team", "Reno $",
+  "Acquire", "Property", "Before", "Palette", "Rooms", "Team", "Reno $",
   "Holding", "Resale", "Shop", "Scenarios", "Expenses", "Summary",
 ];
 

@@ -26,6 +26,8 @@ import ProfileManager from "../ProfileManager";
 import ScenarioLab from "../ScenarioLab";
 import ExpensesStep from "../ExpensesStep";
 import MaterialBreakdown from "../MaterialBreakdown";
+import BeforeRoomsStep from "../BeforeRoomsStep";
+import MaterialPaletteStep from "../MaterialPaletteStep";
 
 interface DealAnalysisProps {
   initialData?: DealData;
@@ -77,7 +79,7 @@ export default function DealAnalysis({ initialData, dealId, onSave, view = "anal
     }, 2000);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calc.mode, calc.acq, calc.prop, calc.rooms, calc.contractors, calc.costDb, calc.contingencyPct, calc.pmPct, calc.holding, calc.resale, calc.quickRenoEstimate, stableOnSave]);
+  }, [calc.mode, calc.acq, calc.prop, calc.rooms, calc.contractors, calc.costDb, calc.contingencyPct, calc.pmPct, calc.holding, calc.resale, calc.quickRenoEstimate, calc.materialPalette, stableOnSave]);
 
   const handleSaveProfile = (name: string, asNew: boolean) => {
     const id = asNew || !activeProfileId ? String(Date.now()) : activeProfileId;
@@ -106,7 +108,7 @@ export default function DealAnalysis({ initialData, dealId, onSave, view = "anal
 
   const handleCompareProfiles = () => {
     calc.setMode("advanced");
-    setStep(8);
+    setStep(10);
     calc.setScenarioTab("crossProfile");
   };
 
@@ -278,15 +280,17 @@ export default function DealAnalysis({ initialData, dealId, onSave, view = "anal
     switch (step) {
       case 0: return <AcquisitionStep acq={calc.acq} updateAcq={calc.updateAcq} transferDuty={calc.transferDuty} totalAcquisition={calc.totalAcquisition} isMobile={isMobile} />;
       case 1: return <PropertyStep prop={calc.prop} updateProp={calc.updateProp} propAfter={calc.propAfter} updatePropAfter={calc.updatePropAfter} isMobile={isMobile} />;
-      case 2: return <RoomsStep rooms={calc.rooms} updateRoom={calc.updateRoom} removeRoom={calc.removeRoom} addRoom={calc.addRoom} isMobile={isMobile} defaultCeilingHeight={calc.prop.defaultCeilingHeight ?? 2.4} prop={calc.prop} onGenerateRooms={(rooms) => { calc.setRooms(rooms); }} />;
-      case 3: return <ContractorPanel contractors={calc.contractors} setContractors={calc.setContractors} rooms={calc.rooms} isMobile={isMobile} />;
-      case 4: return <CostDatabase costDb={calc.costDb} updateCostItem={calc.updateCostItem} pmPct={calc.pmPct} setPmPct={calc.setPmPct} contingencyPct={calc.contingencyPct} setContingencyPct={calc.setContingencyPct} totalRoomMaterialCost={calc.totalRoomMaterialCost} contractorLabour={calc.contractorLabour} fixedCosts={calc.fixedCosts} pmCost={calc.pmCost} contingency={calc.contingency} totalRenovation={calc.totalRenovation} renoCostPerSqm={calc.renoCostPerSqm} isMobile={isMobile} />;
-      case 5: return <HoldingStep holding={calc.holding} updateHolding={calc.updateHolding} acq={calc.acq} monthlyBondInterest={calc.monthlyBondInterest} monthlyHoldingTotal={calc.monthlyHoldingTotal} totalHoldingCost={calc.totalHoldingCost} holdingTimeline={calc.holdingTimeline} isMobile={isMobile} />;
-      case 6: return <ResaleStep resale={calc.resale} updateResale={calc.updateResale} prop={calc.prop} allInCost={calc.allInCost} agentComm={calc.agentComm} grossProfit={calc.grossProfit} netProfit={calc.netProfit} profitPerSqm={calc.profitPerSqm} roi={calc.roi} annualizedRoi={calc.annualizedRoi} returnOnCash={calc.returnOnCash} cashInvested={calc.cashInvested} breakEvenResale={calc.breakEvenResale} dealScore={calc.dealScore} totalAcquisition={calc.totalAcquisition} totalRenovation={calc.totalRenovation} totalHoldingCost={calc.totalHoldingCost} holding={calc.holding} transferDuty={calc.transferDuty} isMobile={isMobile} />;
-      case 7: return <MaterialBreakdown rooms={calc.rooms} prop={calc.prop} mode={calc.mode} isMobile={isMobile} />;
-      case 8: return <ScenarioLab baseInputs={{ totalRenovation: calc.totalRenovation, monthlyHoldingTotal: calc.monthlyHoldingTotal, renovationMonths: calc.holding.renovationMonths, totalAcquisition: calc.totalAcquisition, expectedPrice: calc.resale.expectedPrice, agentCommission: calc.resale.agentCommission }} customScenarios={calc.customScenarios} setCustomScenarios={calc.setCustomScenarios} profiles={profiles} scenarioTab={calc.scenarioTab} setScenarioTab={calc.setScenarioTab} sensResaleAdj={calc.sensResaleAdj} setSensResaleAdj={calc.setSensResaleAdj} sensRenoAdj={calc.sensRenoAdj} setSensRenoAdj={calc.setSensRenoAdj} sensHoldAdj={calc.sensHoldAdj} setSensHoldAdj={calc.setSensHoldAdj} sensCalc={calc.sensCalc} isMobile={isMobile} />;
-      case 9: return <ExpensesStep profileId={activeProfileId} isMobile={isMobile} />;
-      case 10: return <SummaryStep acq={calc.acq} holding={calc.holding} resale={calc.resale} prop={calc.prop} transferDuty={calc.transferDuty} allInCost={calc.allInCost} agentComm={calc.agentComm} netProfit={calc.netProfit} grossProfit={calc.grossProfit} roi={calc.roi} annualizedRoi={calc.annualizedRoi} returnOnCash={calc.returnOnCash} cashInvested={calc.cashInvested} breakEvenResale={calc.breakEvenResale} renoCostPerSqm={calc.renoCostPerSqm} dealScore={calc.dealScore} totalAcquisition={calc.totalAcquisition} totalRenovation={calc.totalRenovation} totalHoldingCost={calc.totalHoldingCost} totalRoomMaterialCost={calc.totalRoomMaterialCost} contractorLabour={calc.contractorLabour} fixedCosts={calc.fixedCosts} pmCost={calc.pmCost} contingency={calc.contingency} roomCosts={calc.roomCosts} contractors={calc.contractors} resetAll={resetAll} isMobile={isMobile} />;
+      case 2: return <BeforeRoomsStep rooms={calc.roomsBefore} setRooms={calc.setRoomsBefore} defaultCeilingHeight={calc.prop.defaultCeilingHeight ?? 2.4} plannedRooms={calc.rooms} isMobile={isMobile} />;
+      case 3: return <MaterialPaletteStep palette={calc.materialPalette ?? { colors: [], tiles: [] }} updatePalette={calc.setMaterialPalette} isMobile={isMobile} />;
+      case 4: return <RoomsStep rooms={calc.rooms} updateRoom={calc.updateRoom} removeRoom={calc.removeRoom} addRoom={calc.addRoom} isMobile={isMobile} defaultCeilingHeight={calc.prop.defaultCeilingHeight ?? 2.4} prop={calc.prop} onGenerateRooms={(rooms) => { calc.setRooms(rooms); }} />;
+      case 5: return <ContractorPanel contractors={calc.contractors} setContractors={calc.setContractors} rooms={calc.rooms} isMobile={isMobile} />;
+      case 6: return <CostDatabase costDb={calc.costDb} updateCostItem={calc.updateCostItem} pmPct={calc.pmPct} setPmPct={calc.setPmPct} contingencyPct={calc.contingencyPct} setContingencyPct={calc.setContingencyPct} totalRoomMaterialCost={calc.totalRoomMaterialCost} contractorLabour={calc.contractorLabour} fixedCosts={calc.fixedCosts} pmCost={calc.pmCost} contingency={calc.contingency} totalRenovation={calc.totalRenovation} renoCostPerSqm={calc.renoCostPerSqm} isMobile={isMobile} />;
+      case 7: return <HoldingStep holding={calc.holding} updateHolding={calc.updateHolding} acq={calc.acq} monthlyBondInterest={calc.monthlyBondInterest} monthlyHoldingTotal={calc.monthlyHoldingTotal} totalHoldingCost={calc.totalHoldingCost} holdingTimeline={calc.holdingTimeline} isMobile={isMobile} />;
+      case 8: return <ResaleStep resale={calc.resale} updateResale={calc.updateResale} prop={calc.prop} allInCost={calc.allInCost} agentComm={calc.agentComm} grossProfit={calc.grossProfit} netProfit={calc.netProfit} profitPerSqm={calc.profitPerSqm} roi={calc.roi} annualizedRoi={calc.annualizedRoi} returnOnCash={calc.returnOnCash} cashInvested={calc.cashInvested} breakEvenResale={calc.breakEvenResale} dealScore={calc.dealScore} totalAcquisition={calc.totalAcquisition} totalRenovation={calc.totalRenovation} totalHoldingCost={calc.totalHoldingCost} holding={calc.holding} transferDuty={calc.transferDuty} isMobile={isMobile} />;
+      case 9: return <MaterialBreakdown rooms={calc.rooms} prop={calc.prop} mode={calc.mode} isMobile={isMobile} />;
+      case 10: return <ScenarioLab baseInputs={{ totalRenovation: calc.totalRenovation, monthlyHoldingTotal: calc.monthlyHoldingTotal, renovationMonths: calc.holding.renovationMonths, totalAcquisition: calc.totalAcquisition, expectedPrice: calc.resale.expectedPrice, agentCommission: calc.resale.agentCommission }} customScenarios={calc.customScenarios} setCustomScenarios={calc.setCustomScenarios} profiles={profiles} scenarioTab={calc.scenarioTab} setScenarioTab={calc.setScenarioTab} sensResaleAdj={calc.sensResaleAdj} setSensResaleAdj={calc.setSensResaleAdj} sensRenoAdj={calc.sensRenoAdj} setSensRenoAdj={calc.setSensRenoAdj} sensHoldAdj={calc.sensHoldAdj} setSensHoldAdj={calc.setSensHoldAdj} sensCalc={calc.sensCalc} isMobile={isMobile} />;
+      case 11: return <ExpensesStep profileId={activeProfileId} isMobile={isMobile} />;
+      case 12: return <SummaryStep acq={calc.acq} holding={calc.holding} resale={calc.resale} prop={calc.prop} transferDuty={calc.transferDuty} allInCost={calc.allInCost} agentComm={calc.agentComm} netProfit={calc.netProfit} grossProfit={calc.grossProfit} roi={calc.roi} annualizedRoi={calc.annualizedRoi} returnOnCash={calc.returnOnCash} cashInvested={calc.cashInvested} breakEvenResale={calc.breakEvenResale} renoCostPerSqm={calc.renoCostPerSqm} dealScore={calc.dealScore} totalAcquisition={calc.totalAcquisition} totalRenovation={calc.totalRenovation} totalHoldingCost={calc.totalHoldingCost} totalRoomMaterialCost={calc.totalRoomMaterialCost} contractorLabour={calc.contractorLabour} fixedCosts={calc.fixedCosts} pmCost={calc.pmCost} contingency={calc.contingency} roomCosts={calc.roomCosts} contractors={calc.contractors} resetAll={resetAll} isMobile={isMobile} />;
       default: return null;
     }
   };
@@ -356,7 +360,7 @@ export default function DealAnalysis({ initialData, dealId, onSave, view = "anal
                   <button onClick={() => setStep(Math.min(STEPS.length - 1, step + 1))} style={{
                     background: theme.accent, border: "none", color: "#000", borderRadius: 8,
                     padding: "10px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer", minHeight: 40,
-                  }}>{step === 6 ? "Shop Materials" : "Next Step"}</button>
+                  }}>{step === 8 ? "Shop Materials" : "Next Step"}</button>
                 )}
               </div>
             </div>
@@ -419,7 +423,7 @@ export default function DealAnalysis({ initialData, dealId, onSave, view = "anal
             <button onClick={() => setStep(Math.min(STEPS.length - 1, step + 1))} style={{
               background: theme.accent, border: "none", color: "#000", borderRadius: 10,
               padding: "12px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer", minHeight: 44,
-            }}>{step === 6 ? "Shop Materials" : "Next Step"}</button>
+            }}>{step === 8 ? "Shop Materials" : "Next Step"}</button>
           )}
         </div>
       </div>

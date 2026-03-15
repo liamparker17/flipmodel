@@ -54,6 +54,7 @@ export interface DealData {
   holding: HoldingData;
   resale: ResaleData;
   quickRenoEstimate: number;
+  materialPalette?: MaterialPalette;
 }
 
 export interface AcquisitionData {
@@ -115,6 +116,7 @@ export interface DetailedItem {
   included: boolean;
   qty: number;
   unitCost: number;
+  paletteRef?: string | null;
 }
 
 export interface ContractorData {
@@ -303,6 +305,31 @@ export interface Document {
   addedAt: string;
 }
 
+// ─── Material Palette ───
+export interface ColorSelection {
+  id: string;
+  role: "exterior" | "exterior_accent" | "interior" | "interior_accent";
+  name: string;
+  brand: string;
+  productCode: string;
+  pricePerLitre: number;
+}
+
+export interface TileSelection {
+  id: string;
+  label: string;
+  type: "ceramic" | "porcelain" | "vinyl" | "natural_stone" | "other";
+  size: string;
+  pricePerSqm: number;
+  brand: string;
+  supplier: string;
+}
+
+export interface MaterialPalette {
+  colors: ColorSelection[];
+  tiles: TileSelection[];
+}
+
 // ─── Style Preferences (for tile/paint/flooring customization) ───
 export interface StylePreferences {
   finish?: string;          // matt/gloss/textured/silk/semi-gloss
@@ -324,6 +351,7 @@ export interface ShoppingListItem {
   vendor?: string;          // where they bought it
   purchasedDate?: string;
   notes?: string;
+  paletteRef?: string;
   stylePreferences?: StylePreferences;  // user's material style choices
   // Custom / unanticipated item fields
   isCustom?: boolean;       // true = not from estimator
