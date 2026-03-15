@@ -42,8 +42,10 @@ export interface DealData {
   mode: "quick" | "advanced";
   acq: AcquisitionData;
   prop: PropertyData;
+  /** @deprecated Use roomsBefore/rooms comparison instead */
   propAfter?: PropertyData;
   rooms: RoomData[];
+  roomsBefore?: BeforeRoom[];
   nextRoomId: number;
   contractors: ContractorData[];
   costDb: Record<string, Record<string, CostItem>>;
@@ -88,6 +90,22 @@ export interface RoomData {
   ceilingHeight?: number | null;  // null/undefined = use house default
   doorSqm?: number;               // default 0 via ?? at read sites
   windowSqm?: number;             // default 0 via ?? at read sites
+}
+
+export interface BeforeRoom {
+  id: number;
+  name: string;
+  sqm: number;
+  ceilingHeight?: number | null;
+  condition?: "good" | "fair" | "poor" | "derelict";
+  notes: string;
+  roomType: string; // set via detectRoomType(name) on creation
+}
+
+export interface PropertyDelta {
+  beforeCounts: Record<string, number>;
+  afterCounts: Record<string, number>;
+  sqmDelta: number;
 }
 
 export interface DetailedItem {

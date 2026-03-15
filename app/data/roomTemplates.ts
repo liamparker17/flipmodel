@@ -2,6 +2,8 @@
 // Each item: { key, label, unit, defaultCost, autoQty }
 // autoQty: "sqm" = room area, "lm" = perimeter estimate, "wallArea" = perimeter x 2.4m, number = fixed qty
 
+import type { RoomData } from "@/types/deal";
+
 export interface RoomTemplateItem {
   key: string;
   label: string;
@@ -221,3 +223,42 @@ export const PRESET_ROOMS: PresetRoom[] = [
   { name: "Garage", sqm: 36, scope: "cosmetic", roomType: "garage" },
   { name: "Patio", sqm: 20, scope: "cosmetic", roomType: "patio" },
 ];
+
+function presetToRoom(preset: PresetRoom, id: number): RoomData {
+  return {
+    id,
+    name: preset.name,
+    sqm: preset.sqm,
+    scope: preset.scope as RoomData["scope"],
+    customCost: null,
+    notes: "",
+    roomType: preset.roomType,
+    breakdownMode: "simple",
+    detailedItems: null,
+    ceilingHeight: null,
+    doorSqm: 0,
+    windowSqm: 0,
+  };
+}
+
+export function generateRoomsFromProperty(prop: { bedrooms: number; bathrooms: number; garages: number }): RoomData[] {
+  const rooms: RoomData[] = [];
+  let nextId = 1;
+  const addPreset = (name: string) => {
+    const preset = PRESET_ROOMS.find(p => p.name === name);
+    if (preset) rooms.push(presetToRoom(preset, nextId++));
+  };
+  for (let i = 0; i < prop.bedrooms; i++) {
+    addPreset(i === 0 ? "Master Bedroom" : `Bedroom ${i + 1}`);
+  }
+  for (let i = 0; i < prop.bathrooms; i++) {
+    addPreset(i === 0 ? "Main Bathroom" : i === 1 ? "En-suite Bathroom" : `Bathroom ${i + 1}`);
+  }
+  addPreset("Kitchen");
+  addPreset("Lounge");
+  if (prop.garages > 0) addPreset("Garage");
+  addPreset("Dining Room");
+  addPreset("Entrance Hall");
+  addPreset("Passage");
+  return rooms;
+}

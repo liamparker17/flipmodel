@@ -5,6 +5,7 @@ import { SA_PRIME, SCOPE_MULT } from "../data/constants";
 import { DEFAULT_COSTS } from "../data/costDefaults";
 import { PRESET_ROOMS } from "../data/roomTemplates";
 import { calcTransferDuty } from "../components/theme";
+import type { BeforeRoom } from "@/types/deal";
 
 const DEFAULT_ACQ = {
   purchasePrice: 1200000, deposit: 0, bondRate: SA_PRIME + 1, bondTerm: 240,
@@ -45,6 +46,7 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
   const [holding, setHolding] = useState(initialData?.holding || DEFAULT_HOLDING);
   const [resale, setResale] = useState(initialData?.resale || DEFAULT_RESALE);
   const [quickRenoEstimate, setQuickRenoEstimate] = useState((initialData?.quickRenoEstimate as number) ?? 500000);
+  const [roomsBefore, setRoomsBefore] = useState<BeforeRoom[]>((initialData?.roomsBefore as BeforeRoom[]) ?? []);
 
   // --- SENSITIVITY ---
   const [sensResaleAdj, setSensResaleAdj] = useState(0);
@@ -249,9 +251,9 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
   }, []);
 
   const getSnapshot = useCallback(() => ({
-    mode, acq, prop, propAfter, rooms, nextRoomId, contractors, costDb,
+    mode, acq, prop, propAfter, rooms, roomsBefore, nextRoomId, contractors, costDb,
     contingencyPct, pmPct, holding, resale, quickRenoEstimate,
-  }), [mode, acq, prop, propAfter, rooms, nextRoomId, contractors, costDb, contingencyPct, pmPct, holding, resale, quickRenoEstimate]);
+  }), [mode, acq, prop, propAfter, rooms, roomsBefore, nextRoomId, contractors, costDb, contingencyPct, pmPct, holding, resale, quickRenoEstimate]);
 
   return {
     // State
@@ -260,6 +262,7 @@ export default function useCalculator(initialData?: Record<string, unknown>) {
     prop, setProp, updateProp,
     propAfter, setPropAfter, updatePropAfter,
     rooms, setRooms, updateRoom, removeRoom, addRoom,
+    roomsBefore, setRoomsBefore,
     nextRoomId,
     contractors, setContractors,
     costDb, setCostDb, updateCostItem,

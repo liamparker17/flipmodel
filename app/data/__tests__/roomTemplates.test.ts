@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calcAutoQty } from "../roomTemplates";
+import { calcAutoQty, generateRoomsFromProperty } from "../roomTemplates";
 
 describe("calcAutoQty", () => {
   it("calculates sqm unchanged", () => {
@@ -28,5 +28,30 @@ describe("calcAutoQty", () => {
   });
   it("returns fixed number for numeric autoQty", () => {
     expect(calcAutoQty(3, 16)).toBe(3);
+  });
+});
+
+describe("generateRoomsFromProperty", () => {
+  it("generates rooms matching property details", () => {
+    const rooms = generateRoomsFromProperty({ bedrooms: 3, bathrooms: 2, garages: 1 });
+    const types = rooms.map(r => r.roomType);
+    expect(types.filter(t => t === "bedroom")).toHaveLength(3);
+    expect(types.filter(t => t === "bathroom")).toHaveLength(2);
+    expect(types).toContain("kitchen");
+    expect(types).toContain("lounge");
+    expect(types).toContain("garage");
+  });
+  it("omits garage when garages is 0", () => {
+    const rooms = generateRoomsFromProperty({ bedrooms: 2, bathrooms: 1, garages: 0 });
+    expect(rooms.map(r => r.roomType)).not.toContain("garage");
+  });
+  it("returns valid RoomData objects", () => {
+    const rooms = generateRoomsFromProperty({ bedrooms: 3, bathrooms: 2, garages: 1 });
+    for (const room of rooms) {
+      expect(room.id).toBeGreaterThan(0);
+      expect(room.sqm).toBeGreaterThan(0);
+      expect(room.breakdownMode).toBe("simple");
+      expect(room.customCost).toBeNull();
+    }
   });
 });
