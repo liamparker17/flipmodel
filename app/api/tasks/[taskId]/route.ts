@@ -2,16 +2,9 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { writeAuditLog } from "@/lib/audit";
-import { z } from "zod";
+import { updateTaskSchema } from "@/lib/validations/task";
 
 type Params = { params: Promise<{ taskId: string }> };
-
-const updateTaskSchema = z.object({
-  title: z.string().optional(),
-  completed: z.boolean().optional(),
-  assignedTo: z.string().nullable().optional(),
-  dueDate: z.string().nullable().optional(),
-});
 
 /**
  * Verify the task belongs to the caller's org by traversing

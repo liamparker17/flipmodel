@@ -1,24 +1,8 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireAuth, requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
-import { z } from "zod";
 import { DEFAULT_ORG_SETTINGS } from "@/types/org";
-
-const createOrgSchema = z.object({
-  name: z.string().min(1).max(100),
-  slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
-  currency: z.string().optional(),
-  timezone: z.string().optional(),
-});
-
-const updateOrgSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/).optional(),
-  logo: z.string().nullable().optional(),
-  currency: z.string().optional(),
-  timezone: z.string().optional(),
-  settings: z.any().optional(),
-});
+import { createOrgSchema, updateOrgSchema } from "@/lib/validations/org";
 
 export async function GET() {
   try {

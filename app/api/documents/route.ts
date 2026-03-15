@@ -2,15 +2,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 import { parsePagination, paginatedResult } from "@/lib/pagination";
-import { z } from "zod";
-
-const createDocumentSchema = z.object({
-  dealId: z.string().optional(),
-  name: z.string().min(1),
-  type: z.string().min(1),
-  url: z.string().optional(),
-  notes: z.string().optional(),
-});
+import { createDocumentSchema } from "@/lib/validations/document";
 
 export async function GET(req: NextRequest) {
   try {

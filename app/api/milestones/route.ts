@@ -2,24 +2,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, handleApiError } from "@/lib/api-helpers";
 import { parsePagination, paginatedResult } from "@/lib/pagination";
-import { z } from "zod";
-
-const createMilestoneSchema = z.object({
-  dealId: z.string().min(1),
-  title: z.string().min(1),
-  description: z.string().optional(),
-  dueDate: z.string().optional(),
-  status: z.string().optional(),
-  order: z.number().int().optional(),
-  assignedContractorId: z.string().optional(),
-  assignedToMemberId: z.string().optional(),
-  roomId: z.string().optional(),
-  tasks: z.array(z.object({
-    title: z.string().min(1),
-    assignedTo: z.string().optional(),
-    dueDate: z.string().optional(),
-  })).optional(),
-});
+import { createMilestoneSchema } from "@/lib/validations/milestone";
 
 export async function GET(req: NextRequest) {
   try {

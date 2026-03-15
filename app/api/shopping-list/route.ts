@@ -2,29 +2,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/db";
 import { requireOrgMember, requirePermission, apiSuccess, apiError, handleApiError } from "@/lib/api-helpers";
 import { parsePagination, paginatedResult } from "@/lib/pagination";
-import { z } from "zod";
-
-const createItemSchema = z.object({
-  dealId: z.string().min(1),
-  materialKey: z.string().min(1),
-  category: z.string().min(1),
-  isCustom: z.boolean().optional(),
-  label: z.string().optional(),
-  qty: z.number().optional(),
-  unit: z.string().optional(),
-  unitPrice: z.number().optional(),
-});
-
-const updateItemSchema = z.object({
-  id: z.string().min(1),
-  purchased: z.boolean().optional(),
-  actualPrice: z.number().nullable().optional(),
-  actualQty: z.number().nullable().optional(),
-  vendor: z.string().nullable().optional(),
-  purchasedDate: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-  stylePreferences: z.record(z.string(), z.string()).nullable().optional(),
-});
+import { createItemSchema, updateItemSchema } from "@/lib/validations/shopping-list";
 
 export async function GET(req: NextRequest) {
   try {
