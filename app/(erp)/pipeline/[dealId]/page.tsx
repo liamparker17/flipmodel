@@ -8,6 +8,7 @@ import { DEAL_STAGES, getStageColor, getStageLabel, computeDealMetrics, PRIORITY
 import type { Deal, DealData, DealStage, DealPriority, Expense, ExpenseCategory, PaymentMethod, Milestone, MilestoneStatus, DealContact, ContactRole, Activity } from "../../../types/deal";
 import { BUDGET_ALERT_THRESHOLD } from "@/lib/constants";
 import TutorialCard from "../../../components/TutorialCard";
+import useOrgContext from "../../../hooks/useOrgContext";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -24,6 +25,8 @@ export default function DealDetailPage() {
   const dealId = params.dealId as string;
   const router = useRouter();
   const { getDeal, updateDeal, updateDealData, deleteDeal, moveDeal, addExpense, deleteExpense, addMilestone, updateMilestone, toggleTask, addContact, deleteContact, addActivity } = useDeals();
+  const { role } = useOrgContext();
+  const canEditDealName = role === "executive";
   const [deal, setDeal] = useState<Deal | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [editingName, setEditingName] = useState(false);
@@ -97,24 +100,24 @@ export default function DealDetailPage() {
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
           }}>&larr;</button>
           <div style={{ minWidth: 0, flex: 1 }}>
-            {editingName ? (
+            {editingName && canEditDealName ? (
               <input value={nameInput} onChange={(e) => setNameInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleNameSave()} onBlur={handleNameSave} autoFocus
                 style={{ background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 6, padding: "4px 8px", color: theme.text, fontSize: 16, fontWeight: 600, width: "100%", outline: "none" }}
               />
             ) : (
-              <h1 onClick={() => setEditingName(true)} style={{ fontSize: isMobile ? 16 : 20, fontWeight: 600, margin: 0, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: theme.text }} title="Click to rename">
+              <h1 onClick={canEditDealName ? () => setEditingName(true) : undefined} style={{ fontSize: isMobile ? 16 : 20, fontWeight: 600, margin: 0, cursor: canEditDealName ? "pointer" : "default", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: theme.text }} title={canEditDealName ? "Click to rename" : undefined}>
                 {deal.name}
               </h1>
             )}
             <div style={{ fontSize: 10, color: theme.textDim, marginTop: 1, display: "flex", alignItems: "center", gap: 6 }}>
-              {editingAddress ? (
+              {editingAddress && canEditDealName ? (
                 <input value={addressInput} onChange={(e) => setAddressInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAddressSave()} onBlur={handleAddressSave} autoFocus
                   style={{ background: theme.input, border: `1px solid ${theme.inputBorder}`, borderRadius: 4, padding: "2px 6px", color: theme.text, fontSize: 10, outline: "none", width: 200 }}
                 />
               ) : (
-                <span onClick={() => setEditingAddress(true)} style={{ cursor: "pointer" }}>{deal.address || "Click to add address"}</span>
+                <span onClick={canEditDealName ? () => setEditingAddress(true) : undefined} style={{ cursor: canEditDealName ? "pointer" : "default" }}>{deal.address || (canEditDealName ? "Click to add address" : "No address")}</span>
               )}
               <span>&middot;</span>
               <span>{new Date(deal.createdAt).toLocaleDateString("en-ZA")}</span>
