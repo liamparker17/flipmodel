@@ -47,7 +47,8 @@ interface Assignments {
 
 export default function AssignmentsPage() {
   const router = useRouter();
-  const { role } = useOrgContext();
+  const { role, hasPermission } = useOrgContext();
+  const canWriteTasks = hasPermission("tasks:write");
   const isFieldWorker = role === "field_worker";
   const pageHeading = role === "field_worker" ? "My Jobs"
     : role === "site_supervisor" ? "My Tasks"
@@ -234,8 +235,8 @@ export default function AssignmentsPage() {
                           {ms.tasks.map((task) => (
                             <div
                               key={task.id}
-                              onClick={() => toggleTask(task.id, task.completed)}
-                              style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 0", cursor: "pointer" }}
+                              onClick={canWriteTasks ? () => toggleTask(task.id, task.completed) : undefined}
+                              style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 0", cursor: canWriteTasks ? "pointer" : "default", opacity: canWriteTasks ? 1 : 0.6 }}
                             >
                               <div style={{
                                 width: 12, height: 12, borderRadius: 2,
@@ -278,9 +279,9 @@ export default function AssignmentsPage() {
                         key={task.id}
                         style={{
                           display: "flex", alignItems: "center", gap: 6, padding: "4px 8px",
-                          background: theme.input, borderRadius: 4, marginBottom: 3, cursor: "pointer",
+                          background: theme.input, borderRadius: 4, marginBottom: 3, cursor: canWriteTasks ? "pointer" : "default", opacity: canWriteTasks ? 1 : 0.6,
                         }}
-                        onClick={() => toggleTask(task.id, task.completed)}
+                        onClick={canWriteTasks ? () => toggleTask(task.id, task.completed) : undefined}
                       >
                         <div style={{
                           width: 12, height: 12, borderRadius: 2,

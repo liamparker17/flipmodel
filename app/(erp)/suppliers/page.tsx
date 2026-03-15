@@ -42,7 +42,8 @@ function getShoppingEntry(deal: Deal, materialKey: string, category: string): Sh
 
 export default function SuppliersPage() {
   const { deals, loaded, markItemPurchased, addCustomShoppingItem, removeCustomShoppingItem, updateShoppingItem } = useDeals();
-  const { role } = useOrgContext();
+  const { role, hasPermission } = useOrgContext();
+  const canWrite = hasPermission("expenses:write");
   const [selectedDealId, setSelectedDealId] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -376,9 +377,11 @@ export default function SuppliersPage() {
               style={{ background: "transparent", color: theme.textDim, border: `1px solid ${theme.cardBorder}`, borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", minHeight: 36 }}>
               Print List
             </button>
-            <button onClick={() => setShowAddForm(!showAddForm)} style={{ background: theme.orange, color: "#fff", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36, marginLeft: "auto" }}>
-              + Add Item
-            </button>
+            {canWrite && (
+              <button onClick={() => setShowAddForm(!showAddForm)} style={{ background: theme.orange, color: "#fff", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 36, marginLeft: "auto" }}>
+                + Add Item
+              </button>
+            )}
           </div>
 
           {showAddForm && (
@@ -440,7 +443,7 @@ export default function SuppliersPage() {
           )}
 
           {/* Bulk Action Bar */}
-          {selectMode && (
+          {selectMode && canWrite && (
             <BulkActionBar
               selectedCount={selectedItems.size}
               onMarkPurchased={handleBulkPurchased}
