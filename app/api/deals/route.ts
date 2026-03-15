@@ -6,7 +6,7 @@ import { createDealSchema } from "@/lib/validations/deal";
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = await requireOrgMember();
+    const ctx = await requirePermission("deals:read");
     const pagination = parsePagination(req);
     const total = await prisma.deal.count({ where: { orgId: ctx.orgId } });
     const deals = await prisma.deal.findMany({

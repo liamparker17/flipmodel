@@ -7,7 +7,7 @@ import { encryptSensitiveFields } from "@/lib/field-encryption";
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = await requireOrgMember();
+    const ctx = await requirePermission("contacts:read");
     const role = req.nextUrl.searchParams.get("role");
 
     const pagination = parsePagination(req);

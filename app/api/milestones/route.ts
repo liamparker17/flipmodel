@@ -23,7 +23,7 @@ const createMilestoneSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = await requireOrgMember();
+    const ctx = await requirePermission("milestones:read");
     const pagination = parsePagination(req);
     const dealId = req.nextUrl.searchParams.get("dealId");
 

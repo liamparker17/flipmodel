@@ -25,7 +25,7 @@ const createInvoiceSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = await requireOrgMember();
+    const ctx = await requirePermission("invoices:read");
     const dealId = req.nextUrl.searchParams.get("dealId");
 
     const pagination = parsePagination(req);

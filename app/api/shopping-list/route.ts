@@ -28,7 +28,7 @@ const updateItemSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = await requireOrgMember();
+    const ctx = await requirePermission("deals:read");
     const pagination = parsePagination(req);
     const dealId = req.nextUrl.searchParams.get("dealId");
 

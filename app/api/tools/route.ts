@@ -6,7 +6,7 @@ import { createToolSchema } from "@/lib/validations/tool";
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = await requireOrgMember();
+    const ctx = await requirePermission("tools:read");
     const pagination = parsePagination(req);
 
     const [tools, total, checkouts, maintenance, incidents] = await Promise.all([
