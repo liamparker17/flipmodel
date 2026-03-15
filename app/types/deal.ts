@@ -72,6 +72,7 @@ export interface PropertyData {
   bathrooms: number;
   garages: number;
   stories: string;
+  defaultCeilingHeight?: number; // default 2.4 via ?? at read sites
 }
 
 export interface RoomData {
@@ -84,6 +85,9 @@ export interface RoomData {
   roomType: string;
   breakdownMode: "simple" | "detailed";
   detailedItems: DetailedItem[] | null;
+  ceilingHeight?: number | null;  // null/undefined = use house default
+  doorSqm?: number;               // default 0 via ?? at read sites
+  windowSqm?: number;             // default 0 via ?? at read sites
 }
 
 export interface DetailedItem {

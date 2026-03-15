@@ -146,14 +146,27 @@ export function detectRoomType(name: string): string {
 }
 
 // Calculate auto-quantity for a room item
-export function calcAutoQty(autoQty: number | "sqm" | "lm" | "wallArea", roomSqm: number): number {
+export function calcAutoQty(
+  autoQty: number | "sqm" | "lm" | "wallArea",
+  roomSqm: number,
+  ceilingHeight: number = 2.4,
+  doorSqm: number = 0,
+  windowSqm: number = 0,
+): number {
   if (typeof autoQty === "number") return autoQty;
   const perimeter = 4 * Math.sqrt(roomSqm);
   switch (autoQty) {
-    case "sqm": return roomSqm;
-    case "lm": return Math.round(perimeter * 10) / 10;
-    case "wallArea": return Math.round(perimeter * 2.4 * 10) / 10;
-    default: return 1;
+    case "sqm":
+      return roomSqm;
+    case "lm":
+      return Math.round(perimeter * 10) / 10;
+    case "wallArea": {
+      const grossWall = perimeter * ceilingHeight;
+      const netWall = grossWall - doorSqm - windowSqm;
+      return Math.round(Math.max(0, netWall) * 10) / 10;
+    }
+    default:
+      return 1;
   }
 }
 
@@ -167,7 +180,13 @@ export interface GeneratedRoomItem {
 }
 
 // Generate detailed items for a room from its template
-export function generateRoomItems(roomType: string, roomSqm: number): GeneratedRoomItem[] {
+export function generateRoomItems(
+  roomType: string,
+  roomSqm: number,
+  ceilingHeight: number = 2.4,
+  doorSqm: number = 0,
+  windowSqm: number = 0,
+): GeneratedRoomItem[] {
   const template = ROOM_TEMPLATES[roomType];
   if (!template) return [];
   return template.items.map((item) => ({
@@ -175,7 +194,7 @@ export function generateRoomItems(roomType: string, roomSqm: number): GeneratedR
     label: item.label,
     unit: item.unit,
     included: true,
-    qty: calcAutoQty(item.autoQty, roomSqm),
+    qty: calcAutoQty(item.autoQty, roomSqm, ceilingHeight, doorSqm, windowSqm),
     unitCost: item.defaultCost,
   }));
 }
