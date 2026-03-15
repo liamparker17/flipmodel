@@ -2,7 +2,8 @@
 "use client";
 import { theme, NumInput, Card, Select } from "./theme";
 import RoomBreakdown from "./RoomBreakdown";
-import { detectRoomType } from "../data/roomTemplates";
+import { detectRoomType, generateRoomsFromProperty, PRESET_ROOMS } from "../data/roomTemplates";
+import type { RoomData } from "@/types/deal";
 
 interface Room {
   id: number;
@@ -21,20 +22,64 @@ interface RoomsStepProps {
   addRoom: () => void;
   isMobile: boolean;
   defaultCeilingHeight: number;
+  prop?: { bedrooms: number; bathrooms: number; garages: number };
+  onGenerateRooms?: (rooms: RoomData[]) => void;
 }
 
-export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMobile, defaultCeilingHeight }: RoomsStepProps) {
+export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMobile, defaultCeilingHeight, prop, onGenerateRooms }: RoomsStepProps) {
+  const handleGenerateFromProperty = () => {
+    if (!prop || !onGenerateRooms) return;
+    onGenerateRooms(generateRoomsFromProperty(prop));
+  };
+
+  const handleLoadPreset = () => {
+    if (!onGenerateRooms) return;
+    const presetRooms: RoomData[] = PRESET_ROOMS.map((p, i) => ({
+      id: i + 1,
+      name: p.name,
+      sqm: p.sqm,
+      scope: p.scope as RoomData["scope"],
+      customCost: null,
+      notes: "",
+      roomType: p.roomType,
+      breakdownMode: "simple",
+      detailedItems: null,
+      ceilingHeight: null,
+      doorSqm: 0,
+      windowSqm: 0,
+    }));
+    onGenerateRooms(presetRooms);
+  };
+
   return (
     <div>
       <Card subtitle="Define each room in the property and its renovation scope. Toggle to Detailed mode for per-item breakdowns.">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
           <span style={{ fontSize: 13, color: theme.textDim }}>
             {rooms.length} rooms &middot; {rooms.reduce((s, r) => s + r.sqm, 0)} sqm total
           </span>
-          <button onClick={addRoom} style={{
-            background: theme.accent, color: "#000", border: "none", borderRadius: 8,
-            padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", minHeight: 44,
-          }}>+ Add Room</button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {prop && onGenerateRooms && (
+              <button onClick={handleGenerateFromProperty} style={{
+                background: theme.input, color: theme.text, border: `1px solid ${theme.inputBorder}`, borderRadius: 8,
+                padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 40,
+              }}>
+                Generate from Property
+              </button>
+            )}
+            {onGenerateRooms && (
+              <button onClick={handleLoadPreset} style={{
+                background: theme.input, color: theme.text, border: `1px solid ${theme.inputBorder}`, borderRadius: 8,
+                padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 40,
+              }}>
+                Load Full Preset
+              </button>
+            )}
+            <button onClick={addRoom} style={{
+              background: theme.accent, color: "#000", border: "none", borderRadius: 8,
+              padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", minHeight: 44,
+            }}>+ Add Room</button>
+          </div>
         </div>
       </Card>
 
