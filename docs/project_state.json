@@ -1,0 +1,15 @@
+{
+  "last_session": "2026-03-15",
+  "active_branch": "main",
+  "open_todos": [],
+  "known_issues": [
+    "Tutorial end-to-end flow needs manual verification on Vercel",
+    "Personal skills not yet pressure-tested against rationalizations",
+    "Python router hook designed but not built"
+  ],
+  "next_steps": [
+    "Verify tutorial flow on deployed instance",
+    "Monitor skill invocation consistency across sessions",
+    "Build Python router hook if description matching proves unreliable"
+  ]
+}
