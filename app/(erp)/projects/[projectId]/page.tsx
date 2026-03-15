@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { theme, fmt, pct, styles } from "../../../components/theme";
+import useOrgContext from "../../../hooks/useOrgContext";
 import useDeals from "../../../hooks/api/useApiDeals";
 import { getStageColor, getStageLabel, computeDealMetrics, getDealProgress, getExpensesByCategory, PRIORITY_CONFIG, EXPENSE_CATEGORIES } from "../../../utils/dealHelpers";
 import type { Deal, Expense, ExpenseCategory, PaymentMethod, Milestone, MilestoneStatus, InspectionStatus, ExpenseSignOff } from "../../../types/deal";
@@ -11,6 +12,11 @@ export default function ProjectDetailPage() {
   const projectId = params.projectId as string;
   const router = useRouter();
   const { getDeal, updateDeal, addExpense, updateExpense, deleteExpense, addMilestone, updateMilestone, toggleTask, addActivity } = useDeals();
+  const { hasPermission } = useOrgContext();
+  const canWriteMilestones = hasPermission("milestones:write");
+  const canWriteExpenses = hasPermission("expenses:write");
+  const canWriteTasks = hasPermission("tasks:write");
+  const canApproveExpenses = hasPermission("expenses:approve");
   const [deal, setDeal] = useState<Deal | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -96,6 +102,7 @@ export default function ProjectDetailPage() {
           onAddMilestone={(ms) => { addMilestone(projectId, ms); refreshDeal(); }}
           onUpdateMilestone={(msId, changes) => { updateMilestone(projectId, msId, changes); refreshDeal(); }}
           onToggleTask={(msId, taskId) => { toggleTask(projectId, msId, taskId); refreshDeal(); }}
+          canWriteMilestones={canWriteMilestones} canWriteTasks={canWriteTasks}
         />
 
         {/* Budget Tracking */}
@@ -161,11 +168,13 @@ export default function ProjectDetailPage() {
       {/* Payment Sign-off */}
       <PaymentSignOffSection deal={deal} milestones={milestones} contractors={contractors}
         onUpdateExpense={(expenseId, changes) => { updateExpense(projectId, expenseId, changes); refreshDeal(); }}
-        isMobile={isMobile} />
+        isMobile={isMobile} canApproveExpenses={canApproveExpenses} />
 
       {/* Quick Expense Add */}
-      <QuickExpenseAdd dealId={projectId} onAdd={(expense) => { addExpense(projectId, expense); refreshDeal(); }} isMobile={isMobile}
-        milestones={milestones} contractors={contractors} />
+      {canWriteExpenses && (
+        <QuickExpenseAdd dealId={projectId} onAdd={(expense) => { addExpense(projectId, expense); refreshDeal(); }} isMobile={isMobile}
+          milestones={milestones} contractors={contractors} />
+      )}
 
       {/* Notes */}
       {deal.notes && (
@@ -185,12 +194,13 @@ interface OrgMemberInfo {
   role: string;
 }
 
-function MilestonesSection({ deal, milestones, progress, contractors, onAddMilestone, onUpdateMilestone, onToggleTask }: {
+function MilestonesSection({ deal, milestones, progress, contractors, onAddMilestone, onUpdateMilestone, onToggleTask, canWriteMilestones, canWriteTasks }: {
   deal: Deal; milestones: Milestone[]; progress: ReturnType<typeof getDealProgress>;
   contractors: Deal["contacts"];
   onAddMilestone: (ms: Omit<Milestone, "id">) => void;
   onUpdateMilestone: (msId: string, changes: Partial<Milestone>) => void;
   onToggleTask: (msId: string, taskId: string) => void;
+  canWriteMilestones: boolean; canWriteTasks: boolean;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
@@ -254,10 +264,12 @@ function MilestonesSection({ deal, milestones, progress, contractors, onAddMiles
     <div style={styles.card}>
       <div style={{ ...styles.flexBetween, marginBottom: 10 }}>
         <h3 style={styles.sectionHeading}>Project Progress</h3>
-        <button onClick={() => setShowForm(!showForm)} style={{
-          background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
-          padding: "4px 8px", fontSize: 9, fontWeight: 600, cursor: "pointer",
-        }}>{showForm ? "Cancel" : "+ Milestone"}</button>
+        {canWriteMilestones && (
+          <button onClick={() => setShowForm(!showForm)} style={{
+            background: theme.accent, color: "#fff", border: "none", borderRadius: 6,
+            padding: "4px 8px", fontSize: 9, fontWeight: 600, cursor: "pointer",
+          }}>{showForm ? "Cancel" : "+ Milestone"}</button>
+        )}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: theme.textDim, marginBottom: 6 }}>
         <span>{progress.completed}/{progress.total} tasks completed</span>
@@ -370,7 +382,7 @@ function MilestonesSection({ deal, milestones, progress, contractors, onAddMiles
                 <div style={{ padding: "0 8px 6px", paddingLeft: 30 }}>
                   {ms.tasks.map((task) => (
                     <div key={task.id} style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 0" }}>
-                      <div onClick={() => onToggleTask(ms.id, task.id)} style={{ width: 12, height: 12, borderRadius: 2, border: `1.5px solid ${task.completed ? theme.green : theme.inputBorder}`, background: task.completed ? theme.green : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, color: "#fff", flexShrink: 0, cursor: "pointer" }}>{task.completed ? "\u2713" : ""}</div>
+                      <div onClick={canWriteTasks ? () => onToggleTask(ms.id, task.id) : undefined} style={{ width: 12, height: 12, borderRadius: 2, border: `1.5px solid ${task.completed ? theme.green : theme.inputBorder}`, background: task.completed ? theme.green : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, color: "#fff", flexShrink: 0, cursor: canWriteTasks ? "pointer" : "default", opacity: canWriteTasks ? 1 : 0.5 }}>{task.completed ? "\u2713" : ""}</div>
                       <span style={{ fontSize: 10, color: task.completed ? theme.textDim : theme.text, textDecoration: task.completed ? "line-through" : "none", flex: 1 }}>{task.title}</span>
                       {members.length > 0 && (
                         <select
@@ -460,9 +472,9 @@ function QuickExpenseAdd({ dealId, onAdd, isMobile, milestones, contractors }: {
 }
 
 // ─── Payment Sign-off Section ───
-function PaymentSignOffSection({ deal, milestones, contractors, onUpdateExpense, isMobile }: {
+function PaymentSignOffSection({ deal, milestones, contractors, onUpdateExpense, isMobile, canApproveExpenses }: {
   deal: Deal; milestones: Milestone[]; contractors: Deal["contacts"];
-  onUpdateExpense: (expenseId: string, changes: Partial<Expense>) => void; isMobile: boolean;
+  onUpdateExpense: (expenseId: string, changes: Partial<Expense>) => void; isMobile: boolean; canApproveExpenses: boolean;
 }) {
   const [notesInput, setNotesInput] = useState<Record<string, string>>({});
   const expenses = (deal.expenses || []).filter((e) => !e.isProjected);
@@ -507,7 +519,7 @@ function PaymentSignOffSection({ deal, milestones, contractors, onUpdateExpense,
           {paidBeforeVerified && <span style={{ fontSize: 8, fontWeight: 600, color: theme.red }}>⚠ Paid before milestone verified</span>}
           {signOff.pmNotes && <span style={{ fontSize: 8, color: theme.textDim, fontStyle: "italic" }}>— {signOff.pmNotes}</span>}
         </div>
-        {signOff.status === "pending" && (
+        {signOff.status === "pending" && canApproveExpenses && (
           <div style={{ display: "flex", gap: 4, marginTop: 4, alignItems: "center" }}>
             <input value={notesInput[e.id] || ""} onChange={(ev) => setNotesInput({ ...notesInput, [e.id]: ev.target.value })}
               placeholder="PM notes..." style={{ flex: 1, background: theme.card, border: `1px solid ${theme.inputBorder}`, borderRadius: 3, padding: "2px 5px", color: theme.text, fontSize: 9, outline: "none", minHeight: 20 }} />
