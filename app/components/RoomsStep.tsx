@@ -20,9 +20,10 @@ interface RoomsStepProps {
   removeRoom: (id: number) => void;
   addRoom: () => void;
   isMobile: boolean;
+  defaultCeilingHeight: number;
 }
 
-export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMobile }: RoomsStepProps) {
+export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMobile, defaultCeilingHeight }: RoomsStepProps) {
   return (
     <div>
       <Card subtitle="Define each room in the property and its renovation scope. Toggle to Detailed mode for per-item breakdowns.">
@@ -94,7 +95,7 @@ export default function RoomsStep({ rooms, updateRoom, removeRoom, addRoom, isMo
               </>
             )}
           </div>
-          <RoomBreakdown room={room} onUpdateRoom={updateRoom} isMobile={isMobile} />
+          <RoomBreakdown room={room} onUpdateRoom={updateRoom} isMobile={isMobile} defaultCeilingHeight={defaultCeilingHeight} />
         </Card>
       ))}
     </div>

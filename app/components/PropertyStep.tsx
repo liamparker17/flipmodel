@@ -28,6 +28,7 @@ export default function PropertyStep({ prop, updateProp, propAfter, updatePropAf
           <Select label="Stories" value={prop.stories} onChange={(v: string) => updateProp("stories", v)} options={[
             { value: "single", label: "Single storey" }, { value: "double", label: "Double storey" },
           ]} />
+          <NumInput label="Default Ceiling Height (m)" value={prop.defaultCeilingHeight ?? 2.4} onChange={(v: number) => updateProp("defaultCeilingHeight", v)} prefix="" suffix="m" step={0.1} isMobile={isMobile} />
         </div>
       </Card>
 

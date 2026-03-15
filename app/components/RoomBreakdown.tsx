@@ -21,6 +21,9 @@ interface Room {
   roomType?: string;
   breakdownMode?: string;
   detailedItems?: DetailedItem[] | null;
+  ceilingHeight?: number | null;
+  doorSqm?: number;
+  windowSqm?: number;
   [key: string]: unknown;
 }
 
@@ -28,12 +31,17 @@ interface RoomBreakdownProps {
   room: Room;
   onUpdateRoom: (id: number, key: string, value: unknown) => void;
   isMobile: boolean;
+  defaultCeilingHeight: number;
 }
 
-export default function RoomBreakdown({ room, onUpdateRoom, isMobile }: RoomBreakdownProps) {
+export default function RoomBreakdown({ room, onUpdateRoom, isMobile, defaultCeilingHeight }: RoomBreakdownProps) {
   const roomType = room.roomType || detectRoomType(room.name);
   const template = (ROOM_TEMPLATES as Record<string, unknown>)[roomType];
   const isDetailed = room.breakdownMode === "detailed";
+
+  const effectiveCeiling = room.ceilingHeight ?? defaultCeilingHeight;
+  const effectiveDoors = room.doorSqm ?? 0;
+  const effectiveWindows = room.windowSqm ?? 0;
 
   const toggleMode = () => {
     if (!isDetailed) {
@@ -75,7 +83,7 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }: RoomBrea
         const newItems = room.detailedItems.map((item) => {
           const tmplItem = tmpl.items.find((t) => t.key === item.key);
           if (tmplItem && typeof tmplItem.autoQty !== "number") {
-            return { ...item, qty: calcAutoQty(tmplItem.autoQty as string, newSqm) };
+            return { ...item, qty: calcAutoQty(tmplItem.autoQty as string, newSqm, effectiveCeiling, effectiveDoors, effectiveWindows) };
           }
           return item;
         });
@@ -89,6 +97,8 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }: RoomBrea
     padding: "8px 10px", color: theme.text, fontSize: 16, textAlign: "right",
     outline: "none", fontFamily: "'JetBrains Mono', monospace", minHeight: 40,
   };
+
+  const labelStyle: React.CSSProperties = { fontSize: 10, color: theme.textDim, textTransform: "uppercase", letterSpacing: 1 };
 
   return (
     <div>
@@ -114,6 +124,51 @@ export default function RoomBreakdown({ room, onUpdateRoom, isMobile }: RoomBrea
           </div>
           <span style={{ fontSize: 12, color: isDetailed ? theme.accent : theme.textDim, fontWeight: isDetailed ? 600 : 400 }}>Detailed</span>
         </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 100 }}>
+          <label style={labelStyle}>Ceiling Height (m)</label>
+          <input
+            type="number"
+            step={0.1}
+            value={room.ceilingHeight ?? ""}
+            placeholder={String(defaultCeilingHeight)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onUpdateRoom(room.id, "ceilingHeight", e.target.value === "" ? null : Number(e.target.value))
+            }
+            style={{ ...inputSmall, width: "100%" }}
+          />
+        </div>
+        <div style={{ flex: 1, minWidth: 100 }}>
+          <label style={labelStyle}>Door Area (sqm)</label>
+          <input
+            type="number"
+            step={0.1}
+            value={room.doorSqm ?? ""}
+            placeholder="0"
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onUpdateRoom(room.id, "doorSqm", e.target.value === "" ? 0 : Number(e.target.value))
+            }
+            style={{ ...inputSmall, width: "100%" }}
+          />
+        </div>
+        <div style={{ flex: 1, minWidth: 100 }}>
+          <label style={labelStyle}>Window Area (sqm)</label>
+          <input
+            type="number"
+            step={0.1}
+            value={room.windowSqm ?? ""}
+            placeholder="0"
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onUpdateRoom(room.id, "windowSqm", e.target.value === "" ? 0 : Number(e.target.value))
+            }
+            style={{ ...inputSmall, width: "100%" }}
+          />
+        </div>
+      </div>
+      <div style={{ fontSize: 13, color: theme.textDim, marginTop: 4, marginBottom: 8 }}>
+        Volume: {(room.sqm * effectiveCeiling).toFixed(1)} m³ | Net Wall: {calcAutoQty("wallArea", room.sqm, effectiveCeiling, effectiveDoors, effectiveWindows)} sqm
       </div>
 
       {isDetailed && room.detailedItems && (

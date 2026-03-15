@@ -278,7 +278,7 @@ export default function DealAnalysis({ initialData, dealId, onSave, view = "anal
     switch (step) {
       case 0: return <AcquisitionStep acq={calc.acq} updateAcq={calc.updateAcq} transferDuty={calc.transferDuty} totalAcquisition={calc.totalAcquisition} isMobile={isMobile} />;
       case 1: return <PropertyStep prop={calc.prop} updateProp={calc.updateProp} propAfter={calc.propAfter} updatePropAfter={calc.updatePropAfter} isMobile={isMobile} />;
-      case 2: return <RoomsStep rooms={calc.rooms} updateRoom={calc.updateRoom} removeRoom={calc.removeRoom} addRoom={calc.addRoom} isMobile={isMobile} />;
+      case 2: return <RoomsStep rooms={calc.rooms} updateRoom={calc.updateRoom} removeRoom={calc.removeRoom} addRoom={calc.addRoom} isMobile={isMobile} defaultCeilingHeight={calc.prop.defaultCeilingHeight ?? 2.4} />;
       case 3: return <ContractorPanel contractors={calc.contractors} setContractors={calc.setContractors} rooms={calc.rooms} isMobile={isMobile} />;
       case 4: return <CostDatabase costDb={calc.costDb} updateCostItem={calc.updateCostItem} pmPct={calc.pmPct} setPmPct={calc.setPmPct} contingencyPct={calc.contingencyPct} setContingencyPct={calc.setContingencyPct} totalRoomMaterialCost={calc.totalRoomMaterialCost} contractorLabour={calc.contractorLabour} fixedCosts={calc.fixedCosts} pmCost={calc.pmCost} contingency={calc.contingency} totalRenovation={calc.totalRenovation} renoCostPerSqm={calc.renoCostPerSqm} isMobile={isMobile} />;
       case 5: return <HoldingStep holding={calc.holding} updateHolding={calc.updateHolding} acq={calc.acq} monthlyBondInterest={calc.monthlyBondInterest} monthlyHoldingTotal={calc.monthlyHoldingTotal} totalHoldingCost={calc.totalHoldingCost} holdingTimeline={calc.holdingTimeline} isMobile={isMobile} />;
