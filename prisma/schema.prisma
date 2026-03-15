@@ -296,6 +296,7 @@ model Deal {
 
   @@index([orgId])
   @@index([orgId, stage])
+  @@index([orgId, createdAt])
   @@index([userId])
 }
 
@@ -327,6 +328,7 @@ model Expense {
   deal            Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
   @@index([orgId])
+  @@index([orgId, createdAt])
   @@index([dealId])
   @@index([userId])
 }
