@@ -58,12 +58,12 @@ export default function DealDetailPage() {
     updateDealData(dealId, snapshot);
   }, [dealId, updateDealData]);
 
-  const handleStageChange = (newStage: DealStage) => { moveDeal(dealId, newStage); refreshDeal(); };
-  const handlePriorityChange = (priority: DealPriority) => { updateDeal(dealId, { priority }); refreshDeal(); };
-  const handleNameSave = () => { updateDeal(dealId, { name: nameInput }); setEditingName(false); refreshDeal(); };
-  const handleAddressSave = () => { updateDeal(dealId, { address: addressInput }); setEditingAddress(false); refreshDeal(); };
-  const handleNotesSave = () => { updateDeal(dealId, { notes: notesInput }); addActivity(dealId, "note_added", "Notes updated"); refreshDeal(); };
-  const handleTagsSave = () => { const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean); updateDeal(dealId, { tags }); refreshDeal(); };
+  const handleStageChange = async (newStage: DealStage) => { await moveDeal(dealId, newStage); refreshDeal(); };
+  const handlePriorityChange = async (priority: DealPriority) => { await updateDeal(dealId, { priority }); refreshDeal(); };
+  const handleNameSave = async () => { await updateDeal(dealId, { name: nameInput }); setEditingName(false); refreshDeal(); };
+  const handleAddressSave = async () => { await updateDeal(dealId, { address: addressInput }); setEditingAddress(false); refreshDeal(); };
+  const handleNotesSave = async () => { await updateDeal(dealId, { notes: notesInput }); addActivity(dealId, "note_added", "Notes updated"); refreshDeal(); };
+  const handleTagsSave = async () => { const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean); await updateDeal(dealId, { tags }); refreshDeal(); };
   const handleDelete = () => { if (window.confirm("Delete this property? This cannot be undone.")) { deleteDeal(dealId); router.push("/pipeline"); } };
 
   if (!deal) {
